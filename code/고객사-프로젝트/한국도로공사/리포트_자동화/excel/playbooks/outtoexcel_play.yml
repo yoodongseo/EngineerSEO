@@ -1,0 +1,14 @@
+---
+- name: outtoexcel_play
+  hosts: all
+  gather_facts: false
+  tasks :
+    - name: python 실행
+      command: /usr/bin/python3 /APP/fap/ansible/projects/Out_TO_Excel/vars/outtoexcel.py
+      register: result
+      ignore_errors: 'yes'
+
+    - name: res
+      debug:
+        msg:
+         - null

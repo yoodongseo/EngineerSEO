@@ -1,0 +1,28 @@
+---
+- block:
+  - name: 연결 상태 확인
+    raw: "uname -a"
+    register: result_version
+    
+  - name: 연결 상태 실패 처리
+    fail:
+      msg: "{{ fap['host_ip'] }}"
+    when: result_version['failed'] | default(True)
+    ignore_errors: false
+    
+  always:
+    - name: Save Data merged 생성 -- pre_check
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '00.연결상태',
+          'command': 'cat',
+          'result': '비정상' if result_version['failed'] | default(True) else '정상',
+          'is_success': False if result_version['failed'] | default(True) else True,
+          'is_pass': False if result_version['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type,
+          'message': '00. 연결 상태',
+            }] }}"
+      when: save_type == 'report'

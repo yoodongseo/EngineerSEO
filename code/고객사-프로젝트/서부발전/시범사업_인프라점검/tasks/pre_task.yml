@@ -1,0 +1,106 @@
+---
+### Linux 대상 점검 명령어 수행 및 점검결과 변수처리
+- name: '명령어 수행_python {{ item.message }}' ### Linux
+  command: /usr/bin/python3 ../vars/raw.py
+  environment:
+    hostname: '{{ fap.host_ip }}'
+    port: '{{ ansible_port }}'
+    username: '{{ ansible_user }}'
+    password: "{{ ansible_password }}"
+    root_passwd: "{{ ansible_become_password | default('') }}"
+    raw: '{{ item.raw }}'
+    vendor: '{{ vendor }}'
+    time: '{{ item.time }}'
+  when: vendor == 'Linux' or vendor == 'L3' or vendor == 'L4' or vendor == 'Axgate'
+  register: total_item_raw
+  delegate_to: localhost
+
+- name: 'Windows 명령어 실행 {{ item.message }}'
+  win_shell: |
+    {{ item.raw }}
+  args:
+    output_encoding_override: "{{ 'EUC-KR' if item.raw == 'w32tm /query /status' else omit }}"
+  register: total_item_windows
+  when: vendor == 'Windows'
+
+- name: 'Secui 명령어 수행_python {{ item.message }}' ### Secui
+  command: /usr/bin/python3 ../vars/secui.py
+  environment:
+    hostname: '{{ fap.host_ip }}'
+    port: '{{ ansible_port }}'
+    username: '{{ ansible_user }}'
+    password: "{{ ansible_password }}"
+    root_passwd: "{{ ansible_become_password | default('') }}"
+    raw: '{{ item.raw }}'
+    vendor: '{{ vendor }}'
+    time: '{{ item.time }}'
+  when: vendor == 'Secui'
+  register: total_item_secui
+  delegate_to: localhost
+
+- name: total_item 설정 - windows 변수 사용
+  set_fact:
+    total_item: '{{ total_item_windows }}'
+  when: total_item_windows.changed == True
+
+- name: total_item 설정 - raw 변수 사용
+  set_fact:
+    total_item: '{{ total_item_raw }}'
+  when: total_item_raw.changed == True
+
+- name: total_item 설정 - secui 변수 사용
+  set_fact:
+    total_item: '{{ total_item_secui }}'
+  when: total_item_secui.changed == True
+
+# - name: 명령어 결과 파일저장
+#   raw: |
+#     echo "{{
+#       total_item_Netapp.stdout if copy == 'Netapp' else
+#       total_item_Veritas.stdout if copy == 'Veritas' else
+#       total_item_Ibm.stdout if copy == 'Ibm' else
+#       'Vendor가 없습니다. Vendor을 입력하세요' }}" | sed "s/\['//;s/']//g" > "{{ item.tmp_file_path }}"
+#   delegate_to: localhost
+
+# - name: 전체 명령어 파일 reading
+#   command: cat "{{ item.tmp_file_path }}"
+#   register: total_item
+#   delegate_to: localhost
+
+### python filter 를 통한 merged_value 생성 / 각 점검 주체 및 대상 항목 별 데이터 python 변수로 선언
+- name: '{{ item.message }} tasks'
+  command: /usr/bin/python3 ../vars/custom_filter.py
+  environment:
+    host: '{{ inventory_hostname }}' # 호스트명
+    host_name: '{{ inventory_hostname }}' # 호스트명
+    name: '{{ item.cmd_name }}' # 명령어 이름(UI 표시)
+    command: '{{ item.cmd_command }}' # 사용되는 명령어
+    report_type: '{{ report }}' # 점검 보고서 타입
+    system: '{{ system }}' # 시스템_벤더_모델_설치사업소_설치장소_관리번호
+    message: '{{ item.message }}' # 점검 메시지
+    com_value: '{{ item.com_value }}' # 비교 기준 값
+    value: '{{ item.value }}' # 필터링 케이스
+    arr_num: '{{ item.arr_num }}' # 열 기준 구분 배열
+    total_item: '{{ total_item.stdout }}' # 명령어 수행결과 stdout
+    criteria: '{{ item.criteria }}' # 점검 기준 보고서 출력 메시지
+    grep: "{{ item.grep | default('') }}" # 행 기준 비교 대상 라인
+    unit: "{{ item.unit | default('') }}" # list_int 및 list_str 필터 단위 분리
+    raw: '{{ item.raw }}'
+  register: result_value
+  delegate_to: localhost
+
+### python을 통해 만들어진 merged_value 생성을 위한 데이터 파싱
+- name: '{{ item.message }} Parse Json result'
+  set_fact:
+    merged: '{{ result_value.stdout | from_json }}'
+
+- name: 점검 그룹 조회
+  include_tasks: ../tasks/host_info_make.yml
+
+- name: 점검현황 데이터 입력 처리 -- "{{ report_table }}"
+  include_tasks: ../tasks/postgresql_make_query.yml
+
+## 점검 항목 별 merged_value 생성
+- name: merged_value 변수 설정 -- 작업성공
+  set_fact:
+    merged_value: '{{ merged_value + [merged] }}'

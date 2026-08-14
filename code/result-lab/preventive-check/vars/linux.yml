@@ -1,0 +1,286 @@
+---
+system: "{{ vendor }}_2_3_4_5_6"
+
+inspection_commands:
+- rule_key: "cpu_usage"
+  cmd_id: "0001"
+  name: "01.CPU 점검"
+  command: "vmstat"
+  os: "{{ vendor }}"
+  inspection_criteria: 20
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "cpu_core"
+  cmd_id: "0002"
+  name: "02.CPU 코어별 상태 점검"
+  command: "lscpu"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "memory_usage"
+  cmd_id: "0003"
+  name: "03.Memory 사용률"
+  command: "free -m"
+  os: "{{ vendor }}"
+  inspection_criteria: 80
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "memory_scan"
+  cmd_id: "0004"
+  name: "04.Memory 상태 확인"
+  command: "dmidecode -t memory"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "paging_space"
+  cmd_id: "0005"
+  name: "05.Paging Space"
+  command: "swapon -s"
+  os: "{{ vendor }}"
+  inspection_criteria: 50
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "filesystem_usage"
+  cmd_id: "0006"
+  name: "06.파일시스템 사용량"
+  command: "df -h"
+  os: "{{ vendor }}"
+  inspection_criteria: 80
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "disk_swap_usage"
+  cmd_id: "0007"
+  name: "07.Disk Swap 사용률"
+  command: "swapon -s"
+  os: "{{ vendor }}"
+  inspection_criteria: 50
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "disk_redundancy"
+  cmd_id: "0008"
+  name: "08.DISK 이중화 정상 여부"
+  command: "for md in $(ls /dev/md* 2>/dev/null | grep -v mdp); do mdadm --detail $md; done"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "dev_stat"
+  cmd_id: "0009"
+  name: "09.DISK 인식 여부 점검"
+  command: "lsblk"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "disk_stat"
+  cmd_id: "0010"
+  name: "10.DISK I/O 점검"
+  command: "vmstat"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    b: 1
+    wa: 1
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "inode_usage"
+  cmd_id: "0011"
+  name: "11.DISK I-Node 정상여부"
+  command: "df -i"
+  os: "{{ vendor }}"
+  inspection_criteria: "80"
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "kernel_parameter"
+  cmd_id: "0012"
+  name: "12.Kernel parameter Check"
+  command: "sysctl -a"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "system_log"
+  cmd_id: "0013"
+  name: "13.로그 점검"
+  command: "dmesg | tail -300"
+  os: "{{ vendor }}"
+  inspection_criteria: "panic,fail"
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "cluster_status"
+  cmd_id: "0014"
+  name: "14.Cluster 데몬 상태"
+  command: "crm_mon -1"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    ok_if_command_missing: true
+    bad_tokens: [ "maintenance", "offline", "stopped", "failed" ]
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "shared_volume_status"
+  cmd_id: "0015"
+  name: "15.공유 볼륨 점검 상태"
+  command: "mount"
+  os: "{{ vendor }}"
+  inspection_criteria: "shared"
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "network_link_status"
+  cmd_id: "0016"
+  name: "16.NW 링크 상태"
+  command: "ip link"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    # match_type:
+    #   prefix   = values에 선언한 문자열로 시작하는 NIC를 점검 대상에 포함
+    #   exact    = values에 선언한 NIC 이름과 정확히 일치하는 경우만 포함
+    #   contains = values에 선언한 문자열이 NIC 이름에 포함되면 포함
+    # values:
+    #   운영 NIC 이름 규칙을 명시한다. 예: ens*, eth*, bond*
+    #   명시한 대상이 ip link 결과에 하나도 없으면 해당 없음 처리한다.
+    match_type: "prefix"
+    values:
+    - "ens"
+    - "eth"
+    - "bond"
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "nic_redundancy_status"
+  cmd_id: "0017"
+  name: "17.NIC 이중화 상태"
+  command: "cat /proc/net/bonding/bond0 2>/dev/null"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    # Bonding Mode는 상세 내용에만 표시하고 판정 조건으로 사용하지 않는다.
+    # require_bond_mii_up: Bond 전체 MII Status가 up이어야 정상
+    # require_current_active_slave: Currently Active Slave가 있어야 정상
+    # require_min_up_slaves: MII Status가 up인 slave 최소 개수
+    # link_failure_count_fail_over:
+    #   Slave Link Failure Count 허용값이다.
+    #   누적 장애 이력 값이라 현재 링크 정상 여부와 다를 수 있으므로 운영 기준에 맞춰 조정한다.
+    require_bond_mii_up: true
+    require_current_active_slave: true
+    require_min_up_slaves: 1
+    link_failure_count_fail_over: 0
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "ping_loss_status"
+  cmd_id: "0018"
+  name: "18.PingLoss 상태"
+  # command: "ping -c 5 $(route -n | awk '$1==\"0.0.0.0\" {print $2}')"
+  command: "ping -c 5 $(ip route | awk '/^default/ {print $3; exit}')"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    max_loss: 0
+    max_avg_rtt: 100
+  is_compare: true
+  is_save: true
+  timeout: 25
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "path_redundancy_status"
+  cmd_id: "0019"
+  name: "19.Path 이중화 상태"
+  command: "multipath -ll"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    min_active_groups: 1
+    allowed_group_status:
+    - "active"
+    - "enabled"
+    required_path_tokens:
+    - "running"
+    banned_tokens:
+    - "failed"
+    - "faulty"
+    - "offline"
+    require_same_policy: true
+    require_policy_contains:
+    - "service-time 0"
+  is_compare: true
+  is_save: true
+  timeout: 10
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "hba_connection_status"
+  cmd_id: "0020"
+  name: "20.HBA 연결상태 점검"
+  command: "for h in /sys/class/fc_host/host*; do [ -d \"$h\" ] && echo \"[$(basename \"$h\")] $(cat \"$h\"/port_state 2>/dev/null) $(cat \"$h\"/speed 2>/dev/null)\"; done"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: "{{ message_data }}"

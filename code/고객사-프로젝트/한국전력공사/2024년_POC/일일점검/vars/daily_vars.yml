@@ -1,0 +1,42 @@
+---
+report: "preventive"
+inspection_group: "일일점검"
+
+merged_value: []
+
+Hitachi:
+  - cmd_name: "df"
+    cmd_command: "df -h"
+    com_value: "80"
+    value: "list_int"
+    message: |
+        디스크 상태점검
+    raw: "df -h"
+    arr_num: 4
+    unit: "%"
+    time: 1
+    criteria: "H/W 상태점검 Drive Disk"
+
+  - cmd_name: "free"
+    cmd_command: "free"
+    com_value: "80"
+    value: "int"
+    message: |
+        메모리 상태점검
+    raw: "free -m | awk 'NR==2{printf \"%.2f\\n\", ($3/$2)*100}'"
+    arr_num: 4
+    unit: "%"
+    time: 1
+    criteria: "H/W 상태점검 Memory"
+
+  - cmd_name: "cpu"
+    cmd_command: "top"
+    com_value: "80"
+    value: "int"
+    message: |
+        CPU 상태점검
+    raw: "top -bn1 | grep 'Cpu(s)' | awk '{ print 100 - $8 }'"
+    arr_num: 4
+    unit: "%"
+    time: 1
+    criteria: "H/W 상태점검 CPU"

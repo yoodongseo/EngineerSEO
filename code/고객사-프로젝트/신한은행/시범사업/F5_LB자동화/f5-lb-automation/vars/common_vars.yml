@@ -1,0 +1,69 @@
+---
+# 인증정보 설정
+username: '{{ ansible_user }}'
+password: '{{ ansible_httpapi_password }}'
+host: 'https://{{ inventory_hostname }}'
+# host: "https://10.136.247.199"
+validate_certs: false
+
+# REST API 정보
+# rest_api_info:
+#   active_api: 'mgmt/tm/sys/failover' # active/standby 구분
+#   default_api: 'mgmt/tm/gtm'
+
+rest_api_info:
+  default_api: "mgmt/tm/ltm" 
+
+
+# Add 코멘트
+add_comment: 'Add by IaC'
+# # Define Status Code(201 -> success / 400 -> Bad Request / 500 -> Server Error )
+# status_code: [201, 400, 500]
+
+# Debug Flag
+debug_mode: false
+
+# 검증 플래그
+err_flag: false
+
+# 롤백 플래그
+rollback_err_flag: false
+rollback_err_msg: []
+
+# 보고서 변수
+today: "{{ lookup('ansible.builtin.pipe', 'date +%Y%m%d') }}"
+cm_hostname: "{{ lookup('ansible.builtin.pipe', 'hostname') }}"
+data_key: kb
+data_type: report
+system: GSLB
+report_type: ['GSLB등록(IaC)', 'GSLB등록(Portal)']
+file_path: '/fap/report/{{ data_key }}_reports/{{ today }}/{{ fap.job_id }}/report/GSLB등록_{{ cm_hostname }}_{{ today }}.xlsx'
+content_name: 'GSLB 등록'
+content_command: 'GSLB 등록'
+
+# 이중화 플래그 / 0->not_active, unknown / 1->active
+is_active: 0
+
+# 포탈 연계 플래그
+portal_flag: true
+
+job_result_not_connected:
+  - data: []
+    err_msg: '접속실패'
+    err_flag: True
+
+# # 정상 접속 체크 - 통합 되면서 삭제
+# is_notconnect: false
+
+# 작업 가능 플래그
+workable_wideips: true
+workable_pool: true
+workable_server: true
+workable_vserver: true
+
+# 작업 완료 플래그
+workdone_wideips: false
+workdone_pool: false
+workdone_poolmember: false
+workdone_server: false
+workdone_vserver: false

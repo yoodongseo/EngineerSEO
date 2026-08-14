@@ -1,0 +1,206 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: "backup"
+report_type: "backup"
+### merged_value --- List 선언
+merged_value: []
+
+ahnlab:
+  - cmd_name: "top"
+    cmd_command: 'top'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU
+    raw: ""
+    multi_raw:
+      - 'diagnostic'
+      - 'top'
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}ahnlab.txt"
+    id: 0001
+
+  - cmd_name: "df"
+    cmd_command: 'df'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. filesystem
+    raw: ""
+    multi_raw:
+      - 'diagnostic'
+      - 'df'
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}ahnlab.txt"
+    id: 0002
+
+  - cmd_name: "free"
+    cmd_command: "free"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. memory
+    raw: ""
+    multi_raw:
+      - 'diagnostic'
+      - 'free'
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}ahnlab.txt"
+    id: 0003
+
+  - cmd_name: "uptime"
+    cmd_command: "uptime"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. uptime
+    raw: ""
+    multi_raw:
+      - 'diagnostic'
+      - 'uptime'
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}ahnlab.txt"
+    id: 0004
+
+secui:
+  - cmd_name: "top"
+    cmd_command: 'top'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU
+    raw: "top -n1"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_secui.txt"
+    id: 0001
+
+  - cmd_name: "df -h"
+    cmd_command: 'df -h'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. filesystem
+    raw: "df -h"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_secui.txt"
+    id: 0002
+
+  - cmd_name: "free"
+    cmd_command: "free"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. memory
+    raw: "free"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_secui.txt"
+    id: 0003
+
+  - cmd_name: "etc/passwd"
+    cmd_command: "etc/passwd"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. etc/passwd
+    raw: "cat /etc/passwd"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_secui.txt"
+    id: 0004
+
+ips:
+  - cmd_name: "top"
+    cmd_command: 'top'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU
+    raw: "top -n1"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_ips.txt"
+    id: 0001
+
+  - cmd_name: "df -h"
+    cmd_command: 'df -h'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. filesystem
+    raw: "df -h"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_ips.txt"
+    id: 0002
+
+  - cmd_name: "free"
+    cmd_command: "free"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. memory
+    raw: "free"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_ips.txt"
+    id: 0003
+
+  - cmd_name: "etc/passwd"
+    cmd_command: "etc/passwd"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. etc/passwd
+    raw: "cat /etc/passwd"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_ips.txt"
+    id: 0004

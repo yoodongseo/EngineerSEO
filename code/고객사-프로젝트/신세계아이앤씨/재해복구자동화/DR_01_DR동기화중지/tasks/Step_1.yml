@@ -1,0 +1,32 @@
+---
+#  아래의 명령어는 COMPANY랑 테스트 할때 진행
+#  SQL> show parameter name
+#  SQL> ALTER DATABASE RECOVER MANAGED STANDBY DATABASE CANCEL;
+
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+#기존 코드
+- name: 동기화 중지
+  shell: su - "{{ item.oracle_user }}" -c "{{ shutdown_sh }}"
+  register: result
+  loop: "{{ ORACLE }}"
+  loop_control:
+    label: "{{ item.sid }}"
+  when: item.oracle_sid != ""  # ORACLE_SID가 정의된 경우에만 실행
+
+- name: 동기화 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ SHOW_PARAMETER_NAME_FILE }}"
+    create: true
+    block: |
+      {{ item.stdout }}
+    marker: "# {mark} 동기화 중지 명령어 결과 백업"
+  loop: "{{ result.results }}"
+  loop_control:
+    label: "{{ item.item.sid }}"
+  when: item.stdout is defined
+  delegate_to: localhost

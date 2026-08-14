@@ -1,0 +1,117 @@
+---
+# JOB_VARS
+req_type: "{{ fap['host_vars']['req_type'] | default('uninstall') }}"
+avamar_name:  "{{ fap['host_vars']['avamar_name'] | default('') }}" ## 설치시에만 필수
+## req_type: install, uninstall, start, stop, restart
+## avamar_name: shbddava01 / shbddava02 / shbddava03 / shbddava04
+
+# SAVE VARS
+system: Linux
+report_type: "Linux AVAMAR {{ '설치' if req_type == 'install' 
+                                else '삭제' if req_type == 'uninstall' 
+                                else '기동' if req_type == 'start' 
+                                else '중지' if req_type == 'stop' 
+                                else '재기동' if req_type == 'restart' }}"
+data_key: LNX_AGENT_MGMT_AVAMAR
+
+# PLAY JOB VARS
+pkg_name:
+  - name: 'AvamarClient-linux-sles11-x86_64-19.3.100-149.rpm'
+  - name: 'abmr-8.5.667-1.x86_64.rpm'
+
+# 설치되는 경로
+stat_path: '/usr/local/avamar/bin'
+
+# 패키지 경로
+copy_src: ../templates
+copy_dest: /tmp/AVAMAR
+
+# /etc/hosts 도메인설정
+lineinfile:
+  avamar_hosts_entries:
+    - value: "### Avamar ###"
+    - line_keyword: "192.0.2.10"
+      value: "192.0.2.10   shbddava01.COMPANY.com  shbddava01"
+    - line_keyword: "192.0.2.10"
+      value: "192.0.2.10   shbddava02.COMPANY.com  shbddava02"
+    - line_keyword: "192.0.2.10"
+      value: "192.0.2.10   shbddava03.COMPANY.com  shbddava03"
+    - line_keyword: "192.0.2.10"
+      value: "192.0.2.10   shbddava04.COMPANY.com  shbddava04"
+    - line_keyword: "192.0.2.10"
+      value: "192.0.2.10   shbdd01.localdomain     shbdd01"
+    - line_keyword: "192.0.2.10"
+      value: "192.0.2.10   shbdd02.localdomain     shbdd02"
+    - line_keyword: "192.0.2.10"
+      value: "192.0.2.10   shbdd03.localdomain     shbdd03"
+    - line_keyword: "192.0.2.10"
+      value: "192.0.2.10   shbdd04.localdomain     shbdd04"
+  target_file: "/etc/hosts"
+
+# 대화형 명령어 처리 관리 변수
+expect_cli_list:
+  install:
+    - name: 3. Avamar 설치
+      cmd:
+        - cli: rpm -iv /tmp/AVAMAR/{{ pkg_name[0]['name'] }}
+          found_list:
+            - found: ''
+              answer: ''
+        - cli: /usr/local/avamar/bin/avregister
+          found_list: 
+            - found: 'preferred'
+              answer: '{{ avamar_name }}'
+            - found: 'clients'
+              answer: 'Enter'
+        - cli: rpm -iv /tmp/AVAMAR/{{ pkg_name[1]['name'] }}
+          found_list:
+            - found: ''
+              answer: ''
+        - cli: abmrcfg
+          found_list:
+            - found: ''
+              answer: ''
+
+  start:
+    - name: 3. Avamar 기동
+      cmd:
+        - cli: '/usr/local/avamar/etc/avagent.d start'
+          found_list:
+            - found: ''
+              answer: ''
+
+  stop:
+    - name: 3. Avamar 중지
+      cmd:
+        - cli: '/usr/local/avamar/etc/avagent.d stop'
+          found_list:
+            - found: ''
+              answer: ''
+
+  restart:
+    - name: 3. Avamar 재기동
+      cmd:
+        - cli: '/usr/local/avamar/etc/avagent.d stop'
+          found_list:
+            - found: ''
+              answer: ''
+        - cli: '/usr/local/avamar/etc/avagent.d start'
+          found_list:
+            - found: ''
+              answer: ''
+        
+  uninstall:
+    - name: 3. Avamar 삭제
+      cmd:
+        - cli: '/usr/local/avamar/etc/avagent.d stop'
+          found_list:
+            - found: ''
+              answer: ''
+        - cli: 'rpm -e abmr'
+          found_list:
+            - found: ''
+              answer: ''
+        - cli: 'rpm -e AvamarClient'
+          found_list:
+            - found: ''
+              answer: ''

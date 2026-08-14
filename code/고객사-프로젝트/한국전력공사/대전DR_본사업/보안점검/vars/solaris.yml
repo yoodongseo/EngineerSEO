@@ -1,0 +1,93 @@
+---
+inspection_commands:
+- rule_key: "sec_srv_account_separation"
+  cmd_id: "0001"
+  name: "01.계정 및 권한 분리"
+  command: "cat /etc/passwd"
+  os: "{{ vendor }}"
+  inspection_criteria: "관리자 계정과 유지보수 계정 분리 / 유지보수 계정에 관리자 권한 부여 금지"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    계정 및 비밀번호 관리_계정 및 권한 분리
+
+- rule_key: "sec_srv_default_account"
+  cmd_id: "0002"
+  name: "02.디폴트 계정 삭제"
+  command: "for u in lp sync shutdown halt news uucp nfs nobody guest ftp; do passwd -s $u 2>&1 || echo \"$u 계정 미존재\"; done"
+  os: "{{ vendor }}"
+  inspection_criteria: "OS/DB/WAS/기타 디폴트 계정이 삭제, 잠금 또는 비활성화 상태일 것"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    계정 및 비밀번호 관리_디폴트 계정 삭제
+    (잠금, 비활성화)
+
+- rule_key: "sec_srv_password_policy"
+  cmd_id: "0003"
+  name: "03.비밀번호 설정"
+  command: "cat /etc/default/passwd"
+  os: "{{ vendor }}"
+  inspection_criteria: "최대사용 기간 90일 이하, 9자리 이상 및 복잡도 정책이 설정되어 있을 것"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    계정 및 비밀번호 관리_비밀번호 설정
+
+- rule_key: "sec_srv_log_retention"
+  cmd_id: "0004"
+  name: "04.시스템 로그보관"
+  command: "echo '===LOGADM==='; [ -f /etc/logadm.conf ] && cat /etc/logadm.conf; find /var/adm/message* -type f -mtime +180 -ls"
+  os: "{{ vendor }}"
+  inspection_criteria: "접근기록, 정책변경 로그 보관기간이 180일 이상일 것"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    시스템 로그보관
+
+- rule_key: "sec_srv_plain_port"
+  cmd_id: "0005"
+  name: "05.평문 서비스 포트 제거"
+  command: "netstat -an | grep LISTEN"
+  os: "{{ vendor }}"
+  inspection_criteria: "FTP(20,21), Telnet(23), Rlogin(513), Rshell/Rcp(514), Rexec(512) 등 제거"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    서비스 포트 관리_평문 서비스 포트 제거
+
+- rule_key: "sec_srv_default_port"
+  cmd_id: "0006"
+  name: "06.DB, 원격접속 기본포트 변경 및 접속제한"
+  command: "netstat -an | grep LISTEN"
+  os: "{{ vendor }}"
+  inspection_criteria: "DB 기본포트, SSH/RDP/X11 등 원격접속 기본포트 변경 및 관리자 IP 접근제한 설정"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    서비스 포트 관리_DB, 원격접속 기본포트 변경 및 접속제한
+
+- rule_key: "sec_srv_etc_port"
+  cmd_id: "0007"
+  name: "07.기타 제거"
+  command: "netstat -an | grep LISTEN"
+  os: "{{ vendor }}"
+  inspection_criteria: "랜섬웨어 포트 137, 138, 139, 445 등 제거"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    서비스 포트 관리_기타 제거

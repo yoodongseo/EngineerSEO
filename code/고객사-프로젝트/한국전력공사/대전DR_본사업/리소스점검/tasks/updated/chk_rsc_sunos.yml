@@ -1,0 +1,31 @@
+---
+# - name: 유닉스(SunOS) 명령어 실행
+#   raw: "{{ item.value.command }}"
+#   register: result
+#   loop: "{{ sunos_commands | dict2items }}"
+#   loop_control:
+#     label: "{{ item.key }}"
+
+# - name: merged_value 생성
+#   set_fact:
+#     merged_value: >-
+#       {{
+#         ( merged_value | default({}))
+#         | combine( item.stdout_lines | parse_result(os_type, item.item.key)) 
+#       }}
+#   loop: "{{ result.results }}"
+#   loop_control:
+#     label: "{{ item.item.key }}"
+
+- name: SunOS 명령어 통합 실행
+  raw: "{{ sunos_combined_command }}"
+  register: combined_result
+
+- name: merged_value 생성 (파싱 및 병합)
+  set_fact:
+    merged_value: >-
+      {{
+        combined_result.stdout_lines
+        | parse_sectioned_output
+        | parse_combined_result('sunos')
+      }}

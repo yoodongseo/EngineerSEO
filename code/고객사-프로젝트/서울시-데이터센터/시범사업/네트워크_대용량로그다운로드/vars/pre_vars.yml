@@ -1,0 +1,83 @@
+---
+### vars 파일
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+local_dir: /fap/report/log_down/{{ today }}/{{ fap['job_id'] }}/{{ fap['host_ip'] }}
+data_key: "Network_log_down"
+report_type: "Network 로그 다운로드"
+### merged_value --- List 선언
+# merged_value: []
+
+piolink:
+  - cmd_name: "show log"
+    cmd_command: 'show log'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. show log
+    raw: ""
+    multi_raw:
+      - 'configure'
+      - 'terminal length 0'
+      - 'show log'
+      - 'terminal length 30' # 기존 30으로 되어 있어서 위와 같이 적용
+    arr_num: 0
+    grep: ""
+    time: 10
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_piolink.txt"
+    fap_report_file: "{{ fap['host_ip'] }}_{{ vendor }}_log.txt"
+    id: 0001
+
+juniper:
+  - cmd_name: "show log messages"
+    cmd_command: 'show logmessages'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. show log messages
+    raw: ""
+    multi_raw:
+      - 'show log messages'    
+    arr_num: 0
+    grep: ""
+    time: 10
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    fap_report_file: "{{ fap['host_ip'] }}_{{ vendor }}_log.txt"
+    id: 0001
+
+nxos:
+  - cmd_name: "show logging"
+    cmd_command: 'show logging'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. show logging
+    raw: ''
+    multi_raw:
+      - 'show logging'    
+    arr_num: 0
+    grep: ""
+    time: 10
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    fap_report_file: "{{ fap['host_ip'] }}_{{ vendor }}_log.txt"
+    id: 0001
+
+alteon:
+  - cmd_name: "info/sys/log"
+    cmd_command: 'info/sys/log'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. info/sys/log
+    raw: ''
+    multi_raw:
+      - 'info/sys/log'    
+    arr_num: 0
+    grep: ""
+    time: 10
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    fap_report_file: "{{ fap['host_ip'] }}_{{ vendor }}_log.txt"
+    id: 0001

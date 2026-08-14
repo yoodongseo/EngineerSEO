@@ -1,0 +1,40 @@
+---
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: 'Linux'
+report_type: 'Linux 디렉토리 권한설정'
+data_key: LNX_SET_DIR_PERM
+
+## 현장에 반영시 "default 필터 제거 필요, 수행의뢰 처리 예정"
+dir_path: "{{ fap['host_vars']['dir_name'] | default('/root/check_dir') }}"
+dir_mode: "{{ fap['host_vars']['dir_mode'] | default('755') }}"
+dir_owner: "{{ fap['host_vars']['dir_owner'] | default('root') }}"
+dir_group: "{{ fap['host_vars']['dir_group'] | default('root') }}"
+dir_recurse: "{{ fap['host_vars']['dir_recurse'] | default('Y') }}"
+
+# pkg_name: "{{ fap['host_vars']['pkg_name'] }}"
+
+set_dir_perm_cmd: |
+  # STEP 1 디렉토리 존재 여부 확인
+  if [[ ! -d '{{ dir_path }}' ]]; then
+    echo '{{ dir_path }} directory not found!!'; exit 1
+  fi
+  
+  # STEP 2 디렉토리 권한 설정
+  chmod {{ dir_mode }} '{{ dir_path }}'
+  if [[ $? -ne 0 ]]; then
+    echo "chmod {{ dir_path }} failed."; exit 1
+  fi
+
+  # STEP 3 하위 소유자 및 그룹 설정 조건 수행
+  if [[ "{{ dir_recurse }}" == "Y" ]]; then
+    chown -R {{ dir_owner }}:{{ dir_group }} '{{ dir_path }}'
+    if [[ $? -ne 0 ]]; then
+      echo "chown -R {{ dir_owner }}:{{ dir_group }} Failed!!"; exit 1
+    fi
+  else
+    chown {{ dir_owner }}:{{ dir_group }} '{{ dir_path }}'
+    if [[ $? -ne 0 ]]; then
+      echo "chown {{ dir_owner }}:{{ dir_group }} {{ dir_path }} Failed!!!"; exit 1
+    fi
+  fi
+  exit 0

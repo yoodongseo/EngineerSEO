@@ -1,0 +1,20 @@
+---
+- block:
+  - name: 버전 정보 수집
+    shell: uname -r
+    register: before_version
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. 기존 버전',
+          'command': report_type,
+          'result': before_version['stdout'] | default(none),
+          'is_success': True,
+          'is_pass': False if before_version['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

@@ -1,0 +1,30 @@
+---
+- name: "DR_1node_04_DR전환_점검"
+  hosts: all
+  serial: 1
+  gather_facts: true
+  tasks:
+    - name: 일시 생성
+      set_fact:
+        today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+      delegate_to: localhost
+      run_once: true
+      
+    - name: 변수 파일 호출
+      COMPANYlude_vars: ../vars/server_ordering_04.yml
+
+    - name: Standy DB의 호스트 정보
+      debug: 
+        msg:
+        - "IP: {{ STANDBY_DB_IP }}"
+        - "HOSTNAME: {{ ansible_facts.fqdn }}"
+      when: fap.host_ip == STANDBY_DB_IP | default('none')
+
+    - name: "Step 4 - DR DB 점검"
+      COMPANYlude_tasks: ../tasks/Step_4.yml
+      when: fap.host_ip == STANDBY_DB_IP | default('none')
+
+    - debug:
+        msg:
+          - "[Step 4] DR DB 점검 명령어 수행 및 백업"
+          - "점검 로그 경로 ---> 각 서버의 {{ BACKUP_DIR }}"

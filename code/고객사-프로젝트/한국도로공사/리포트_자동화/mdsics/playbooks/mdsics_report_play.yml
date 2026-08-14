@@ -1,0 +1,27 @@
+---
+- name: ex mdsics report
+  hosts: all
+  strategy: free
+  gather_facts: false
+  
+  tasks:
+    - name: vars include
+      include_vars: ../vars/mdsics_report_vars.yml
+
+    - name: 일시 생성
+      #command: "date +'%y%m%d'"
+      command: date -d '1 days ago' +'%y%m%d'
+      register: today
+      delegate_to: localhost
+      
+    - name: Report file get(mdsics)
+      raw: cat "{{ mdsics_file_path }}/mdsics.log_{{ today.stdout }}"
+      register: mdsics_report_data
+      when: mdsics_file_path | regex_replace('(?i)mdsics')
+
+    - name: mdsics tasks
+      include_tasks: ../tasks/ex_mdsics_report.yml
+      when: mdsics_file_path | regex_replace('(?i)mdsics')
+
+
+    

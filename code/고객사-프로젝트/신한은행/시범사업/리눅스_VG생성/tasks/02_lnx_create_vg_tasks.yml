@@ -1,0 +1,20 @@
+---
+- block:
+  - name: VG 생성 작업 수행
+    shell: "{{ vg_create_job_cmd }}"
+    register: result_vg_create_job_cmd
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. VG 생성',
+          'command': 'VG Create CMD',
+          'result': result_vg_create_job_cmd['stdout'] | default('unknown') if result_vg_create_job_cmd['failed'] | default(True) else result_vg_create_job_cmd['stdout'],
+          'is_success': True,
+          'is_pass': False if result_vg_create_job_cmd['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

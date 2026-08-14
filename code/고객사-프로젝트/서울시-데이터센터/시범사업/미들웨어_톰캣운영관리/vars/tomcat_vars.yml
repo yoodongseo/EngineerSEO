@@ -1,0 +1,5 @@
+---
+# SAVE VARS
+system: Linux
+report_type: "Tomcat_관리"
+data_key: Tomcat_MGMT

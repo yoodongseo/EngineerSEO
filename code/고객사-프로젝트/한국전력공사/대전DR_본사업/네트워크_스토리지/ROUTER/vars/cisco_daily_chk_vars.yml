@@ -1,0 +1,188 @@
+---
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "router"
+model: "cisco"
+data5: "에방점검_Router"
+
+commands:
+  - {
+      cmd_id: "0001",
+      filter_key: "NetworkCpuFilter",
+      name: "01. CPU 점검",
+      command: "show processes cpu",
+      os: "{{ model }}",
+      inspection_criteria: 70,
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+
+  - {
+      cmd_id: "0002",
+      filter_key: "NetworkMemoryFilter",
+      name: "02. Memory 점검",
+      command: "show processes memory",
+      os: "{{ model }}",
+      inspection_criteria: 10, #Free 메모리
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+
+  - cmd_id: "0003"
+    filter_key: "NetworkInterfaceFilter"
+    name: "03. Interface 점검"
+    command: "show interface"
+    os: "{{ model }}"
+    inspection_criteria:
+      load_max_pct: 80
+      errors_max: 0
+      collisions_max: 0
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  # - cmd_id: "0004"
+  #   filter_key: "NetworkInterfaceFilter"
+  #   name: "4. Interface/모듈 점검"
+  #   command: "show interface"
+  #   os: "{{ model }}"
+  #   inspection_criteria:
+  #     load_max_pct: 80
+  #     errors_max: 0
+  #     collisions_max: 0
+  #   is_save: true
+  #   is_compare: true
+  #   timeout: 1
+  #   sleep: 1
+  #   message: "{{ message_data }}"
+
+  - cmd_id: "0004"
+    filter_key: "NetworkVlanFilter"
+    name: "04. Vlan 점검"
+    command: "show vlan brief"
+    os: "{{ model }}"
+    inspection_criteria:
+#      reserved_vlans: [1002, 1003, 1004, 1005]
+      ok_statuses: ["active", "act/unsup", "inactive"]
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  # - cmd_id: "0006"
+  #   filter_key: ""
+  #   name: "6. 각 LB 상태 점검"
+  #   command: "show serverfarm web_server"
+  #   os: "{{ model }}"
+  #   inspection_criteria: ""
+  #   is_save: true
+  #   is_compare: true
+  #   timeout: 1
+  #   sleep: 1
+  #   message: "{{ message_data }}"
+
+
+  - cmd_id: "0005"
+    filter_key: "NetworkMacFilter"
+    name: "05. Mac/Arp 점검"
+    command: "show mac address-table"
+    os: "{{ model }}"
+    inspection_criteria:
+      allow_arp_duplicate_ip: false
+      require_arp_mapping: false
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0006"
+    filter_key: "NetworkRouteFilter"
+    name: "6. Router 점검"
+    command: "show ip route"
+    os: "{{ model }}"
+    inspection_criteria:
+      require_default_route: true
+      require_codes: ["S"]   # 필요 시 ["S","O","B"]
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0007"
+    filter_key: "NetworkStpFilter"
+    name: "7. STP 상태 점검"
+    command: "show spanning-tree"
+    os: "{{ model }}"
+    inspection_criteria: "true"
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0008"
+    filter_key: "NetworkRedundancyFilter"
+    name: "08. 이중화 상태 점검"
+    command: "show vrrp brief"
+    os: "{{ model }}"
+    inspection_criteria: "error"
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  # - cmd_id: "0011"
+  #   filter_key: "NetworkPingFilter"
+  #   name: "11. 통신 상태 점검"
+  #   command: "ping " #ip 주소 수집 방법 확인 필요
+  #   os: "{{ model }}"
+  #   inspection_criteria: "success"
+  #   is_save: true
+  #   is_compare: true
+  #   timeout: 1
+  #   sleep: 1
+  #   message: "{{ message_data }}"
+
+  - {
+      cmd_id: "0009",
+      filter_key: "LogFilter",
+      name: "09. Log 점검",
+      command: "show logging last 50",
+      os: "{{ model }}",
+      inspection_criteria: "error,down",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+
+  - cmd_id: "0010"
+    filter_key: "NetworkHardwareFilter"
+    name: "10. H/W 상태 점검"
+    command: "show environment"
+    os: "{{ model }}"
+    inspection_criteria: "true"
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"

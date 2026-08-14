@@ -1,0 +1,28 @@
+---
+- block: 
+  - name: Start Tomcat service
+    win_service:
+      name: "Tomcat9"
+      state: restarted
+    register: service_result
+
+  - name: 결과 확인
+    debug:
+      msg: "{{ service_result }}"
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '3. 톰캣 재기동 결과',
+          'command': 'Windows_Tomcat_Restart',
+          'result': '재기동 오류' if service_result['failed'] else service_result.state,
+          'is_success': True,
+          'is_pass': False if service_result['failed'] else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"
+
+

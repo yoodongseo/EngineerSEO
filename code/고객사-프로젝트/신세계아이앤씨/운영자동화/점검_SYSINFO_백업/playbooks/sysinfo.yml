@@ -1,0 +1,58 @@
+---
+- name: sysinfo
+  hosts: all
+  gather_facts: true
+  ignore_errors: true
+  ignore_unreachable: true
+  vars:
+    data_type: backup
+    data_key: network
+    os: "{{ ansible_facts.distribution|default(None) }}"
+    compare: True
+    fail_flag: False
+  tasks:
+  - debug: var=os
+  - block:
+    - name: 연결상태 체크 작업 호출(RedHat)
+      include_tasks: ../tasks/connection_check.yml
+      when: ansible_facts.distribution|default('unknown') == 'RedHat' 
+
+    - name: sysinfo 작업 실행(RedHat)
+      include: ../tasks/sysinfo_rhel.yml
+      ignore_errors: false
+      when: ansible_facts.distribution|default('unknown') == 'RedHat' and result_connection.failed == false
+
+    always:
+    - name: Make failure message
+      include_tasks: ../tasks/make_failure_msg.yml
+      when: result_connection.failed|default(true) == true
+
+    - name: Make content value
+      set_fact:
+        content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+      delegate_to: localhost
+      when: merged_value is defined
+
+    - name: Save to DB
+      fap.common.save_data:
+        content: "{{ content_value }}"
+        protocol: http
+        hostname: "{{ inventory_hostname }}"
+        data_type: backup
+        data_key: network
+        template_id: "{{ fap.template_id | default(omit) }}"
+        job_id: "{{ fap.job_id | default(omit) }}"
+      delegate_to: localhost
+      when: content_value is defined
+
+    - name: 작업 실패 판단
+      debug:
+        msg:
+         - "작업 실패, 작업 템플릿 로그 내용을 확인해주세요."
+         - "지원 OS: RedHat, 대상 OS: {{ os|default('알수없음') }}"
+      ignore_errors: false
+      delegate_to: localhost
+      when: fail_flag or (result_connection.failed|default(true) == true)
+      failed_when: fail_flag or (result_connection.failed|default(true) == true)
+  
+

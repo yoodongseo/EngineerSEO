@@ -1,0 +1,71 @@
+---
+#  아래의 명령어는 COMPANY랑 테스트 할때 진행
+#  SQL> shutdown immediate
+
+# 로그 저장 디렉토리 생성
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+# step2. 1작업
+- name: "Primary DB 중지 {{ ansible_facts.fqdn }}"
+  shell: su - "{{ item.oracle_user }}" -c "{{ shutdown_sh }}"
+  register: result
+  loop: "{{ ORACLE }}"
+  when: item.oracle_sid != ""  # ORACLE_SID가 정의된 경우에만 실행
+
+- name: 동기화 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ SHUTDOWN_IMMEDIATE_FILE }}"
+    create: true
+    block: |
+      {{ item.stdout }}
+    marker: "# {mark} 동기화 중지 명령어 결과 백업"
+  loop: "{{ result.results }}"
+  when: item.stdout is defined
+  register: blockinfile_result
+  delegate_to: localhost
+
+- name: 동기화 중지 명령어 결과 백업 경로 출력 ---> localhost
+  when: blockinfile_result.changed | bool
+  debug:
+    msg: "저장 경로 : {{ BACKUP_DIR }}/{{ SHUTDOWN_IMMEDIATE_FILE }}"
+
+# step2. 2작업
+- name: Primary CRS 중지
+  shell: |
+    source ~/.bash_profile
+    crsctl disable crs
+    crsctl stop crs
+  args:
+    executable: /bin/bash     
+  register: result_stop_crs
+
+- name: Primary CRS 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ STOP_CRS_FILE }}"
+    create: true
+    block: |
+      {{ result_stop_crs.stdout }}
+    marker: "# {mark} Primary CRS 중지 명령어 결과 백업"
+  register: blockinfile_result_crs
+  delegate_to: localhost
+
+- name: Primary CRS 중지 명령어 결과 백업 경로 출력 ---> localhost
+  debug:
+    msg: "{{ blockinfile_result_crs.diff[0].after_header }}"
+
+# step2. cubeone 중지 필요 시 호출
+- name: cubeone 작업 실행
+  COMPANYlude_tasks: ../tasks/cubeone_task.yml
+  when: CUBEONE_WORK in ['y','Y']
+
+# step2. 4작업
+- name: Primary OS sync 명령어 수행
+  shell: sync;sync;sync;
+
+- name: Primary OS 중지
+  community.general.shutdown:
+  register: result_shutdown

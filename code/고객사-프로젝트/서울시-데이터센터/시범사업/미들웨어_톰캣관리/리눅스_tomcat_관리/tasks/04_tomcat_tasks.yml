@@ -1,0 +1,63 @@
+---
+- block:
+  - name: 톰캣 설치
+    debug:
+      msg: "톰캣 설치"
+
+  - name: tomcat설치진행_계정확인(미 존재 시 생성)
+    user:
+      name: "auto"
+      state: present
+      shell: /bin/bash
+
+  - name: 설치파일 배포
+    copy:
+      src: "../templates/{{ tomcat_files }}"
+      dest: "/home/auto"
+      owner: "auto"
+      group: "auto"
+
+  - name: 설치파일 압축해제
+    unarchive:
+      src: "/home/auto/{{ tomcat_files }}"
+      dest: "/home/auto"
+      owner: "auto"
+      group: "auto"
+      remote_src: yes
+
+  - name: 환경변수 추가
+    lineinfile:
+      path: /etc/profile
+      regexp: '^export CLASSPATH='
+      line: 'export CLASSPATH=$CLASSPATH:$JAVA_HOME/jre/lib/ext:$JAVA_HOME/lib/tools.jar:$CATALINA_HOME/lib/jsp-api.jar:$CATALINA_HOME/lib/servlet-api.jar'
+
+  - name: 환경변수 추가
+    lineinfile:
+      path: /etc/profile
+      regexp: '^export CATALINA_HOME='
+      line: 'export CATALINA_HOME=/home/auto/apache-tomcat-9.0.96'
+
+  - name: 설정 변경 적용
+    shell: source /etc/profile
+
+  - name: 톰캣 실행
+    shell: su - auto -c "/home/auto/apache-tomcat-9.0.96/bin/startup.sh"
+    register: tomcat_start_result
+
+  - name: 톰캣 실행 디버깅
+    debug:
+      msg: "{{ tomcat_start_result['stdout'] }}"
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '톰캣 설치확인',
+          'command': 'tomcat check',
+          'result': tomcat_start_result['stdout'] | default('알수없음'),
+          'is_success': True,
+          'is_pass': False if tomcat_start_result['failed'] else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

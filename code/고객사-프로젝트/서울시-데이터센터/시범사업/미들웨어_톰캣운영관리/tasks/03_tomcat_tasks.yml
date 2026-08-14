@@ -1,0 +1,41 @@
+---
+- name: 톰캣 실행
+  shell: "su - auto -c '{{ fap.host_vars.tomcat_home }}/bin/startup.sh'"
+  register: result_start
+  when: fap.host_vars.tomcat_status == 'start'
+
+- name: 톰캣 중지
+  shell: "su - auto -c '{{ fap.host_vars.tomcat_home }}/bin/shutdown.sh'"
+  register: result_stop
+  when: fap.host_vars.tomcat_status == 'stop'
+
+- name: 톰캣 재기동
+  shell: "su - auto -c '{{ fap.host_vars.tomcat_home }}/bin/shutdown.sh' && su - auto -c '{{ fap.host_vars.tomcat_home }}/bin/startup.sh'"
+  register: result_restart
+  when: fap.host_vars.tomcat_status == 'restart'
+
+- name: 결과 생성
+  set_fact:
+    tomcat_total: >-
+      {{ result_start.stdout | default(none) if fap.host_vars.tomcat_status == 'start' else
+         result_stop.stdout | default(none) if fap.host_vars.tomcat_status == 'stop' else
+         result_restart.stdout | default(none) if fap.host_vars.tomcat_status == 'restart' else
+         "작업 수행 결과가 없습니다." }}
+
+- name: 결과 디버깅
+  debug:
+    msg: "{{ tomcat_total }}"
+
+- name: Save DATA Merged 생성
+  set_fact:
+    merged_value: "{{ merged_value | default([]) + [{
+      'host': fap['host_ip'],
+      'host_name': fap['host_ip'],
+      'name': '리눅스_톰캣관리',
+      'command': 'hostname',
+      'result': tomcat_total,
+      'is_success': True,
+      'is_pass': True if tomcat_total != '작업 수행 결과가 없습니다.' else False,
+      'system': system,
+      'report_type': report_type
+        }] }}"

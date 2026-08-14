@@ -1,0 +1,58 @@
+---
+# 로그 저장 디렉토리 생성
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+# step4. 1작업
+- name: "프로세스 기동 확인 - 1"
+  shell: su - oracle -c "{{ item }}"
+  loop: "{{ DR_DB_CEHCK_CMD }}"
+  register: result_ps
+  loop_control:
+    label: "{{ item }}"
+
+- name: "프로세스 추출 - 1"
+  set_fact:
+   ps_results: "{{ ps_results|default([]) + [ '='*30 + item.cmd + '='*30 +'\n' + item.stdout ] }}"
+  loop: "{{ result_ps.results }}"
+  loop_control:
+    label: "{{ item.cmd }}"
+
+# step4. 2작업
+- name: "프로세스 기동 확인 - 2"
+  shell: su - oracle -c "{{ ps_status_sh }}"
+  register: result_ps
+
+- name: "프로세스 추출 - 2"
+  set_fact:
+   ps_results: "{{ ps_results|default([]) + [ '='*30 + 'DB날짜 쿼리' + '='*30 + '\n' + result_ps.stdout ] }}"
+
+# step4. 3작업
+- name: "Alert 로그 확인"
+  shell: |
+    source /home/oracle/.bash_profile
+    bdump
+    dump_dir=$(pwd)
+    su - oracle -c "tail -100 $dump_dir/alert*.log"
+  register: result_ps
+  
+- name: "Alert 추출 "
+  set_fact:
+   ps_results: "{{ ps_results|default([]) + [ '='*30 + 'Alert 로그'  + '='*30 + '\n' + result_ps.stdout ] }}"
+
+- name: 동기화 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_DB_CHECK_FILE }}"
+    create: true
+    block: |
+      {{ ps_results|join('\n') }}
+    marker: "# {mark} 동기화 중지 명령어 결과 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+- name: 동기화 중지 명령어 결과 백업 경로 출력 ---> localhost
+  debug:
+    msg: "{{ blockinfile_result.diff[0].after_header }}"

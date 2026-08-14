@@ -1,0 +1,24 @@
+---
+- name: 시스템정보 수집작업 호출
+  include_tasks: ../tasks/get_systeminfo.yml
+  loop: "{{ cmd }}"
+
+- name: "수집한 정보 {{ tmp_file }}파일에 저장"
+  lineinfile:
+    dest: "{{ local_dir_path }}/device_info/{{ tmp_file }}"
+    line:
+      "{{ os_facts }}"
+  delegate_to: localhost
+  register: result_tmpfile
+- name: Make merged value --- true
+  set_fact: 
+    merged_value: "{{ [{\
+    'host': inventory_hostname, \
+    'host_name': inventory_hostname, \
+    'is_success': true, \
+    'file_path': '{{ local_dir_path }}/device_info', \
+    'system': system, \
+    'report_type': report_type \
+    }] }}"
+  delegate_to: localhost
+  when: result_tmpfile.failed|default(true) == false 

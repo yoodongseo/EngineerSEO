@@ -1,0 +1,16 @@
+---
+- name: "인코딩 타입변경 명령어 수행(utf-8 to euc-kr)"
+  shell: "iconv -c -f utf-8 -t euc-kr {{ tmp_file }} >> {{ output_file }}"
+  args:
+    chdir: "{{ local_dir_path }}/device_info"
+  register: result_change_encoding
+  run_once: true
+  delegate_to: localhost
+  
+- name: "TMP 파일 삭제"
+  file:
+    path: "{{ local_dir_path }}/device_info/{{ tmp_file }}"
+    state: absent
+  run_once: true
+  delegate_to: localhost
+    

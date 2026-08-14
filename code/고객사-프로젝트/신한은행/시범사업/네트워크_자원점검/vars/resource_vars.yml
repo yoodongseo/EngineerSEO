@@ -1,0 +1,257 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: "backup"
+inspection_group: "예방점검"
+ansible_port: 22
+report_type: "네트워크 리소스 점검"
+system: "Network"
+data_key: 'NW_RESOURCE'
+
+### merged_value --- List 선언
+merged_value: []
+
+cisco:
+  - cmd_name: "CPU"
+    cmd_command: 'CPU'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 인터페이스 상태 변경
+    raw: 'show processes cpu | in CPU utilization'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0001
+
+  - cmd_name: "Memory"
+    cmd_command: 'Memory'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. Memory
+    raw: 'show processes memory | include Processor Pool Total'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0002
+
+  - cmd_name: "인터페이스별 메모리 사용량"
+    cmd_command: '인터페이스별 메모리 사용량'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. 인터페이스별 메모리 사용량
+    raw: 'show interfaces summary'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0003
+
+axgate:
+  - cmd_name: "CPU"
+    cmd_command: 'CPU'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU
+    raw: 'show resource cpu'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    id: 0001
+
+  - cmd_name: "Memory"
+    cmd_command: 'Memory'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. Memory
+    raw: 'show resource memory'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    id: 0002
+
+  - cmd_name: "Storage"
+    cmd_command: 'Storage'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. Storage
+    raw: 'show resource storage'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    id: 0003
+
+nexg:
+  - cmd_name: "CPU"
+    cmd_command: 'CPU'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU
+    raw: 'show process cpu | in ^CPU'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0001
+
+  - cmd_name: "Memory"
+    cmd_command: 'Memory'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. Memory
+    raw: 'show process memory | in ^Memory'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0002
+
+  - cmd_name: "Storage"
+    cmd_command: 'Storage'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. Storage
+    raw: 'show filesystem'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0003
+
+juniper:
+  - cmd_name: "CPU"
+    cmd_command: 'CPU'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU
+    raw: 'show system processes brief'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 4
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0001
+
+  - cmd_name: "Memory"
+    cmd_command: 'Memory'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. Memory
+    raw: "show system memory | match memory"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 4
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0002
+
+  - cmd_name: "Storage"
+    cmd_command: 'Storage'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. Storage
+    raw: 'show system storage'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 4
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0003
+
+nxos:
+  - cmd_name: "CPU"
+    cmd_command: 'CPU'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU
+    raw: 'show system resources | head lines 3'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0001
+
+  - cmd_name: "Memory"
+    cmd_command: 'Memory'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. Memory
+    raw: 'show system resources | in Memory'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0002
+
+  - cmd_name: "redundancy"
+    cmd_command: 'redundancy'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. redundancy
+    raw: 'show system redundancy status'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0003

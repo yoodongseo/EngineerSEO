@@ -1,0 +1,41 @@
+---
+- name: backup
+  hosts: all
+  connection: local
+  strategy: free
+  gather_facts: false
+  serial: 100
+  ignore_errors: true
+  ignore_unreachable: true
+  tasks:
+    - block:
+        - name: vars 호출
+          include_vars: ../vars/backup_vars.yml
+
+        - name: task 호출
+          include_tasks: ../tasks/backup_task.yml
+          loop: "{{ Windows }}"
+          loop_control:
+            label: "{{ item.cmd_name }} 진행"
+
+      always:
+        ### 생성된 merged_value 데이터를 content_value로 취합
+        - name: Make content value
+          set_fact:
+            content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+          delegate_to: localhost
+          when: merged_value is defined
+        
+        ### fap모듈 --- content_value -> DB 삽입
+        - name: Save to DB
+          fap.common.save_data:
+            content: "{{ content_value }}"
+            protocol: http
+            hostname: "{{ inventory_hostname }}"
+            # data_type: cli_data
+            data_type: backup
+            data_key: network
+            template_id: "{{ fap.template_id | default(omit) }}"
+            job_id: "{{ fap.job_id | default(omit) }}"
+          delegate_to: localhost
+          when: content_value is defined

@@ -1,0 +1,18 @@
+---
+- name: 패스워드 변경 --- python 파일 호출
+  command: /usr/bin/python3 ../vars/passwd.py
+  environment:
+    hostname: "{{ fap.host_ip }}"
+    port: "{{ ansible_port }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    root_passwd: "{{ ansible_become_password }}"
+    new_passwd: "{{ month_pass }}"
+    change_user: "{{ month_user }}"
+  register: password_value
+  delegate_to: localhost
+
+- name: AIX 패스워드 변경 인증
+  raw: "pwdadm -c {{ month_user }}"
+  when: 
+    - month_user == 'sysmng'

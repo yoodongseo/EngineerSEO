@@ -1,0 +1,15 @@
+---
+### raw 데이터 경로
+splex_file_path: /LOG_MGMT/SPLEX_CHK
+
+### 엑셀 저장 경로
+splex_save_path: "/fap/report/{{ splex_report_name }}/{{ today.stdout }}/{{ fap.job_id }}/{{ inventory_hostname }}"
+
+### 엑셀명
+splex_name: "splex_status_{{ today.stdout }}.xlsx"
+
+### 파이썬 엑셀 output 경로
+splex_output_path: "{{ splex_save_path }}/{{ splex_name }}"
+
+### 보고서 info
+splex_report_name: "db_synchronization"

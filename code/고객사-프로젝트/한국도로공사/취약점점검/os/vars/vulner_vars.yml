@@ -1,0 +1,10 @@
+---
+script_name: "Total_Linux_Vulnerability_Check.sh"
+script_path: "../vars/{{ script_name }}"
+output_path: "/tmp/{{ script_name }}"
+#save_path: "/fap/report/{{ today }}/{{ inventory_hostname }}"
+save_path: "/fap/report/{{ report_name }}/{{ today }}/{{ fap.job_id }}/{{ inventory_hostname }}"
+report_name: "vulnerability"
+# file_name: "{{ hostname_check.stdout_lines[1] }}_{{ today }}.log"
+file_name: "{{ hostname_check.stdout }}_{{ today }}.log"
+ansible_port: 22

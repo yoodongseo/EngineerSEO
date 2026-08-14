@@ -1,0 +1,13 @@
+- name: Run prompt
+  fap.custom.prompt:
+    command: "{{ inspection_commands }}"
+  delegate_to: localhost
+  register: prompt_result
+
+# - name: prompt debug
+#   debug:
+#     msg: "{{ prompt_result }}"
+
+- name: Set prompt result items
+  set_fact:
+    command_result_items: "{{ prompt_result.result.data_list }}"

@@ -1,0 +1,391 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: "backup"
+inspection_group: "예방점검"
+ansible_port: 22
+report_type: "네트워크 인터페이스 상태 변경"
+system: "Network"
+data_key: 'NW_CHG_INT_STAT'
+
+### merged_value --- List 선언
+merged_value: []
+
+## Global
+job_flag: "{{ 'UP' if fap['host_vars']['job_flag'] | default('Down') == 'UP' else 'Down' }}"
+description: "{{ fap['host_vars']['description'] | default('None') }}"
+## VLAN 설정
+vlan_id: "{{ fap['host_vars']['vlan_id'] | default(none) }}"
+vlan_name: "{{ fap['host_vars']['vlan_name'] | default(none) }}"
+vlan_int: "{{ fap['host_vars']['vlan_int'] | default(none) }}"
+vlan_ip: "{{ fap['host_vars']['vlan_ip'] | default(none) }}"
+vlan_subnet: "{{ fap['host_vars']['vlan_subnet'] | default(none) }}"
+
+## cisco test
+# interface_name: "{{ fap['host_vars']['interface_name'] | default('fastEthernet 0/4') }}"
+
+## axgate test
+interface_name: "{{ fap['host_vars']['interface_name'] | default('eth4') }}"
+
+cisco:
+  - cmd_name: "인터페이스 상태 변경"
+    cmd_command: '인터페이스 상태 변경'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 인터페이스 상태 변경
+    raw: ''
+    multi_raw:
+      - 'show running-config interface {{ interface_name }}' ## before
+      - 'show interface {{ interface_name }} status'  ## before
+      - 'configure terminal'
+      - 'interface {{ interface_name }}'
+      - "{{ 'shutdown' if job_flag == 'Down' else 'no shutdown' }}"
+      - 'end'
+      - 'show running-config interface {{ interface_name }}' ## after
+      - 'show interface {{ interface_name }} status' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0001
+
+  - cmd_name: "포트 Description"
+    cmd_command: '포트 Description'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 포트 Description
+    raw: ''
+    multi_raw:
+      - 'show running-config interface {{ interface_name }}' ## before
+      - 'show interface {{ interface_name }} status'  ## before
+      - 'configure terminal'
+      - 'interface {{ interface_name }}'
+      - 'description {{ description }}'
+      - 'end'
+      - 'show running-config interface {{ interface_name }}' ## after
+      - 'show interface {{ interface_name }} status' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0002
+
+  - cmd_name: "VLAN 할당"
+    cmd_command: 'VLAN 할당'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. VLAN 할당
+    raw: ''
+    multi_raw:
+      - 'show interface status' ## before
+      - 'configure terminal'
+      - 'vlan {{ vlan_id }}'
+      - 'name {{ vlan_name }}'
+      - 'exit'
+      - 'interface {{ vlan_int }}'
+      - 'switchport access vlan {{ vlan_id }}'
+      - 'exit'
+      - 'interface vlan {{ vlan_id }}'
+      - 'ip address {{ vlan_ip }} {{ vlan_subnet }}'
+      - 'end'
+      - 'show interface status' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0003
+
+axgate:
+  - cmd_name: "인터페이스 상태 변경"
+    cmd_command: "인터페이스 상태 변경"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        "1. 인터페이스 상태 변경"
+    raw: ''
+    multi_raw:
+      - 'show running-config interface {{ interface_name }}' ## before
+      - 'show ip interface {{ interface_name }} brief' ## before
+      - 'configure terminal'
+      - 'interface {{ interface_name }}'
+      - "{{ 'shutdown' if job_flag == 'Down' else 'no shutdown' }}"
+      - 'end'
+      - 'show running-config interface {{ interface_name }}' ## after
+      - 'show ip interface {{ interface_name }} brief'  ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap.host_ip }}_axgate.txt"
+    id: 0001
+
+  - cmd_name: "포트 Description"
+    cmd_command: '포트 Description'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 포트 Description
+    raw: ''
+    multi_raw:
+      - 'show running-config interface {{ interface_name }}' ## before
+      - 'show interface {{ interface_name }}'  ## before
+      - 'configure terminal'
+      - 'interface {{ interface_name }}'
+      - 'description {{ description }}'
+      - 'end'
+      - 'show running-config interface {{ interface_name }}' ## after
+      - 'show interface {{ interface_name }}' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    id: 0002
+
+    # - cmd_name: "VLAN 할당"
+    #   cmd_command: 'VLAN 할당'
+    #   value: "str"
+    #   com_value: "Fail"
+    #   message: |
+    #       3. VLAN 할당
+    #   raw: ''
+    #   multi_raw:
+    #     - 'show running-config interface {{ interface_name }}' ## before
+    #     - 'show interface {{ interface_name }}'  ## before
+    #     - 'configure terminal'
+    #     - 'vlan {{ vlan_id }}'
+    #     - 'name {{ vlan_name }}'
+    #     - 'exit'
+    #     - 'interface {{ vlan_int }}'
+    #     - 'switchport access {{ vlan_id }}'
+    #     - 'exit'
+    #     - 'interfact {{ vlan_id }}'
+    #     - 'ip address {{ vlan_ip }} {{ vlan_subnet }}'
+    #     - 'end'
+    #     - 'show interface status' ## after
+    #   arr_num: 0
+    #   grep: ""
+    #   time: 2
+    #   criteria: "Fail 결과 존재 시 비정상"
+    #   tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    #   id: 0003
+
+nexg:
+  - cmd_name: "인터페이스 상태 변경"
+    cmd_command: '인터페이스 상태 변경'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 인터페이스 상태 변경
+    raw: ''
+    multi_raw:
+      - 'show running-config interface {{ interface_name }}' ## before
+      - 'configure terminal'
+      - 'interface {{ interface_name }}'
+      - "{{ 'shutdown' if job_flag == 'Down' else 'no shutdown' }}"
+      - 'end'
+      - 'show running-config interface {{ interface_name }}' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0001
+
+  - cmd_name: "포트 Description"
+    cmd_command: '포트 Description'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 포트 Description
+    raw: ''
+    multi_raw:
+      - 'show running-config interface {{ interface_name }}' ## before
+      - 'configure terminal'
+      - 'interface {{ interface_name }}'
+      - 'description {{ description }}'
+      - 'end'
+      - 'show running-config interface {{ interface_name }}' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0002
+
+  # - cmd_name: "VLAN 할당"
+  #   cmd_command: 'VLAN 할당'
+  #   value: "str"
+  #   com_value: "Fail"
+  #   message: |
+  #       3. VLAN 할당
+  #   raw: ''
+  #   multi_raw:
+  #     - 'show running-config interface {{ interface_name }}' ## before
+  #     - 'configure terminal'
+  #     - 'vlan {{ vlan_id }}'
+  #     - 'name {{ vlan_name }}'
+  #     - 'exit'
+  #     - 'interface {{ vlan_int }}'
+  #     - 'switchport access vlan {{ vlan_id }}'
+  #     - 'exit'
+  #     - 'interfact vlan {{ vlan_id }}'
+  #     - 'ip address {{ vlan_ip }} {{ vlan_subnet }}'
+  #     - 'end'
+  #     - 'show running-config interface {{ interface_name }}' ## after
+  #   arr_num: 0
+  #   grep: ""
+  #   time: 2
+  #   criteria: "Fail 결과 존재 시 비정상"
+  #   tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+  #   id: 0003
+
+juniper:
+  - cmd_name: "인터페이스 상태 변경"
+    cmd_command: '인터페이스 상태 변경'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 인터페이스 상태 변경
+    raw: ''
+    multi_raw:
+      - 'show configuration interfaces {{ interface_name }}' ## before
+      - 'configure'
+      - "{{ 'set' if job_flag == 'Down' else 'delete' }} interface {{ interface_name }} disable"
+      - "commit"
+      - 'exit'
+      - 'show configuration interfaces {{ interface_name }}' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0001
+
+  - cmd_name: "포트 Description"
+    cmd_command: '포트 Description'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 포트 Description
+    raw: ''
+    multi_raw:
+      - 'show configuration interfaces {{ interface_name }}' ## before
+      - 'configure'
+      - "{{ 'set' if job_flag == 'UP' else 'delete' }} interface {{ interface_name }} description {{ description }}"
+      - "commit"
+      - 'exit'
+      - 'show configuration interfaces {{ interface_name }}' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0002
+
+    #  - cmd_name: "VLAN 할당"
+    #    cmd_command: 'VLAN 할당'
+    #    value: "str"
+    #    com_value: "Fail"
+    #    message: |
+    #        3. VLAN 할당
+    #    raw: ''
+    #    multi_raw:
+    #      - 'show vlans' ## before
+    #      - 'configure'
+    #      - "{{ 'set' if job_flag == 'UP' else 'delete' }} vlans {{ vlan_name }} vlan-id {{ vlan_id }}"
+    #      - "{{ 'set' if job_flag == 'UP' else 'delete' }} interfaces {{ vlan_int }} unit 0 family ethernet-switching interface-mode access"
+    #      - "{{ 'set' if job_flag == 'UP' else 'delete' }} interfaces {{ vlan_int }} unit 0 family ethernet-switching vlan members {{ vlan_name }}"
+    #      - "commit"
+    #      - 'exit'
+    #      - 'show vlans' ## after
+    #    arr_num: 0
+    #    grep: ""
+    #    time: 2
+    #    criteria: "Fail 결과 존재 시 비정상"
+    #    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    #    id: 0003
+
+nxos:
+  - cmd_name: "인터페이스 상태 변경"
+    cmd_command: '인터페이스 상태 변경'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 인터페이스 상태 변경
+    raw: ''
+    multi_raw:
+      - "switchto vdc VD"
+      - 'show running-config interface {{ interface_name }}' ## before
+      - 'show interface {{ interface_name }} status'  ## before
+      - 'configure terminal'
+      - 'interface {{ interface_name }}'
+      - "{{ 'shutdown' if job_flag == 'Down' else 'no shutdown' }}"
+      - 'end'
+      - 'show running-config interface {{ interface_name }}' ## after
+      - 'show interface {{ interface_name }} status' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0001
+
+  - cmd_name: "포트 Description"
+    cmd_command: '포트 Description'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 포트 Description
+    raw: ''
+    multi_raw:
+      - "switchto vdc VD"
+      - 'show running-config interface {{ interface_name }}' ## before
+      - 'show interface {{ interface_name }} status'  ## before
+      - 'configure terminal'
+      - 'interface {{ interface_name }}'
+      - 'description {{ description }}'
+      - 'end'
+      - 'show running-config interface {{ interface_name }}' ## after
+      - 'show interface {{ interface_name }} status' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0002
+
+  - cmd_name: "VLAN 할당"
+    cmd_command: 'VLAN 할당'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. VLAN 할당
+    raw: ''
+    multi_raw:
+      - "switchto vdc VD"
+      - "show interface {{ interface_name }} status" ## before
+      - 'configure terminal'
+      - 'vlan {{ vlan_id }}'
+      - 'name {{ vlan_name }}'
+      - 'exit'
+      - 'interface {{ vlan_int }}'
+      - 'switchport'
+      - 'switchport access vlan {{ vlan_id }}'
+      - 'exit'
+      - 'interface vlan {{ vlan_id }}'
+      - 'ip address {{ vlan_ip }} {{ vlan_subnet }}'
+      - 'end'
+      - 'show interface {{ interface_name }} status' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0003

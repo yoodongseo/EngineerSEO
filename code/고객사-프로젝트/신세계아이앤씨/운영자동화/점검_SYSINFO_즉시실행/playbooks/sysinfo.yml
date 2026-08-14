@@ -1,0 +1,286 @@
+---
+
+- name: Sysinfo
+  hosts: all
+  become: true
+  gather_facts: true
+  ignore_errors: true
+  ignore_unreachable: true
+  tasks: 
+  - name: asd
+    include_vars: ../vars/vars_rhel.yml
+
+  - name: merged_value 생성
+    set_fact:
+      merged_value: []
+
+  - name: CHECK 디렉토리 생성
+    file: 
+      path: /check
+      state: directory
+    # run_once: yes
+
+  - name: 스크립트 파일 배포
+    ansible.builtin.copy:
+      src: "../vars/{{ item.command }}"
+      dest: "/check/{{ item.command }}"
+    loop: "{{ Linux_sysinfo }}"
+
+  - name: sysinfo 스크립트 실행
+    shell: "sh {{ item.command }}"
+    args:
+      chdir: '/check/'
+    register: result_script
+    loop: "{{ Linux_sysinfo }}"
+
+  - name: set_fact - result_value
+    set_fact:
+      result_value: "{{ result_value | default({}) | combine({\
+      'host': inventory_hostname, \
+      'id': item.id, \
+      'name': item.name, \
+      'result': result_script.stdout_lines|default(None), \
+      'is_success': True, \
+      'compare': True }) }}"
+    delegate_to: localhost
+    loop: "{{ Linux_sysinfo }}"
+
+  - name: set_fact - merged_value
+    set_fact:
+      merged_value: "{{ merged_value + [result_value] }}"
+    delegate_to: localhost
+
+# ---
+# - name: Sysinfo
+#   hosts: all
+#   become: true
+#   gather_facts: true
+#   ignore_errors: true
+#   ignore_unreachable: true
+  
+#   tasks:    
+
+#   ##리눅스일 때
+#     - name: 레드햇 hostname 출력
+#       shell: hostname      
+#       register: hostname
+#       when: ansible_distribution == "RedHat"
+    
+#     - name: HW info 출력
+#       shell: dmidecode –t system
+#       register: HW_info
+#       when: ansible_distribution == "RedHat"
+
+#     - name: oslevel 출력
+#       shell: uname -a
+#       register: oslevel
+#       when: ansible_distribution == "RedHat"
+
+#     - name: cluster status - RHCS 출력
+#       shell: /usr/sbin/clustat
+#       register: RHCS
+#       when: ansible_distribution == "RedHat"
+
+#     - name: cluster status - Pacemaker 출력
+#       shell: pcs status
+#       register: Pacemaker
+#       when: ansible_distribution == "RedHat"
+
+#     - name: cluster status - Infoscale 출력
+#       shell: hastatus -sum
+#       register: Infoscale
+#       when: ansible_distribution == "RedHat"
+
+#     - name: network info 출력
+#       shell: ifconfig
+#       register: nw_info
+#       when: ansible_distribution == "RedHat"
+
+#     - name: disk info 출력
+#       shell: df -h
+#       register: disk_info
+#       when: ansible_distribution == "RedHat"
+
+#     - name: Running process - Nodesafer, DBsafer
+#       shell: ps –ef |grep safer
+#       register: safer
+#       when: ansible_distribution == "RedHat"
+
+#     - name: Running process - polestar
+#       shell: ps –ef |grep AGENT
+#       register: AGEBT
+#       when: ansible_distribution == "RedHat"
+
+#     - name: Running process - Cubeone
+#       shell: ps –ef |grep cubeone
+#       register: cubeone
+#       when: ansible_distribution == "RedHat"
+
+#     - name: Running process - Netbackup
+#       shell: ps –ef |grep bp
+#       register: bp
+#       when: ansible_distribution == "RedHat"
+
+#     - name: Running process - OSWatcher
+#       shell: ps –ef |grep osw
+#       register: osw
+#       when: ansible_distribution == "RedHat"
+
+#     - name: ntp
+#       shell: ps –ef |grep xntpd
+#       register: ntp
+#       when: ansible_distribution == "RedHat"
+    
+  # - name: set_fact --- result_value 변수에 작업 성공 정보 저장
+  #   set_fact:
+  #     result_value: "{{ result_value | default({}) | combine({'host': inventory_hostname, \
+  #     'id': item.id,\
+  #     'name': item.name, \
+  #     'command': command, \
+  #     'result': result|default(''), \
+  #     'message': None, \
+  #     'is_success': True, \
+  #     'os': os|default(None), \
+  #     'compare': compare|default(None) \
+  #       }) }}"    
+  #   delegate_to: localhost
+
+    ##Solaris 일 때
+    # - name: hostname 출력
+    #   shell: hostname      
+    #   register: hostname
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: HW info 출력
+    #   shell: ptrdiag
+    #   register: HW_info
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: oslevel 출력
+    #   shell: uname -a
+    #   register: oslevel
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: cluster status - Prime Cluster 출력
+    #   shell: hvdisp -a
+    #   register: Prime Cluster
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: network info 출력
+    #   shell: ifconfig -a
+    #   register: nw_info
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: disk info 출력
+    #   shell: df -k
+    #   register: disk_info
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: Running process - Nodesafer, DBsafer
+    #   shell: ps –ef |grep safer
+    #   register: safer
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: Running process - polestar
+    #   shell: ps –ef |grep AGENT
+    #   register: AGENT
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: Running process - Cubeone
+    #   shell: ps –ef |grep cubeone
+    #   register: cubeone
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: Running process - Netbackup
+    #   shell: ps –ef |grep bp
+    #   register: bp
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: Running process - OSWatcher
+    #   shell: ps –ef |grep osw
+    #   register: osw
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: ntp
+    #   shell: ps –ef |grep xntpd
+    #   register: ntp
+    #   when: ansible_distribution == 'Solaris'
+
+    # - name: Print registered variables
+    #   debug:
+    #     var: "{{ item }}"
+    #   with_items:
+    #     - hostname
+    #     - HW_info
+    #     - oslevel
+    #     - RHCS
+    #     - Pacemaker
+    #     - Infoscale
+    #     - nw_info
+    #     - disk_info
+    #     - safer
+    #     - AGEBT
+    #     - cubeone
+    #     - bp
+    #     - osw
+    #     - ntp
+    #   when: ansible_distribution == "RedHat"
+
+
+
+
+##기존 코드
+# ---
+# - name: sysinfo
+#   hosts: all
+#   gather_facts: true
+#   ignore_errors: true
+#   ignore_unreachable: true
+#   vars:
+#     data_type: backup
+#     data_key: network
+#     os: "{{ ansible_facts.distribution|default(None) }}"
+#     compare: True
+#     fail_flag: False
+#   tasks:
+#   - block:
+#     - name: 연결상태 체크 작업 호출(RedHat)
+#       include_tasks: ../tasks/connection_check.yml
+#       when: ansible_facts.distribution|default('unknown') == 'RedHat' 
+
+#     - name: sysinfo 작업 실행(RedHat)
+#       include: ../tasks/sysinfo_rhel.yml
+#       ignore_errors: false
+#       when: ansible_facts.distribution|default('unknown') == 'RedHat' and result_connection.failed == false
+
+#     always:
+#     - name: Make failure message
+#       include_tasks: ../tasks/make_failure_msg.yml
+#       when: result_connection.failed|default(true) == true
+
+#     - name: Make content value
+#       set_fact:
+#         content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+#       delegate_to: localhost
+#       when: merged_value is defined
+
+#     - name: Save to DB
+#       fap.common.save_data:
+#         content: "{{ content_value }}"
+#         protocol: http
+#         hostname: "{{ inventory_hostname }}"
+#         data_type: backup
+#         data_key: network
+#         template_id: "{{ fap.template_id | default(omit) }}"
+#         job_id: "{{ fap.job_id | default(omit) }}"
+#       delegate_to: localhost
+#       when: content_value is defined
+
+#     - name: 작업 실패 판단
+#       debug:
+#         msg: 작업 실패, 작업 템플릿 로그 내용을 확인해주세요.
+#       ignore_errors: false
+#       delegate_to: localhost
+#       when: fail_flag or (result_connection.failed|default(true) == true)
+#       failed_when: fail_flag or (result_connection.failed|default(true) == true)
+  

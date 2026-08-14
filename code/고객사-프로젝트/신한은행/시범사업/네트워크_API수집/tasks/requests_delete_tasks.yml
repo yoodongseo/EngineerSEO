@@ -1,0 +1,16 @@
+---
+- name: Delete API 수행
+  ansible.builtin.uri:
+    url: "{{ API_URL }}"
+    method: DELETE
+    user: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    force_basic_auth: true
+    return_content: true
+    headers:
+      Content-Type: application/json
+    status_code: "{{ status_code }}"
+    validate_certs: "{{ validate_certs }}"
+    body_format: json
+    body: "{{ delete_body | default(omit) }}"
+  register: delete_response

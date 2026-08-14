@@ -1,0 +1,56 @@
+---
+- block:
+  - name: 배포 경로 생성
+    file:
+      path: "{{ copy_dest }}"
+      state: directory
+
+  - name: 설치 패키지 배포
+    copy:
+      src: "{{ copy_src }}/{{ item['name'] }}"
+      dest: "{{ copy_dest }}"
+    loop: "{{ pkg_name }}"
+    loop_control:
+      label: "{{ item['name'] }} 배포 진행중.."
+
+  - name: "{{ lineinfile['target_file'] }} 파일 내 Avamar 호스트 항목 추가" 
+    lineinfile:
+      path: "{{ lineinfile['target_file'] }}"
+      line: "{{ item['value'] }}"
+      regexp: "{{ item['line_keyword'] | default(omit) | regex_escape }}"
+      state: present
+    loop: "{{ lineinfile['avamar_hosts_entries'] }}"     
+
+  - name: 설치 작업 수행
+    command: /usr/bin/python3 ../vars/cli_expect.py
+    environment:
+      username: "{{ ansible_user }}"
+      password: "{{ ansible_password }}"
+      hostname: "{{ fap['host_ip'] }}"
+      port: "{{ ansible_port | default('22') }}"
+      command_expect: "{{ item | to_json }}"
+      su_password: "{{ ansible_become_password | default('') }}"
+    loop: "{{ expect_cli_list['install'] }}"
+    loop_control:
+      label: "{{ item['name'] }}"
+    register: result_install_py
+    delegate_to: localhost
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': item.item.name,
+          'command': 'Avamar Agent install',
+          'result': item.stdout | default(none),
+          'is_success': True,
+          'is_pass': False if item.failed | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"
+      when: item.stdout is defined
+      loop: "{{ result_install_py.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"

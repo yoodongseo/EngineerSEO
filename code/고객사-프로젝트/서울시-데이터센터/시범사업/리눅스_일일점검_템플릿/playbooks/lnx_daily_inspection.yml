@@ -1,0 +1,38 @@
+---
+- name: Linux POC 코드
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/poc_vars.yml
+  tasks:
+  - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_poc_con_tasks.yml
+
+      - name: 2. 점검 수행 - 작업 보고서
+        include_tasks: ../tasks/save_data_report.yml
+        loop: "{{ lnx_inspection_item }}"
+        loop_control:
+          label: "{{ item['name'] }} 점검 수행"
+
+      # - name: 2. 점검 수행 - 백업 관리
+      #   include_tasks: ../tasks/save_data_report.yml
+      #   loop: "{{ lnx_inspection_item }}"
+      #   loop_control:
+      #     label: "{{ item['name'] }} 점검 수행"
+
+      # - name: 2. 점검 수행 - path 다운로드
+      #   include_tasks: ../tasks/save_data_report.yml
+      #   loop: "{{ lnx_inspection_item }}"
+      #   loop_control:
+      #     label: "{{ item['name'] }} 점검 수행"
+
+    always:
+      # - name: content_value 백업 생성
+      #   include_tasks: ../tasks/content_backup.yml
+
+      - name: content_value report 생성
+        include_tasks: ../tasks/content_report.yml

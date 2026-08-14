@@ -1,0 +1,44 @@
+report_type: 'backup'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "backup" # content save backup 외 report, backup
+save_type: "backup" # report, path, backup
+system: "Linux"
+model: "linux"
+hostip: "{{ fap.host_ip }}"
+target_type: "server"
+
+# mail 설정
+target_team_name: ""
+target_mailing_list: "user@example.com"
+smtp_noti_name: "EMAIL"
+
+inspection_commands:
+  # - id: '0001'
+  #   name: '01. 설비의 계정'
+  #   command: 'cat /etc/passwd'
+
+  # - id: '0002'
+  #   name: '02. OS 정보'
+  #   command: 'uname -a'
+  - cmd_id: "0001"
+    name: "01. 설비의 계정"
+    command: "cat /etc/passwd"
+    os: "{{ vendor }}"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+  - cmd_id: "0002"
+    name: "02. OS 정보"
+    command: "uname -a"
+    os: "{{ vendor }}"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"

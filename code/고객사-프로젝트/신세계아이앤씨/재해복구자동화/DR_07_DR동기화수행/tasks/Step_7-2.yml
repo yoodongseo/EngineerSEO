@@ -1,0 +1,22 @@
+---
+- name: DR DB 복제 상태 점검
+  shell: su - oracle -c "{{ db_copy }}"
+  register: result
+
+- name: "DR DB 복제 상태 점검 추출"
+  set_fact:
+   db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'DR DB 복제 상태 점검'  + '='*30 + '\n' + result.stdout ] }}"
+
+- name: DR DB 복제 상태 점검 로그 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_CHECK_FILE }}"
+    create: true
+    block: |
+      {{ db_recovery_results|join('\n') }}
+    marker: "# {mark} DR DB 복제 상태 점검 로그 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+- name: DR DB 복제 상태 점검 로그 백업 경로 출력
+  debug:
+    msg: "{{ blockinfile_result.diff[0].after_header }}"

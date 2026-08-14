@@ -1,0 +1,28 @@
+---
+- name: 인터페이스 설정 값 변경
+  hosts: all
+  strategy: free
+  gather_facts: false 
+  ignore_errors: false
+  ignore_unreachable: true
+  vars_files: ### vars 파일 호출(점검 명령어 및 python filter 기입 변수 수집)
+    - ../vars/pre_vars.yml
+  tasks:
+    - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/00_nw_con_check.yml
+
+      - name: 2. 인터페이스 상태 변경 수행
+        include_tasks: ../tasks/01_nw_change_state_tasks.yml
+        loop: >-
+          {{ axgate if vendor == 'axgate'
+          else cisco if vendor == 'cisco' 
+          else nexg if vendor == 'nexg'
+          else juniper if vendor == 'juniper'
+          else nxos if vendor == 'nxos' }}
+        loop_control:
+          label: "{{ item }}"
+        
+      always:
+        - name: 데이터 저장
+          include_tasks: ../tasks/save_data.yml

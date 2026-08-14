@@ -1,0 +1,20 @@
+---
+- name: Linux Agent MGMT(POLESTAR)
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/lnx_agent_polestar_vars.yml
+  tasks:
+  - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_lnx_con_tasks.yml
+
+      - name: "2. Agent {{ req_type }} 작업 수행" ## install, uninstall, start, stop, restart
+        include_tasks: ../tasks/02_lnx_agent_polestar_{{ req_type }}_tasks.yml
+        
+    always:
+      - name: 데이터 저장
+        include_tasks: ../tasks/save_data.yml

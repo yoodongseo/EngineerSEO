@@ -1,0 +1,78 @@
+---
+- block:
+  - name: 파일 배포
+    win_copy:
+      src: "{{ pkg_src }}"
+      dest: "{{ update_pkg_dest }}"
+
+  # - name: 배포 파일 압축해제
+  #   win_unzip:
+  #     src: "{{ update_pkg_dest }}{{ pkg_src.split('/')[-1] }}"
+  #     dest: "{{ update_pkg_dest }}"
+
+  - name: 업데이트 파일 확인
+    ansible.windows.win_find:
+      paths: "{{ update_pkg_dest }}"
+      patterns: "*.msu"
+    register: msu_result    
+
+  - name: 업데이트 쉘 배포
+    win_copy:
+      content: |
+        # PowerShell Script to install MSU Files
+        wusa {{ msu_result['files'][0]['path'] }} /quiet /norestart
+      dest: "{{ update_pkg_dest }}/update_ps.ps1"
+
+  - name: 업데이트 수행
+    win_shell: |
+      $taskName = "update_scheduledtask"
+      $scriptPath = "{{ update_pkg_dest }}/update_ps.ps1"
+      
+      # 작업 등록
+      schtasks /create /tn $taskName /tr "powershell.exe -ExecutionPolicy Bypass -File $scriptPath" /sc once /st 00:00 /rl highest /f /ru "SYSTEM"
+      
+      # 작업 즉시 실행
+      schtasks /run /tn $taskName
+
+      # 작업 삭제
+      schtasks /delete /tn $taskName /f
+    register: result_update
+  
+  - name: 업데이트 항목 추출
+    set_fact:
+      kb_number: "{{ msu_result['files'][0]['path'] | regex_search('kb([0-9]+)') }}"
+    
+  - name: 업데이트 항목 debug
+    debug:
+      msg: "업데이트 항목 : {{ kb_number }}"
+    
+  - name: win_update_check
+    win_shell: Get-winevent -LogName "Setup" | Select-Object -First 2 | Out-String -Width 512
+    # win_shell: Get-winevent -LogName "Setup" | Select-Object -First 3
+    until: "'성공' in win_update_result.stdout"
+    retries: 8
+    delay: 1
+    register: win_update_result
+    ignore_errors: true
+    
+  - name: 성공 여부 판단
+    set_fact:
+      win_is_success: "성공"
+    when: 
+      - "'성공' in win_update_result.stdout"
+      - "kb_number in win_update_result.stdout"
+    
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. 업데이트',
+          'command': 'hostname',
+          'result': win_update_result.stdout,
+          'is_success': True,
+          'is_pass': True if win_is_success | default(False) == '성공' else False,
+          'system': system,
+          'report_type': report_type
+            }] }}"

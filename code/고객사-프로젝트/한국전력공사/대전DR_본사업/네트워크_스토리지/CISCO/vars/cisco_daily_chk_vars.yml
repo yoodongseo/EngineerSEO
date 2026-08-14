@@ -1,0 +1,146 @@
+---
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "network"
+model: "cisco"
+data5: "에방점검_Cisco"
+
+commands:
+  - cmd_id: "0001"
+    filter_key: "CiscoCPUFilter"
+    name: "01. CPU 점검"
+    command: "show processes cpu"
+    os: "{{ model }}"
+    inspection_criteria:
+      five_seconds_avg: 20
+      one_minute_avg: 15
+      five_minutes_avg: 10
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+  - {
+      cmd_id: "0002",
+      filter_key: "CiscoMemoryFilter",
+      name: "02. 메모리 점검",
+      command: "show system resources",
+      os: "{{ model }}",
+      inspection_criteria: 10,
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0003",
+      filter_key: "InterfaceStatusFilter",
+      name: "03. 인터페이스 점검",
+      command: "show interface",
+      os: "{{ model }}",
+      inspection_criteria: 80,
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0004",
+      filter_key: "CiscoInterfaceFilter",
+      name: "04. 모듈 상태 점검",
+      command: "show interface status",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0005",
+      filter_key: "CiscoVlanFilter",
+      name: "05. VLAN 상태 점검",
+      command: "show vlan brief",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0006",
+      filter_key: "CiscoMacFilter",
+      name: "06. Mac, Arp 상태 점검",
+      command: "show mac address-table",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0007",
+      filter_key: "CiscoRouteFilter",
+      name: "07. 라우팅 Table 상태 점검",
+      command: "show ip route",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0008",
+      filter_key: "CiscoSTPFilter",
+      name: "08. STP상태 점검",
+      command: "show spanning-tree",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0009",
+      filter_key: "LogFilter",
+      name: "09. Log 점검",
+      command: "show logging last 50",
+      os: "{{ model }}",
+      inspection_criteria: "error,down",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+
+  - {
+      cmd_id: "0010",
+      filter_key: "CiscoEnvironmentFilter",
+      name: "10. 전원, FAN 등 점검",
+      command: "show environment",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }

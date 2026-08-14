@@ -1,0 +1,81 @@
+---
+- name: Register Handler Test
+  hosts: all
+  gather_facts: false
+  strategy: free
+  ignore_unreachable: true
+  vars_files:
+    - ../vars/common.yml
+
+  module_defaults:
+    fap.custom.prompt:
+      fap_vars: "{{ fap }}"
+      protocol: ssh
+      ip: "{{ inventory_hostname }}"
+      ssh_port: "{{ ansible_port | default(22) }}"
+      result_type: cli_data
+      target_type: "{{ target_type }}"
+      user_id: "{{ ansible_user }}"
+      user_password: "{{ ansible_password | default('') }}"
+      become_method: "{{ ansible_become_method | default('') }}"
+      become_user: "{{ ansible_become_user | default('') }}"
+      become_password: "{{ ansible_become_password | default('') }}"
+
+  tasks:
+    - block:
+        - name: Load vendor vars
+          include_vars: "../vars/{{ vendor | lower }}.yml"
+          
+        - name: 사전 점검 tasks 파일 Check
+          set_fact:
+            con_check_file: >-
+              con_check_{{
+                'windows' if (vendor | default('') | lower) == 'windows'
+                else 'linux' if (vendor | default('') | lower) in ['linux', 'solaris', 'hpux', 'aix', 'linux5']
+                else 'other'
+              }}.yml
+        
+        - name: 사전 점검 tasks 호출
+          include_tasks: "/fap/ansible/projects/faplib/tasks/{{ con_check_file }}"
+
+        - name: Run vendor tasks
+          include_tasks:
+            file: "../tasks/{{ 'windows' if vendor == 'Windows' else 'ssh' }}.yml"
+
+        - name: Run register handler
+          fap.custom.register_handler:
+            result_items: "{{ command_result_items }}"
+            inspection_items: "{{ inspection_commands | selectattr('is_save', 'eq', true) | list }}"
+            host: "{{ inventory_hostname }}"
+            host_name: "{{ inventory_hostname }}"
+            report_type: "{{ report_type }}"
+            file_path: "{{ file_path }}"
+            system: "{{ system }}"
+            report_target: "{{ report_target }}"
+          delegate_to: localhost
+          register: result_value
+
+        # - name: 결과 debug
+        #   debug:
+        #     msg: "{{ result_value }}"
+
+        # - name: Show register result
+        #   debug:
+        #     msg: |
+        #       {{ item.result }}
+        #   loop: "{{ result_value.result }}"
+        #   loop_control:
+        #     label: "{{ item.name }}"
+            
+      always:
+        - name: 데이터 비교 Tasks 호출
+          include_tasks: /fap/ansible/projects/faplib/tasks/diff_notice_task.yml
+          when:
+            - result_value is defined
+            - result_value.result is defined
+            
+        - name: DB 저장 Tasks 호출
+          include_tasks: /fap/ansible/projects/faplib/tasks/content_savedb.yml
+          #          when:
+          #            - result_value is defined
+          #            - result_value.result is defined

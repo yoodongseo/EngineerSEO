@@ -1,0 +1,35 @@
+---
+# 사용자 입력 변수 (포탈에서 넘어오는)
+wideips_name: "{{ fap.host_vars.reqgslbinfo.domainname}}"
+net_type: "{{ fap.host_vars.reqgslbinfo.nettype|default('unknown')}}" # netType
+pool_lbmode: "{{ fap.host_vars.reqgslbinfo.gslbmetric|default('ratio') }}" # gslbMetric
+pool_ttl: "{{ fap.host_vars.reqgslbinfo.ttl|default(60) }}" # ttl
+company_code: "{{ fap.host_vars.reqgslbinfo.companycode}}"
+vinfo: "{{ fap.host_vars.reqgslbinfo.reqgslbtargetlist }}"
+# vinfo 정보
+# "reqGslbTargetList": [
+#             {
+#               "serverName": "GP",
+#               "ip": "192.0.2.10",
+#               "distributionRatio": 80,
+#               "healthCheckPort": "8989",
+#               "healthCheckIp": "192.0.2.10",
+#               "protocol": "tcp",
+#             },
+
+# check
+# center_code: "GP"
+
+# 네이밍룰 pool_계열사코드_도메인
+pool_name: "{{ 'pool_' ~ company_code ~ '_' ~ wideips_name }}"
+
+# default
+pool_ratio: "1"
+pool_type: "A"
+pool_order: 0
+healthcheck_monitor: "/Common/tcp" # Virtual 서버에 적용
+
+vserver_idx: 0
+vserver_data: []
+
+is_check: "{{ fap.host_vars.reqgslbinfo.is_check|default(true)}}" #검증여부 true면 검증만 실행

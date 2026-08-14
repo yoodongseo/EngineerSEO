@@ -1,0 +1,80 @@
+---
+- name: check_system_config
+  hosts: all
+  gather_facts: true
+  ignore_errors: true
+  ignore_unreachable: true
+  vars:
+    data_key: Linux_systeminfo
+    report_type: '시스템구성점검(OS)'
+    system: '리눅스'
+  vars_files:
+    - '../vars/check_system_vars.yml'
+  tasks:
+  - block:
+    - name: "연결 상태 체크"
+      shell: hostname
+      register: result_connection
+      failed_when: false
+      ignore_unreachable: true
+      ignore_errors: true
+
+    - name: 사전 준비 작업 호출
+      include_tasks: ../tasks/pre_task.yml
+      when: result_connection.failed|default(true) == false and ansible_facts.distribution == "RedHat"
+
+    - name: 점검 작업 호출
+      include_tasks: ../tasks/check_system_config_main.yml
+      when: result_connection.failed|default(true) == false and ansible_facts.distribution == "RedHat"
+
+    - name: 사후 완료 작업 호출
+      include_tasks: ../tasks/post_task.yml
+      when: result_connection.failed|default(true) == false and ansible_facts.distribution == "RedHat"  
+
+    always:
+      - name: Make Failure value
+        set_fact:
+          merged_value: "{{ merged_value|default([]) + [{\
+          'host': inventory_hostname, \
+          'host_name': inventory_hostname, \
+          'is_success': false, \
+          'file_path': none, \
+          'system': system, \
+          'report_type': report_type \
+            }] }}"
+        delegate_to: localhost
+        when: result_connection.failed|default(true) == true or merged_value is not defined
+
+      - name: Make content value
+        set_fact:
+          content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+        delegate_to: localhost
+        when: merged_value is defined
+
+      - name: Save to DB
+        fap.common.save_data:
+          content: "{{ content_value }}"
+          protocol: http
+          hostname: "{{ inventory_hostname }}"
+          data_type: report
+          data_key: "{{ data_key }}"
+          template_id: "{{ fap.template_id | default(omit) }}"
+          job_id: "{{ fap.job_id | default(omit) }}"
+        delegate_to: localhost
+        when: content_value is defined
+      
+      - name: "FAP DB에 저장 완료"
+        run_once: true
+        delegate_to: localhost
+        command: echo " "
+        changed_when: false
+        check_mode: no
+        no_log: true
+  
+  - name: "작업을 종료합니다"
+    run_once: true
+    delegate_to: localhost
+    command: echo " "
+    changed_when: false
+    check_mode: no
+    no_log: true

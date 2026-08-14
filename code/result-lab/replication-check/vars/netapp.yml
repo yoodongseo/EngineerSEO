@@ -1,0 +1,15 @@
+---
+system: "NetApp"
+
+inspection_commands:
+  - rule_key: "rep_netapp"
+    cmd_id: "0001"
+    name: "NetAPP FAS8300 복제 상태 점검"
+    command: "snapmirror show"
+    os: "{{ vendor }}"
+    inspection_criteria: "Netapp FAS8300 복제 상태 점검 Broken-off Idle 상태 시 복제 상태 점검 필요"
+    is_compare: true
+    is_save: true
+    timeout: 10
+    sleep: 1
+    message: "{{ message_data }}"

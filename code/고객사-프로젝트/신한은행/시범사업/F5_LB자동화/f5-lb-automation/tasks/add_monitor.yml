@@ -1,0 +1,57 @@
+---
+- when: item.protocol == "tcp"
+  block:
+    - name: tcp 모니터 추가 -> {{monitor_name}}
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/monitor/{{item.protocol}}"
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: POST
+        body_format: json
+        body:
+          name: "{{ monitor_name }}"
+          destination: "{{item.healthcheckip ~ ':' ~ item.healthcheckport}}"
+        validate_certs: false
+      register: AddtcpMonitor
+      delegate_to: localhost
+
+    - name: 모니터 확인 정보 추출
+      set_fact:
+        data: "{{ AddtcpMonitor.json|default([]) }}"
+        err_msg: "{{ AddtcpMonitor.json|default({}) if AddtcpMonitor.status|int != 200 else {} }}"
+        err_flag: "{{ false if AddtcpMonitor.status|default(0)|int == 200 else true }}"
+        workdone_wideips: "{{ false if AddtcpMonitor.status|default(0)|int != 200 else true }}"
+
+- when: item.protocol != "tcp"
+  block:
+    - name: http/https 모니터 추가 -> {{monitor_name}}
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/monitor/{{item.protocol}}"
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: POST
+        body_format: json
+        body:
+          name: "{{ monitor_name }}"
+          destination: "{{item.healthcheckip ~ ':' ~ item.healthcheckport}}"
+          # send: "{{item.healthcheckurl|replace('<br>', '\\r\\n')}}"
+          send: "{{item.healthcheckurl}}"
+          recvStatusCode: "200"
+        validate_certs: false
+      register: AddMonitor
+      delegate_to: localhost
+
+    # - name: 헬스체크 정보 확인
+    #   set_fact:
+    #     murl: "{{item.healthcheckurl}}"
+    #     # reurl: "{{item.healthcheckurl|regex_replace('<br>', '\\r\\n')}}"
+    #     reurl2: "{{item.healthcheckurl|replace('<br>', '\\r\\n')}}"
+
+    - name: 모니터 확인 정보 추출
+      set_fact:
+        data: "{{ AddMonitor.json|default([]) }}"
+        err_msg: "{{ AddMonitor.json|default({}) if AddMonitor.status|int != 200 else {} }}"
+        err_flag: "{{ false if AddMonitor.status|default(0)|int == 200 else true }}"
+        workdone_wideips: "{{ false if AddMonitor.status|default(0)|int != 200 else true }}"
+
+    # - debug: var=AddMonitor

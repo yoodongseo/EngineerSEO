@@ -1,0 +1,75 @@
+---
+- name: "명령어 수행 {{ vendor }}" ### Netapp
+  raw: "{{ item.raw }}"
+  register: total_item_Netapp
+  when: vendor == 'Netapp'
+
+- name: "명령어 수행 {{ vendor }}" ### Ibm
+  raw: "{{ item.raw }}"
+  register: total_item_Ibm
+  when: vendor == 'Ibm'
+
+- name: "명령어 수행_python {{ vendor }}" ### Veritas
+  command: /usr/bin/python3 ../vars/raw.py
+  environment:
+    hostname: "{{ fap.host_ip }}"
+    port: "{{ ansible_port }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    root_passwd: "{{ ansible_become_password | default('') }}"
+    raw: "{{ item.raw }}"
+    vendor: "{{ vendor }}"
+  register: total_item_Veritas
+  delegate_to: localhost
+  when: vendor == 'Veritas'
+
+- name: 명령어 결과 파일저장
+  raw: |
+    echo "{{ 
+      total_item_Netapp.stdout if vendor == 'Netapp' else
+      total_item_Veritas.stdout if vendor == 'Veritas' else
+      total_item_Ibm.stdout if vendor == 'Ibm' else
+      'vendor가 없습니다. vendor을 입력하세요' }}" | sed "s/\['//;s/']//g" > "{{ item.tmp_file_path }}"
+  delegate_to: localhost
+
+- name: 전체 명령어 파일 reading
+  command: cat "{{ item.tmp_file_path }}"
+  register: total_item
+  delegate_to: localhost
+
+- name: "{{ item.cmd_name }} tasks"
+  command: /usr/bin/python3 ../vars/custom_filter_copy.py
+  environment:
+    host: "{{ inventory_hostname }}"
+    host_name: "{{ inventory_hostname }}"
+    name: "{{ item.cmd_name }}"
+    command: "{{ item.cmd_command }}"
+    report_type: "{{ report }}"
+    system: "{{ system }}"
+    com_value: "{{ item.com_value }}"
+    copy: "{{ vendor }}"
+    # 점검 system 별 명령어 수행결과 기입
+    total_item: "{{ total_item.stdout }}"
+    criteria: "{{ item.criteria }}"
+  register: result_value
+  delegate_to: localhost
+
+- name: Temp 삭제
+  file: 
+    path: "{{ item.tmp_file_path }}"
+    state: absent
+  delegate_to: localhost
+
+- name: Parse Json result
+  set_fact:
+    merged: "{{ result_value.stdout | from_json }}"
+
+    #- name: 점검 그룹 조회
+    #  include_tasks: /fap/ansible/projects/한전_시스템점검현황/tasks/host_info_make.yml
+    #
+    #- name: 점검현황 데이터 입력 처리 -- "{{ report_table }}"
+    #  include_tasks: /fap/ansible/projects/한전_시스템점검현황/tasks/postgresql_make_query.yml
+
+- name: merged_value 변수 설정
+  set_fact:
+    merged_value: "{{ merged_value + [merged] }}"

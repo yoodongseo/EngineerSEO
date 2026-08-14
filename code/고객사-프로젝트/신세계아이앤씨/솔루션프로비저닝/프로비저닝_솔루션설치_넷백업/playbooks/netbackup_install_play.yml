@@ -1,0 +1,18 @@
+---
+- name: netbackup install
+  hosts: all
+  gather_facts: false
+  tasks:
+
+  - name: 변수 호출
+    COMPANYlude_vars: ../vars/netbackup_install_vars.yml
+
+  - name: hostname 추출
+    shell: hostname
+    register: hostname_result
+
+  - name: netbackup 설치 작업 호출
+    COMPANYlude_tasks: ../tasks/netbackup_install_tasks.yml
+
+  - name: SAVE DB
+    COMPANYlude_tasks: ../tasks/netbackup_dbsave.yml

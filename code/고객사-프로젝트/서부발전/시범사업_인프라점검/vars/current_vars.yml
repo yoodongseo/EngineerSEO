@@ -1,0 +1,10 @@
+---
+# 날짜 변수
+today: "{{ lookup('ansible.builtin.pipe', 'date +%Y-%m-%d')}}"
+
+fap_report_type: 일일점검
+postgre_ip: 127.0.0.1
+postgre_port: 5432
+postgre_user: nds
+postgre_pass: rt12345%
+report_table: fap_report_data

@@ -1,0 +1,65 @@
+---
+- block:
+  - name: 1. 연결상태 체크
+    ansible.windows.win_command: hostname 
+    register: prompt_result_win
+    ignore_errors: true
+    ignore_unreachable: true
+    
+  - name: 실패 데이터 확인
+    set_fact:
+      fail_result: >-
+        {%- set msg = (prompt_result_win.msg | default('') | lower) -%}
+
+        {%- if not (prompt_result_win.unreachable | default(false)) -%}
+        정상
+
+        {%- elif 'access is denied' in msg
+                or 'unauthorized' in msg
+                or 'authentication failed' in msg
+                or 'logon failure' in msg 
+                or 'credentials' in msg -%}
+        계정정보 불일치
+
+        {%- elif 'connection refused' in msg
+                or 'actively refused' in msg
+                or 'no connection could be made' in msg
+                or 'failed to parse' in msg -%}
+        접속포트 불일치
+
+        {%- elif 'timed out' in msg
+                or 'timeout' in msg
+                or 'unreachable' in msg
+                or 'failed to connect' in msg -%}
+        대상설비 통신불가
+
+        {%- elif prompt_result_win.failed | default(false) -%}
+        대상설비 통신불가
+
+        {%- else -%}
+        기타
+        {%- endif -%}
+
+  - name: 연결 상태 실패 처리 # (DB에 데이터를 입력하면서 명시적으로 실패하기 위해 사용)
+    fail:
+      msg: "점검실패: {{ fail_result }}"
+    when: fail_result != '정상'
+    ignore_errors: false
+
+  always:
+    - name: Save DATA Merged 생성 -- con_tasks
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '00.연결상태',
+          'command': 'uname',
+          'result': '비정상' if prompt_result_win.failed | default(True) else '정상',
+          'is_success': False if prompt_result_win.failed | default(True) else True,
+          'is_pass': '-1' if prompt_result_win.failed | default(True) else True,
+          'system': system,
+          'report_type': report_type,
+          'fail_reason': fail_result,
+          'data5': report_target
+            }] }}"
+      when: save_type == 'report'

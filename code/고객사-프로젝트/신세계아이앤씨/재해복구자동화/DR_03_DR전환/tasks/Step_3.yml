@@ -1,0 +1,168 @@
+---
+# 로그 저장 디렉토리 생성
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+- name: oracle home 수집
+  shell: |
+    source /home/oracle/.bash_profile
+    echo $ORACLE_HOME
+  register: oraclehome
+
+- name: oracle home 변수 변경
+  set_fact:
+    ORACLE_HOME: "{{ oraclehome.stdout }}"
+
+# step3. 1작업
+- name: DR DB IP 기동
+  shell: "/usr/sbin/ifconfig {{ item.eth }} {{ item.ip }}/24 up"
+  loop: "{{ DR_DB_IP_EXE_LIST }}"
+  register: DR_DB_IP_EXE_RESULT
+  when: item.eth != ""
+
+- name: DR DB IP 확인
+  shell: /usr/sbin/ifconfig -a
+  register: result_DR_DB_IP_EXE
+
+- name: DB IP 기동 결과 추출
+  set_fact:
+    result_dr_db_ip_exe: "{{ result_dr_db_ip_exe|default([]) + [ item.stdout ] }}"
+  loop: "{{ DR_DB_IP_EXE_RESULT.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.item.eth != ""
+
+- name: DB IP 목록 결과 추출
+  set_fact:
+    result_dr_db_ip_exe: "{{ result_dr_db_ip_exe|default([]) + [ result_DR_DB_IP_EXE.stdout ] }}"
+
+- name: 동기화 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_DB_IP_EXE_FILE }}"
+    create: true
+    block: |
+      {{ result_dr_db_ip_exe|join('\n') }}
+    marker: "# {mark} 동기화 중지 명령어 결과 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step3. 2작업
+- name: DR DB Read Write 모드 변경 및 리스너 설정 추가
+  shell: su - "{{ item.oracle_user }}" -c "{{ read_write_sh }}"
+  loop: "{{ ORACLE }}"
+  loop_control: 
+    label: "{{ item.oracle_sid }}"
+  when: item.oracle_sid != ""
+  register: result
+
+- name: DR DB Read Write 모드 변경 및 리스너 설정 추가 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_DB_READ_WRITE_FILE }}"
+    create: true
+    block: |
+      {{ item.stdout }}
+    marker: "# {mark} DR DB Read Write 모드 변경 및 리스너 설정 추가 결과 백업"
+  loop: "{{ result.results }}"
+  when: item.stdout is defined
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step3. 3작업
+- name: "{{ LISTENER_ORA }}, {{ LISTENER_ORA_DR }} 파일 확인"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+  - "{{ ORACLE_HOME }}/network/admin/{{ LISTENER_ORA }}"
+  - "{{ ORACLE_HOME }}/network/admin/{{ LISTENER_ORA_DR }}"
+  register: result_listener_ora
+
+- name: "{{ LISTENER_ORA }}, {{ LISTENER_ORA_DR }} 파일 존재여부 추출"
+  set_fact:
+    file_stat_debug: "{{ file_stat_debug|default([]) + [ item.item + ' ---> ' + item.stat.exists|string ] }}"
+    file_stat_bools: "{{ file_stat_bools|default([]) + [ item.stat.exists ] }}"
+  loop: "{{ result_listener_ora.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: "작업 중단 여부 확인(판단기준: {{ LISTENER_ORA }}, {{ LISTENER_ORA_DR }} 파일 존재여부)"
+  fail:
+    msg: "{{ file_stat_debug }}"
+  when: item == false
+  loop: "{{ file_stat_bools }}"
+
+# step3. 3-2 Ping 체크
+- name: Ping 체크
+  command: ping -c 1 "{{ item.ip }}"
+  register: ping_result
+  until: ping_result.rc == 0
+  retries: 600  # Number of retries
+  delay: 6   # Wait 10 seconds between retries
+  loop: "{{ DR_DB_IP_EXE_LIST }}"
+  loop_control:
+    label: "{{ item.ip }}"
+  when: item.eth != ""
+  delegate_to: localhost
+
+# step3. 4작업
+- name: DR DB lsnrctl Kill 중지
+  shell: "{{ tnslsnr_kill }}"
+  register: result_stop
+
+- name: lsnrctl stop 명령어 로그 저장 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ LSNCRCTL_STATUS }}"
+    create: true
+    block: |
+      {{ result_stop.stdout }}
+    marker: "# {mark} lsnrctl stop 명령어 결과 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step3. 5 작업
+- name: DR DB Read Write 모드 변경 및 리스너 설정 추가
+  shell: |
+    su - oracle -c "cd {{ ORACLE_HOME }}/network/admin && 
+    mv {{ LISTENER_ORA }} {{ LISTENER_ORA_ORG }} &&
+    mv {{ LISTENER_ORA_DR }} {{ LISTENER_ORA }}"
+
+# step3. 6작업
+- name: DR DB lsnrctl Start
+  shell: |
+    su - oracle -c "cd {{ ORACLE_HOME }}/network/admin &&
+    lsnrctl start &&
+    lsnrctl status"
+  register: result_start
+
+- name: lsnrctl start 명령어 로그 저장 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ LSNCRCTL_STATUS }}"
+    create: true
+    block: |
+      {{ result_start.stdout }}
+    marker: "# {mark} lsnrctl start 명령어 결과 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step3. 7작업
+- name: Local listener 변경
+  shell: su - "{{ item.oracle_user }}" -c "{{ listener_change }}"
+  loop: "{{ ORACLE }}"
+  loop_control:
+    label: "{{ item.oracle_sid }}"
+  when: item.oracle_sid != ""
+  register: local_listener_result
+
+- name: Local listener 변경 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ local_listener_status }}"
+    create: true
+    block: |
+      {{ item.stdout }}
+    marker: "# {mark} Local listener 변경 결과 백업"
+  loop: "{{ local_listener_result.results }}"
+  when: item.stdout is defined
+  register: blockinfile_result
+  delegate_to: localhost

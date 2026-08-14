@@ -1,0 +1,36 @@
+---
+merged_value: []
+report_type: "dr_report"
+file_dir: "/fap/report/dr_live/step1/{{ fap.job_id }}/{{ fap.host_name }}_{{ inventory_hostname }}"
+file_path: "{{ file_dir }}/tomcat_down_{{ today.stdout }}.txt"
+
+was_instance:
+  - name: appmarket-was-01
+    was_path: /DATA/wasadmin/instance/appmarket-was-01/bin/shutdown.sh
+
+  - name: exbusadmin-was-01
+    was_path: /DATA/wasadmin/instance/exbusadmin-was-01/bin/shutdown.sh
+
+  - name: solbitech-was1
+    was_path: /DATA/wasadmin/instance/solbitech-was1/bin/shutdown.sh
+
+  - name: exstore
+    was_path: /DATA/wasadmin/instance/exstore/bin/shutdown.sh
+
+  - name: himobile
+    was_path: /DATA/wasadmin/instance/himobile/bin/shutdown.sh
+
+  - name: aclnwas01_globalEx
+    was_path: /DATA/wasadmin/instance/aclnwas01_globalEx/bin/shutdown.sh
+
+  - name: aclnwas01_rnd-infoEx
+    was_path: /DATA/wasadmin/instance/aclnwas01_rnd-infoEx/bin/shutdown.sh
+
+  - name: eval-ext
+    was_path: /DATA/wasadmin/instance/eval-ext/bin/shutdown.sh
+
+  - name: eval-int
+    was_path: /DATA/wasadmin/instance/eval-int/bin/shutdown.sh
+
+  - name: nkms
+    was_path: /DATA/wasadmin/instance/nkms/bin/shutdown.sh

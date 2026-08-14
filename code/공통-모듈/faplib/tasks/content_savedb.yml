@@ -1,0 +1,32 @@
+---
+- name: 필터 결과 추가
+  set_fact:
+    merged_value: "{{ merged_value | default([]) + (result_value.result | default(result_value2.result) | default([])) }}"
+  delegate_to: localhost
+  
+- name: content_value 변수 생성
+  set_fact:
+    content_value: "{{ content_value | default({}) | combine({'data_list': merged_value }) }}"
+  delegate_to: localhost
+  
+- name: 데이터 저장 -- 보고서
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: "{{ data_type }}"
+    data_key: "{{ data_key }}"
+    template_id: "{{ fap.template_id }}"
+    job_id: "{{ fap.job_id }}"
+  delegate_to: localhost 
+
+- name: 데이터 저장 -- 백업
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: "backup"
+    data_key: "{{ data_key }}"
+    template_id: "{{ fap.template_id }}"
+    job_id: "{{ fap.job_id }}"
+  delegate_to: localhost 

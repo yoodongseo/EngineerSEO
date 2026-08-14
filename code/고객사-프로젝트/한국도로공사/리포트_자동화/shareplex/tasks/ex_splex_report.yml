@@ -1,0 +1,55 @@
+---
+- name: file debug
+  debug:
+    var: splex_report_data.stdout
+
+- name: splex python 실행
+  command: /usr/bin/python3 ../vars/ex_splex.py
+  environment:
+    report_data: "{{ splex_report_data.stdout }}"
+    save_path: "{{ splex_save_path }}"
+    output_name: "{{ splex_name }}"
+    host: "{{ fap.host_name }}"
+  register: report_py
+  delegate_to: localhost
+
+- name: splex python debug
+  debug:
+    var: report_py
+
+- name: splex result_value reset
+  set_fact:
+    result_value: []
+
+- name: splex 결과 파일 DB화 작업
+  set_fact:
+    result_value: "{{ result_value | default([]) + [{
+      'host': inventory_hostname,
+      'host_name': fap.host_ip,
+      'is_success': true,
+      'file_path': splex_save_path,
+      'report_type': splex_report_name,
+      'system': 'report'
+      }] }}"
+    delegate_to: localhost
+
+- name: splex Debug DB화
+  debug:
+    var: result_value
+
+- name: splex Make content value
+  set_fact:
+    content_value: "{{ content_value | default({}) | combine({'data_list': result_value}) }}"
+  delegate_to: localhost
+- debug: var=content_value
+
+- name: splex Save DB
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: report
+    data_key: ex_report
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  delegate_to: localhost

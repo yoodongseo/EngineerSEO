@@ -1,0 +1,5 @@
+---
+- name: 작업 결과 추출, 보고서 생성
+  set_fact:
+    job_result: "{{ job_result|default([])|make_report_gslb(file_path, err_flag,'B')}}"
+# - debug: var=job_result

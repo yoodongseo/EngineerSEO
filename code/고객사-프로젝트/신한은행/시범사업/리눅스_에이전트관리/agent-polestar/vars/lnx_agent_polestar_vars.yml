@@ -1,0 +1,122 @@
+---
+# JOB_VARS
+## install, uninstall, start, stop, restart
+req_type: "{{ fap['host_vars']['req_type'] }}"
+
+# SAVE VARS
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: Linux
+report_type: "Linux Polestar {{ '설치' if req_type == 'install' 
+                                else '삭제' if req_type == 'uninstall' 
+                                else '기동' if req_type == 'start' 
+                                else '중지' if req_type == 'stop' 
+                                else '재기동' if req_type == 'restart' }}"
+data_key: LNX_AGENT_MGMT_POLESTAR
+
+# PLAY JOB VARS
+# pkg_name_search: "ls -lt ../templates | grep 'tar.gz' | head -1 | awk '{print $9}'"
+pkg_name: "NNPAgent_SMS_Linux64_3.4_8.4.7_5.tar.gz"
+copy_src: "../templates/{{ pkg_name }}"
+copy_dest: /tmp
+
+# JOB SHELL
+agent_mgmt_polestar:
+  install: |
+    pkg_name="{{ pkg_name }}"
+
+    # step 0: 사전 점검 (이미 설치되어 있는 경우 성공 및 중지)
+    if [ -f /sw/nnpagent/NNPAgent/MAgent/bin/MAGENT7 ]; then
+        echo "Polestar SW is already installed."; exit 0
+    fi
+
+    # step 1: S/W 디렉토리 생성 및 파일 이동
+    mkdir -p /sw/nnpagent
+    mv /tmp/$pkg_name /sw/nnpagent
+
+    # step 2: 압축 해제
+    cd /sw/nnpagent && tar -zxvf $pkg_name > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Error: No such directory /sw/nnpagent OR Failed to extract $pkg_name."
+        exit 1
+    fi
+
+    # step 3: 설치 수행
+    success_message="auto start script add success"
+    install_output=$(./AgentInstall.sh -t 2 -p 21003)
+
+    # step 4: 설치 정상여부 점검
+    if echo "$install_output" | grep -q "$success_message"; then
+      echo "$success_message"; exit 0
+    else
+      echo "Error: Installation failed."; exit 1
+    fi
+  uninstall: |
+    # step 0: 사전 점검 (설치 되어 있지 않은 경우 성공 및 중지)
+    if [ ! -f /sw/nnpagent/NNPAgent/MAgent/bin/MAGENT7 ]; then
+        echo "Polestar SW is not installed."; exit 0
+    fi
+
+    # step 1: 경로 이동 및 중지 수행
+    cd /sw/nnpagent/NNPAgent && ./agentstop.sh
+    sleep 1
+
+    if ps -ef | grep MAGENT | grep -v grep | grep -q MAGENT; then
+        echo "Error: MAGENT process is not stopped."; exit 1
+    fi
+
+    # step 2: 설치 경로 삭제
+    rm -rf /sw/nnpagent
+    if [ $? -eq 0 ]; then
+        echo "Installation path /sw/nnpagent has been successfully removed."; exit 0    
+    else
+        echo "Error: The directory /sw/nnpagent could not be removed."; exit 1
+    fi
+  start: |
+    # step 0: 사전 점검 (설치 되어 있지 않은 경우 실패 및 중지)
+    if [ ! -f /sw/nnpagent/NNPAgent/MAgent/bin/MAGENT7 ]; then
+        echo "Error: Polestar SW is not installed."; exit 1
+    fi  
+
+    # step 1: 경로 이동 및 Agent 실행
+    cd /sw/nnpagent/NNPAgent && ./agentstart.sh
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to start the agent."; exit 1
+    else
+        echo "Success: The agent has started successfully."; exit 0
+    fi
+  stop: |
+    # step 0: 사전 점검 (설치 되어 있지 않은 경우 실패 및 중지)
+    if [ ! -f /sw/nnpagent/NNPAgent/MAgent/bin/MAGENT7 ]; then
+        echo "Polestar SW is not installed."; exit 1
+    fi
+
+    # step 1: 경로 이동 및 중지 수행
+    cd /sw/nnpagent/NNPAgent && ./agentstop.sh
+    sleep 1
+        
+    if ps -ef | grep MAGENT | grep -v grep | grep -q MAGENT; then
+        echo "Error: MAGENT process is not stopped."; exit 1
+    else
+        echo "MAGENT process is stopped."; exit 0
+    fi
+  restart: |
+    # step 0: 사전 점검 (설치 되어 있지 않은 경우 실패 및 중지)
+    if [ ! -f /sw/nnpagent/NNPAgent/MAgent/bin/MAGENT7 ]; then
+        echo "Polestar SW is not installed."; exit 1
+    fi
+
+    # step 1: 중지 수행
+    cd /sw/nnpagent/NNPAgent && ./agentstop.sh
+    sleep 1
+        
+    if ps -ef | grep MAGENT | grep -v grep | grep -q MAGENT; then
+        echo "Error: MAGENT process is not stopped."; exit 1
+    fi
+
+    # step 2: 기동 수행
+    cd /sw/nnpagent/NNPAgent && ./agentstart.sh
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to start the agent."; exit 1
+    else
+        echo "Success: The agent has restarted successfully."; exit 0
+    fi

@@ -1,0 +1,415 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: "backup"
+inspection_group: "예방점검"
+ansible_port: 22
+report_type: "backup"
+### merged_value --- List 선언
+merged_value: []
+
+cisco:
+  - cmd_name: "show running-config"
+    cmd_command: 'show running-config'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. show running-config
+    raw: "show running-config"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0001
+
+  - cmd_name: "show arp"
+    cmd_command: 'show arp'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. show arp
+    raw: "show arp"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0002
+
+  - cmd_name: "show ip  aliases"
+    cmd_command: "show ip  aliases"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. show ip aliases
+    raw: "show ip aliases"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0003
+
+  - cmd_name: "show ip interface brief"
+    cmd_command: "show ip interface brief"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. show ip interface brief
+    raw: "show ip interface brief"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0004
+
+  - cmd_name: "show version"
+    cmd_command: "show version"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. show version
+    raw: "show version"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0005
+
+axgate:
+  - cmd_name: "show running-config"
+    cmd_command: 'show running-config'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. show running-config
+    raw: "show running-config"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap.host_ip }}_axgate.txt"
+    id: 0001
+
+  - cmd_name: "show arp"
+    cmd_command: 'show arp'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. show arp
+    raw: "show arp"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap.host_ip }}_axgate.txt"
+    id: 0002
+
+  - cmd_name: "show ip route"
+    cmd_command: "show ip route"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. show ip route
+    raw: "show ip route"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    id: 0003
+
+  - cmd_name: "show ip interface brief"
+    cmd_command: "show ip interface brief"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. show ip interface brief
+    raw: "show ip interface brief"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0004
+
+  - cmd_name: " show version"
+    cmd_command: " show version"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. show version
+    raw: " show version"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0005
+
+juniper:
+  - cmd_name: "show configuration firewall"
+    cmd_command: 'show configuration firewall'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. show configuration
+    raw: "show configuration firewall"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0001
+
+  - cmd_name: "show arp"
+    cmd_command: 'show arp'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. show arp
+    raw: "show arp"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0002
+
+  - cmd_name: "show route"
+    cmd_command: "show route"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. show route
+    raw: "show route"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0003
+
+  - cmd_name: "show interfaces brief"
+    cmd_command: "show interfaces brief"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. show interfaces brief
+    raw: "show interfaces brief"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0004
+
+  - cmd_name: "show version"
+    cmd_command: "show version"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. show version 
+    raw: "show version"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0005
+
+nexg:
+  - cmd_name: "show running-config"
+    cmd_command: 'show running-config'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. show running-config
+    raw: "show running-config"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0001
+
+  - cmd_name: "show arp"
+    cmd_command: 'show arp'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. show arp
+    raw: "show arp"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0002
+
+  - cmd_name: "show ip route"
+    cmd_command: "show ip route"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. show ip route
+    raw: "show ip route"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0003
+
+  - cmd_name: "show ip interface brief"
+    cmd_command: "show ip interface brief"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. show ip interface brief
+    raw: "show ip interface brief"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0004
+
+  - cmd_name: " show version"
+    cmd_command: " show version"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. show version
+    raw: " show version"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0005
+
+nxos:
+  - cmd_name: "show running"
+    cmd_command: 'show running'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. show running-config
+    raw: 'show running-config'
+    multi_raw:
+      - ''    
+    value: "str"
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0001
+
+  - cmd_name: " show ip arp"
+    cmd_command: ' show ip arp'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. show ip arp
+    raw: "show ip arp"
+    multi_raw:
+      - ''    
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0002
+
+  - cmd_name: "show interface brief"
+    cmd_command: "show interface brief"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. show interface brief
+    raw: "show interface brief"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0003
+
+  - cmd_name: "show version"
+    cmd_command: "show version"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. show version
+    raw: "show version"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0004
+
+  - cmd_name: "show system uptime"
+    cmd_command: "show system uptime"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. show system uptime
+    raw: "show system uptime"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0005

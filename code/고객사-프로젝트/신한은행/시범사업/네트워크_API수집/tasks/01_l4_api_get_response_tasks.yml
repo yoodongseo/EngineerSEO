@@ -1,0 +1,37 @@
+---
+- name: API GET 호출 (정보 수집)
+  include_tasks: ../tasks/requests_get_tasks.yml # get_response 변수 리턴
+  vars:
+    API_URL: "{{ api_host }}/{{ item['url'] }}"
+
+- name: 성공 변수
+  set_fact:
+    merged_value: >-
+      {{ [{
+          'host': inventory_hostname,
+          'id': item.id,
+          'name': item.cmd_name,
+          'command': item.cmd_name,
+          'result': get_response.json | default(None) | to_yaml,
+          'message': item.message | default(None),
+          'is_success': true,
+          'os': vendor | default('None'),
+          'compare': true
+        }] + (merged_value | default([])) }}
+  when: get_response.failed | default(true) == false
+
+- name: 실패 변수
+  set_fact:
+    merged_value: >-
+      {{ [{
+          'host': inventory_hostname,
+          'id': None,
+          'name': None,
+          'command': None,
+          'result': None,
+          'message': None,
+          'is_success': False,
+          'os': None,
+          'compare': None
+        }] + (merged_value | default([])) }}
+  when: merged_value is not defined

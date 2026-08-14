@@ -1,0 +1,33 @@
+---
+- name: 한국도로공사 webtob Start up
+  hosts: all
+  gather_facts: false
+  tasks:
+    - block:
+      - name: 일시 생성
+        set_fact:
+          today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+        delegate_to: localhost
+        
+      - name: 변수 호출
+        include_vars: ../vars/webtob_start_vars.yml
+
+      - name: 작업 호출
+        include_tasks: ../tasks/webtob_start_tasks.yml
+        loop: "{{ Linux }}"
+        loop_control:
+          label: "{{ item.message }}"            
+
+      always:
+        - set_fact:
+            content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+          
+        - fap.common.save_data:
+            content: "{{ content_value }}"
+            protocol: http
+            hostname: "{{ inventory_hostname }}"
+            data_type: "report"
+            data_key: "dr_live"
+            template_id: "{{ fap.template_id }}"
+            job_id: "{{ fap.job_id }}"
+          delegate_to: localhost

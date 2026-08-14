@@ -1,0 +1,55 @@
+---
+# DB 정보 조회 명령어
+unix_DB_command:
+  oracleDB: "ps -ef | grep ora_ | grep -Ev grep"
+  mySQL: "ps -ef | grep mysqld | grep -Ev grep"
+  postgreSQL: "ps -ef | grep postgres | grep -Ev grep"
+  mongoDB: "ps -ef | grep mongod | grep -Ev grep"
+  msSQLserver: "ps -ef | grep sqlservr | grep -Ev grep"
+  tibero: "ps -ef | grep tibero | grep -Ev grep"
+  db2: "ps -ef | grep db2 | grep -Ev grep"
+
+windows_DB_command:
+  oracleDB: |
+    $oracleDB = Get-Service -Name '*Oracle*'
+    $oracleDB.Name
+  mySQL: |
+    $mysqlDB = Get-Service -Name '*MariaDB*'
+    $mysqlDB.Name
+  postgreSQL: |
+    $postgreSQL = Get-Service -Name '*postge*'
+    $postgreSQL.Name
+  mongoDB: |
+    $mongoDB = Get-Service -Name '*Mongo*'
+    $mongoDB.Name
+  msSQLserver: |
+    $msSQLserver = Get-Service -Name '*MSSQLSERVER*'
+    $msSQLserver.Name
+  tibero: |
+    $tbSvc = Get-Service -Name '*tbsvc*'
+    $tbSvc.Name
+  db2: |
+    $db2Svc = Get-Service -Name '*DB2*'
+    $db2Svc.Name
+
+# DB 버전정보 조회 명령어
+unix_DB_version_command:
+  oracleDB: |
+    su - oracle -c "sqlplus / as sysdba  << EOF
+    SELECT * FROM v\\\$version;
+    EOF"
+  mySQL: "mysql --version"
+  postgreSQL: "psql --version"
+  mongoDB: "mongo --version"
+  # msSQLserver: "sqlcmd -E -Q \"SELECT @@VERSION;\""
+  tibero: "tbver"
+  db2: "db2level"
+
+windows_DB_version_command:
+  oracleDB: "sqlplus /no log"
+  mySQL: "mysql --version"
+  postgreSQL: "psql --version"
+  mongoDB: "mongo --version"
+  msSQLserver: "sqlcmd -E -Q \"SELECT @@VERSION;\""
+  tibero: "tbver"
+  db2: "db2level"

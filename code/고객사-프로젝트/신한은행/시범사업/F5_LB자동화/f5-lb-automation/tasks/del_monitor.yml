@@ -1,0 +1,41 @@
+---
+- when: err_flag == false
+  block:
+    - name: 모니터 정보 조회
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/monitor/{{item.protocol}}"
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: GET
+        validate_certs: "{{ validate_certs }}"
+      register: MonitorList
+      delegate_to: localhost
+
+    - name: 롤백 대상 검증 -> {{monitor_name}}
+      set_fact:
+        del_flag: "{{1 if monitor_name in MonitorList['json']['items'] | map(attribute='name') | list  else 0}}"
+
+- when: del_flag|default(0)|int == 1
+  block:
+    - name: 모니터 삭제 -> {{monitor_name}}
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/monitor/{{item.protocol}}/{{monitor_name}} "
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: DELETE
+        validate_certs: false
+      register: DelMonitor
+      delegate_to: localhost
+    # - debug: var=DelPool
+
+    - name: 모니터 롤백 결과 추출
+      set_fact:
+        rollback_data: "{{ DelMonitor.json|default([]) }}"
+        rollback_err_msg: "{{ DelMonitor.json|default({}) if DelMonitor.status|int != 200 else {} }}"
+        rollback_err_flag: "{{ false if DelMonitor.status|default(0)|int == 200 else true }}"
+# - when: del_flag|default(0)|int == 0
+#   name: Pool 롤백 정보 추출
+#   set_fact:
+#     rollback_data: []
+#     rollback_err_msg: []
+#     rollback_err_flag: false

@@ -1,0 +1,52 @@
+---
+- name: script_license_jeus
+  hosts: all
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: deploy File
+      delegate_to: localhost
+      raw: scp -P 222 JEUS_DEMO.zip {{ inventory_hostname }}:/home/example_user/license/JEUS_DEMO.zip
+
+
+    - name: Create a directory for unzip
+      file:
+        path: /home/example_user/license/downloads
+        state: directory
+
+    - name: unzip
+      unarchive:
+        src: /home/example_user/license/JEUS_DEMO.zip
+        dest: /home/example_user/license/downloads
+        remote_src: 'yes'
+
+    - name: shell script start
+      command: sh hostname.sh
+      args:
+        chdir: /home/example_user/license
+      register: result
+
+    - name: print the output of the script
+      debug:
+        var: result.stdout
+
+    - name: fail msg
+      fail:
+        msg: license update script failed
+      when: result.rc != 0
+
+    - name: shell script start
+      command: sh jeus_license_update.sh
+      args:
+        chdir: /home/example_user/license
+      register: result
+
+    - name: remove folder
+      raw: rm -rf /home/example_user/license/downloads
+      register: result
+      ignore_errors: 'yes'
+
+    - name: remove '*_DEMO.zip'
+      raw: find /home/example_user/license -type f -name '*_DEMO.zip' -exec rm -f {} +
+      register: result
+      ignore_errors: 'yes'

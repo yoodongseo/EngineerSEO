@@ -1,0 +1,35 @@
+---
+- block:
+  - name: Agent 재기동 작업 수행
+    command: /usr/bin/python3 ../vars/cli_expect.py
+    environment:
+      username: "{{ ansible_user }}"
+      password: "{{ ansible_password }}"
+      hostname: "{{ fap['host_ip'] }}"
+      port: "{{ ansible_port | default('22') }}"
+      command_expect: "{{ item | to_json }}"
+      su_password: "{{ ansible_become_password | default('') }}"
+    loop: "{{ expect_cli_list['restart'] }}"
+    loop_control:
+      label: "{{ item['name'] }}"
+    register: result_restart_py
+    delegate_to: localhost
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': item.item.name,
+          'command': 'LSV Agent Restart',
+          'result': item.stdout | default(none),
+          'is_success': True,
+          'is_pass': False if item.failed | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"
+      when: item.stdout is defined
+      loop: "{{ result_restart_py.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"

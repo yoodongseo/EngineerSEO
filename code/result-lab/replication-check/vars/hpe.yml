@@ -1,0 +1,15 @@
+---
+system: "HPE"
+
+inspection_commands:
+  - rule_key: "rep_hpe"
+    cmd_id: "0001"
+    name: "HPE Primera Remote Copy 복제 상태 점검"
+    command: "showrcopy"
+    os: "{{ vendor }}"
+    inspection_criteria: "HPE Primera Remote Copy 복제 상태 점검 Target ready, Link Up, Group Started, SyncStatus Synced 상태 확인"
+    is_compare: true
+    is_save: true
+    timeout: 10
+    sleep: 1
+    message: "{{ message_data }}"

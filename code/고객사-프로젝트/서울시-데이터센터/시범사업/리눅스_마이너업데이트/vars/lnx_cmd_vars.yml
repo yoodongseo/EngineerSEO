@@ -1,0 +1,76 @@
+---
+# GLOBAL
+job_result: {}
+merged_value: []
+
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: 'Linux'
+report_type: '업데이트'
+data_key: lnx_update
+command_timeout: 30
+
+# chk_lnx_cmd - 접속한 Linux 서버의 현황을 점검 (chk_rocky.yml 활용) ## 현재 9.* RedHat Linux에서만 동작하도록 제한
+chk_lnx_cmd: |
+  OS_NAME=$(grep "^NAME=" /etc/os-release | cut -d'=' -f2 | tr -d '"')
+  VERSION_ID=$(grep "^VERSION_ID=" /etc/os-release | cut -d'=' -f2 | tr -d '"')
+  if [[ "$OS_NAME" == "Red Hat"* && "$VERSION_ID" == 9.* ]]; then
+    echo $OS_NAME $VERSION_ID;
+  else
+    echo $OS_NAME $VERSION_ID;
+  fi
+
+# del_origin_repo_cmd - /etc/yum.repos.d/*.repo 형태의 파일을 "origin_repo_config.tar" 로 백업 및 삭제합니다. (job_repo.yml 활용)
+del_origin_repo_cmd: |
+  REPO_DIR="/etc/yum.repos.d"
+  REPO_PATTERN="*.repo"
+  TODAY=$(date +"%Y%m%d%H%M")
+  BACKUP_FILE="origin_repo_config_$TODAY.tar"
+
+  # 디렉토리 내 .repo 파일이 존재하는지 확인 및 tar 형태로 백업
+  if ls $REPO_DIR/$REPO_PATTERN 1> /dev/null 2>&1; then
+      cd $REPO_DIR
+      tar -cf $BACKUP_FILE $REPO_PATTERN
+      # tar 명령어 성공 여부 점검 및 삭제
+      if [ $? -eq 0 ]; then
+          echo "Backup created successfully: $REPO_DIR/$BACKUP_FILE"
+          rm -f $REPO_PATTERN
+          if ls $REPO_PATTERN 1> /dev/null 2>&1; then
+              echo "Error: Some .repo files were not deleted."; exit 1
+          else
+              # 파일이 성공적으로 삭제되었으면 성공
+              echo "Success: All .repo files were deleted."; exit 0
+          fi
+      else
+          echo "Error: Failed to create backup."
+          exit 1
+      fi
+  else
+      echo "No .repo files found. Nothing to delete."
+      exit 0
+  fi
+
+# copy_repo - 신규 레포지토리 설정정보 생성 변수 (job_repo.yml 활용)
+
+repo_ip: '98.33.2.170' ## 추후 변경 필요, 기존 9_3 에서 9_4를 테스트 하는 과정
+copy_repo:
+  dest: "/etc/yum.repos.d/FAP_auto_update.repo"
+  content: |-
+    [Red_Hat_9_4_BaseOS]
+    name=LocalRepo_BaseOS
+    baseurl=ftp://{{ repo_ip }}/ftp/pub/RHEL/9_4/en/os/x86_64/BaseOS/
+    gpgcheck=0
+    enabled=1
+
+    [Red_Hat_9_4_AppStream]
+    name=LocalRepo_AppStream
+    baseurl=ftp://{{ repo_ip }}/ftp/pub/RHEL/9_4/en/os/x86_64/AppStream/
+    gpgcheck=0
+    enabled=1
+
+# update 및 재기동 관련 timeout 설정 Dict
+update_reboot:
+  update_timeout: 1800
+  reboot_timeout: 600
+  boot_time_command: uptime
+
+yum_clean_cmd: 'yum clean all && yum repolist'

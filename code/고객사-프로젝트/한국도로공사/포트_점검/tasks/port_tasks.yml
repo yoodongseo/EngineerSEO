@@ -1,0 +1,53 @@
+---
+- name: 일시 생성
+  set_fact:
+    today: "{{ lookup('ansible.builtin.pipe', 'date +%Y%m%d') }}"
+  delegate_to: localhost
+
+- name: Job ID Folder create
+  file:
+    path: "{{ save_path }}"
+    state: directory
+    owner: fap
+    group: fap
+    mode: "0755"
+  delegate_to: localhost
+
+- name: NMAP Port Listen
+  command: /usr/bin/python3 ../vars/fap_portscan.py "{{ fap.host_ip }}"
+  environment:
+    job_id: "{{ fap.job_id }}"
+    ansible_hostname: "{{ inventory_hostname }}"
+    host_name: "{{ fap.host_name }}"
+    today: "{{ today }}"
+    report_name: "{{ report_name }}"
+  register: listening_port_result
+  delegate_to: localhost
+
+- name: Linux netstat 실행
+  #raw: /usr/bin/netstat -nlp | grep LISTEN | egrep "tcp|udp" | grep -v "bash"
+  raw: /usr/bin/netstat -nap
+  register: netstat_result
+
+- name: result fact
+  set_fact:
+    result: >
+      nmap:
+      {{ listening_port_result.stdout }}
+
+      netstat:
+      {{ netstat_result.stdout }}
+  delegate_to: localhost
+
+- name: result_value 변수 설정
+  set_fact:
+    result_value: "{{ result_value | default([]) + [{ 
+      'host': inventory_hostname, 
+      'host_name': fap.host_ip, 
+      'is_success': 'true', 
+      'file_path': save_path, 
+      'report_type': 
+      'Port_Lestening', 
+      'system': 'ALL System', 
+      'result': result }] }}"
+  delegate_to: localhost

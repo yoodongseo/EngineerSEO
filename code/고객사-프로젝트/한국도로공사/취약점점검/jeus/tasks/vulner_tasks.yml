@@ -1,0 +1,87 @@
+---
+- name: 일시 생성
+  set_fact:
+    today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+  delegate_to: localhost
+
+- name: hostname 수집
+  raw:  hostname | tr -d '\n'
+  register: hostname_check
+
+- name: 파일 배포
+  command: /usr/bin/python3 ../vars/scp.py
+  environment:
+    script_path: "{{ script_path }}"
+    output_path: "{{ output_path }}"
+    host_ip: "{{ fap.host_ip }}"
+    user: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    port: "{{ ansible_port }}"
+  register: python_scp
+  delegate_to: localhost
+
+- name: 파일 배포 debug
+  debug:
+    var: python_scp.stdout
+
+- name: 파일 확인 변수 생성
+  raw: "ls -al {{ output_path }}"
+  register: file_check
+
+- name: 파일 실행 권한 추가   
+  raw: "chmod +x {{ output_path }}"
+        
+- name: 파일 확인
+  debug:
+    var: file_check.stdout_lines
+
+- name: 파일 실행
+  raw: "{{ output_path }}"
+  register: Linux_vulner_check
+
+- name: 스크립트 / 결과 파일 삭제
+  raw: "rm -rf {{ output_path }}"
+
+- name: 저장 폴더 생성
+  file:
+    path: "{{ save_path }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+
+- name: 결과 파일 저장
+  copy:
+    content: "{{ Linux_vulner_check.stdout }}"
+    dest: "{{ save_path }}/{{ file_name }}"
+    force: yes
+  delegate_to: localhost
+
+- name: 결과 파일 DB화 작업
+  set_fact:
+    result_value: "{{ result_value | default([]) + [{
+      'host': inventory_hostname,
+      'host_name': fap.host_ip,
+      'is_success': true,
+      'file_path': save_path,
+      'report_type': report_name,
+      'system': 'jeus',
+      'data1': 'WAS'
+      }] }}"
+    delegate_to: localhost
+
+- name: Make content value
+  set_fact:
+    content_value: "{{ content_value | default({}) | combine({'data_list': result_value}) }}"
+  delegate_to: localhost
+- debug: var=content_value
+
+- name: Save DB
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: report
+    data_key: vulnerability
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  delegate_to: localhost

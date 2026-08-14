@@ -1,0 +1,254 @@
+- name: 연결 확인
+  ping: ""
+  register: ping_result
+
+- block:
+  # - name: 01. OS 확인
+  #   raw: "uname"
+  #   register: chk_server_type
+  # - set_fact:
+  #     server_type_info: "{{ chk_server_type.stdout }}"
+  #   when: chk_server_type.rc == 0
+
+  # - block: # LINUX
+  - name: 01_01. OS 버전확인 - Linux
+    raw: "cat /etc/*-release"
+    register: chk_os_version
+
+  - set_fact:
+      op_type: "{{ chk_os_version.stdout | find_value('=','PRETTY_NAME') | string }}"
+      server_type: "LINUX"
+      os_version: >-
+        {%- if 'rhel' in chk_os_version.stdout -%}
+        Redhat 
+        {%- elif 'rocky' in chk_os_version.stdout -%}
+        Rocky 
+        {%- elif 'centos' in chk_os_version.stdout -%}
+        CentOS 
+        {%- else -%}
+        기타
+        {%- endif -%} {{ chk_os_version.stdout | find_value('=','VERSION_ID') | string | default('') }}
+    when: chk_os_version.rc == 0
+    # when: server_type_info == 'Linux'
+
+  - name: 01_02. OS 커널버전 확인 - Linux
+    raw: "uname -a"
+    register: chk_os_kernel_version
+
+  - name: 커널 버전 결과 공백제거
+    set_fact:
+      cleaned_output: "{{ chk_os_kernel_version.stdout.strip() }}"
+  
+  - set_fact:
+      os_kernel_version: "{{ cleaned_output | cut_str(0,2) }}"
+    when: chk_os_kernel_version.rc == 0
+
+  - debug:
+      msg: "Original output: {{ chk_os_kernel_version.stdout }}"
+  - debug:
+      msg: "Parsed output: {{ os_kernel_version }}"
+
+  # - block: # Solaris
+  #   - name: 01_02. OS 버전확인 - sunOS(solaris)
+  #     raw: "cat /etc/*-release"
+  #     register: os_version
+  #   - set_fact:
+  #       os_version_info: "Solaris {{ os_version.stdout | cut_str(0,1) }}"
+  #       type_flag: "sunOS"
+  #   when: chk_server_type.stdout == 'sunOS'
+
+  # - block: # AIX
+  #   - name: 01_03. OS 버전확인 - AIX
+  #     raw: "oslevel -s"
+  #     register: os_version_AIX
+  #   - set_fact:
+  #       os_version_info: "{{ os_system }} {{ os_version_AIX.stdout | cut_str(0,0,1) }}.{{ os_version.stdout | cut_str(0,0,2) }}"
+  #       type_flag: "AIX"
+  #   when: chk_server_type.stdout == 'AIX'
+
+  - name: 02. 디스크 용량 추출
+    raw: "df -h"
+    register: disk_size
+
+  - name: 03. 메모리 용량 추출
+    raw: "free -h"
+    register: mem_size
+  - set_fact:
+      Disk_size: "{{ disk_size.stdout | sum_size('disk') }}"
+      Mem_size: "{{ mem_size.stdout | sum_size('memory') }}"
+
+  - name: 04. CPU 개수 및 core 개수 추출 (물리적 CPU socket 개수)
+    raw: "lscpu"
+    register: CPU_info
+  - set_fact:
+      CPU_cnt: "{{ CPU_info.stdout | find_value(':','CPU(s)') }}"
+      CPU_core_cnt: "{{ CPU_info.stdout | find_value(':','Core(s) per socket') }}"
+    when: CPU_info.rc == 0
+  - set_fact:
+      CPU_total_core_cnt: "{{ CPU_cnt | int * CPU_core_cnt | int }}"
+    when: CPU_info.rc == 0
+
+  ## OracleDB 확인 (버전추출 테스트 완료)
+  - name: 05. DB 체크 - OracleDB
+    raw: "{{ unix_DB_command.oracleDB }}"
+    register: oracledb
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "Oracle"
+    - name: 05_01. OracleDB 버전확인
+      shell: "{{ unix_DB_version_command.oracleDB }}"
+      register: oracledb_version_info
+      become: true
+      become_user: root
+    - name: 05_02. OracleDB 정보 가공
+      set_fact:
+        db_name: "Oracle Database {{ oracledb_version_info.stdout | cut_str(2, 1) }}"
+        db_version_01: "{{ oracledb_version_info.stdout | cut_str(2, 1) }}"
+        db_version_02: "{{ oracledb_version_info.stdout | cut_str(8, 2) }}"
+      when: oracledb_version_info.rc == 0
+    when: oracledb.rc == 0
+
+  - name: oracledb_version_info 가공 값 디버깅
+    debug:
+      msg: 
+        - "{{ db_name }}"
+        - "{{ db_version_01 }}"
+        - "{{ db_version_02 }}"
+
+  ## MySQL DB 확인 (버전추출 테스트 완료)
+  - name: 05. DB 체크 - mySQL
+    raw: "{{ unix_DB_command.mySQL }}"
+    register: mysql
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "MySQL"
+    - name: 05_01. MySQL 버전확인
+      shell: "{{ unix_DB_version_command.mySQL }}"
+      register: mysql_version_info
+      become: true
+      become_user: root
+    - name: 05_02. MySQL 정보 가공
+      set_fact:
+        db_name: "MySQL server {{ mysql_version_info.stdout | string | cut_str(0,2) }}"
+        db_version_01: "{{ mysql_version_info.stdout | string | cut_str(0,2) }}"
+        db_version_02: "{{ mysql_version_info.stdout | string | cut_str(0,2) }}"
+      when: mysql_version_info.rc == 0
+    when: mysql.rc == 0
+
+  ## PostgreSQL 확인 (버전추출 테스트 완료)
+  - name: 05. DB 체크 - postgreSQL
+    raw: "{{ unix_DB_command.postgreSQL }}"
+    register: postgresql
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "postgreSQL"
+    - name: 05_01. postgreSQL 버전확인
+      shell: "{{ unix_DB_version_command.postgreSQL }}"
+      register: postgreSQL_version_info
+      become: true
+      become_user: root
+    - name: 05_02. postgreSQL 정보 가공
+      set_fact:
+        db_name: "{{ postgreSQL_version_info.stdout }}"
+        db_version_01: "{{ postgreSQL_version_info.stdout | string | cut_str(0,2) }}"
+        db_version_02: "{{ postgreSQL_version_info.stdout | string | cut_str(0,2) }}"
+      when: postgreSQL_version_info.rc == 0
+    when: postgresql.rc == 0
+
+  ## MongoDB 확인
+  - name: 05. DB 체크 - mongoDB
+    raw: "{{ unix_DB_command.mongoDB }}"
+    register: mongodb
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "mongoDB"
+    - name: 05_01. mongoDB 버전확인
+      shell: "{{ unix_DB_version_command.mongoDB }}"
+      register: mongoDB_version_info
+      become: true
+      become_user: root
+    - name: 05_02. mongoDB 정보 가공
+      set_fact:
+        db_name: "mongoDB {{ mongoDB_version_info.stdout | string | cut_str(0,3) }}"
+        db_version_01: "{{ mongoDB_version_info.stdout | string | cut_str(0,3) }}"
+        db_version_02: "{{ mongoDB_version_info.stdout | string | cut_str(0,3) }}"
+      when: mongoDB_version_info.rc == 0
+    when: mongodb.rc == 0
+
+  ## MSSQLserver 확인 (윈도우 계정정보 필요로인해 리눅스는 버전추출불가)
+  - name: 05. DB 체크 - msSQLserver
+    raw: "{{ unix_DB_command.msSQLserver }}"
+    register: sqlserver
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "MSSQL"
+    # - name: 05_01. msSQLserver 버전확인
+    #   shell: "{{ unix_DB_version_command.msSQLserver }}"
+    #   register: msSQLserver_version_info
+    #   become: true
+    #   become_user: root
+    # - name: 05_02. msSQLserver 정보 가공
+    #   set_fact:
+    #     db_name: "Microsoft SQL Server {{ msSQLserver_version_info.stdout | string | cut_str(2,3) }}"
+    #     db_version_01: "{{ msSQLserver_version_info.stdout | string | cut_str(2,7) }}"
+    #     db_version_02: "{{ msSQLserver_version_info.stdout | string | cut_str(2,7) }}"
+    #   when: msSQLserver_version_info.rc == 0
+    when: sqlserver.rc == 0
+
+  ## Tibero 확인
+  - name: 05. DB 체크 - Tibero
+    raw: "{{ unix_DB_command.tibero }}"
+    register: tibero
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "Tibero"
+    - name: 05_01. Tibero 버전확인
+      shell: "{{ unix_DB_version_command.tibero }}"
+      register: tibero_version_info
+      become: true
+      become_user: root
+    - name: 05_02. Tibero 정보 가공
+      set_fact:
+        db_name: "Tibero {{ tibero_version_info.stdout | string | cut_str(0,1) }}"
+        db_version_01: "{{ tibero_version_info.stdout | string | cut_str(1,1) }}"
+        db_version_02: "{{ tibero_version_info.stdout | string | cut_str(1,1) }}"
+      when: tibero_version_info.rc == 0
+    when: tibero.rc == 0
+
+  ## DB2 확인
+  - name: 05. DB 체크 - DB2
+    raw: "{{ unix_DB_command.db2 }}"
+    register: db2
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "DB2"
+    - name: 05_01. DB2 버전확인
+      shell: "{{ unix_DB_version_command.db2 }}"
+      register: db2_version_info
+      become: true
+      become_user: root
+    - name: 05_02. db2 정보 가공
+      set_fact:
+        db_name: "{{ db2_version_info.stdout | string | cut_str(0,1) }}"
+        db_version_01: "{{ db2_version_info.stdout | string | cut_str(0,11) }}"
+        db_version_02: "{{ db2_version_info.stdout | string | cut_str(0,11) }}"
+      when: db2_version_info.rc == 0
+    when: db2.rc == 0
+
+  # 기타
+  - name: 06. DB 체크 - 기타
+    set_fact:
+      db_info: "기타"
+      db_name: ""
+      db_version_01: ""
+      db_version_02: ""
+    when: db_info is undefined
+
+  when: ping_result.ping is defined

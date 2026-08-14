@@ -1,0 +1,19 @@
+---
+- name: 02. UNIX - Disk info
+  command: "df -k"
+  register: disk_info
+
+- name: 02. LINUX - set_fact
+  set_fact:
+    df_list: "{{ df_list | default([]) + [ \
+              { 'filesystem': (item.split())[0], \
+                'size': (((item.split())[1] | float / 1024) | round) | int, \
+                'used': (((item.split())[2] | float / 1024) | round) | int, \
+                'avail': (((item.split())[3] | float / 1024) | round) | int, \
+                'mounted': (item.split())[5] } \
+              ] }}"
+  loop: "{{ disk_info.stdout_lines[1:] }}"
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_list': df_list }) }}"

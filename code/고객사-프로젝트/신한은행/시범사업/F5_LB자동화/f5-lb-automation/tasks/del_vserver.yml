@@ -1,0 +1,41 @@
+---
+# 네이밍룰 센터코드_계열사코드_Server
+- name: Define Server
+  set_fact:
+    server_name: "{{ item.datacentercode ~ '_' ~ company_code ~ '_Server' }}"
+
+# 네이밍룰 V서버 Index
+- name: Define Virtual Server Idx
+  set_fact:
+    vserver_idx: "{{ vserver_idx|int + 1 }}"
+
+# 네이밍룰 vir_센터코드_Idx_계열사코드_도메인명
+- name: Define Virtual Server
+  set_fact:
+    vserver_name: "{{ 'vir' ~ '_' ~ item.datacentercode ~ '_' ~  vserver_idx ~ '_' ~ company_code ~ '_' ~ wideips_name  }}"
+
+- name: Virtual Server 삭제 -> "{{server_name ~ ':' ~ server_name}}"
+  ansible.builtin.uri:
+    url: "{{ host }}/{{ rest_api_info.default_api }}/server/{{server_name}}/virtual-servers/{{server_name}}"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: DELETE
+    validate_certs: false
+  register: DelVServer
+  delegate_to: localhost
+# - debug: var=DelVServer
+
+- name: Virtual Server 확인 정보 추출
+  set_fact:
+    rollback_data: "{{ DelVServer.json|default([]) }}"
+    rollback_err_msg: "{{ DelVServer.json|default({}) if DelVServer.status|int != 200 else {} }}"
+    rollback_err_flag: "{{ false if DelVServer.status|default(0)|int == 200 else true }}"
+
+# 네이밍룰 tcp_V서버명
+- name: Define Monitor
+  set_fact:
+    monitor_name: "{{ item.protocol ~ '_' ~ vserver_name ~ '_' ~ item.healthcheckport }}"
+
+- name: 모니터 삭제 호출
+  include_tasks: "./del_monitor.yml"
+  when: err_flag|default(true) == false

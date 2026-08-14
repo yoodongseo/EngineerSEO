@@ -1,0 +1,32 @@
+---
+- name: linux_vulner_check
+  gather_facts: false
+  ignore_errors: true
+  ignore_unreachable: true
+  # strategy: free
+  hosts: all
+  tasks:
+  - block:
+    - name: 연결 확인
+      shell: echo $HOSTNAME
+      register: result_connection
+
+    - name: 변수 설정
+      include_vars: ../vars/linux_vulner_check_vars.yml
+
+    - name: 작업 호출
+      include_tasks: ../tasks/linux_vulner_check_task.yml
+      when: result_connection.rc | default(1) == 0
+
+    always: 
+    - name: 점검 결과 저장
+      include_tasks: ../tasks/save_to_db.yml
+    
+    - name: 작업 결과 표출
+      debug: # 작업 과정 디버깅
+        msg:
+          - "연결상태 점검결과 ---> {{ (result_connection.rc | default(1) == 0) | ternary(true, false) }}"
+          - "취약점 진단 스크립트 배포 결과 ---> {{ (result_copy.failed | default(true) == false) | ternary(true, false) }}"
+          - "취약점 진단 성공 여부 ---> {{ (result_running_shell.rc | default(1) == 0) | ternary(true, false) }}"
+      failed_when: result_connection.rc | default(1) == 1
+      ignore_errors: false

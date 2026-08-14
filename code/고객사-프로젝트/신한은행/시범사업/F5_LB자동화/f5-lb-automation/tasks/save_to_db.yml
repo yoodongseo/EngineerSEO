@@ -1,0 +1,55 @@
+---
+- name: DB 저장을 위한 변수 생성(IaC)
+  set_fact:
+    content_value: "{{ {'data_list': [{ \
+      'host': inventory_hostname, \
+      'host_name': inventory_hostname, \
+      'is_success': false if is_notconnect == true|default(true) else job_result.is_success|default(false), \
+      'is_pass': false if is_notconnect == true|default(true) else job_result.is_pass|default(false), \
+      'file_path': (file_path|split('/'))[:-1]|join('/')+'/', \
+      'report_type': report_type[0], \
+      'message': '접속실패' if is_notconnect == true|default(true) else job_result.err_msg|default(None), \
+      'system': system, \
+      'is_active': is_active \
+      }]} }}"
+# - debug: var=content_value
+
+- name: 보고서 경로 DB 저장(IaC)
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: "{{ data_type }}"
+    data_key: "{{ data_key }}_report"
+    template_id: "{{ fap.template_id }}"
+    job_id: "{{ fap.job_id }}"
+  delegate_to: localhost
+  when: content_value is defined
+
+- name: DB 저장을 위한 변수 생성(포탈)
+  set_fact:
+    content_value: "{{ {'data_list': [{ \
+      'host': inventory_hostname, \
+      'host_name': inventory_hostname, \
+      'is_success': job_result.is_success|default(false), \
+      'is_pass': job_result.is_pass|default(false), \
+      'name': 'GSLB 등록', \
+      'command': 'GSLB 등록', \
+      'result': '점검 실패' if job_result.data|default(None) == None else job_result.data,\
+      'report_type': report_type[1], \
+      'message': '접속실패' if is_notconnect == true|default(true) else job_result.err_msg|default(None), \
+      'system': system, \
+      'is_active': is_active \
+      }]} }}"
+
+- name: 보고서 경로 DB 저장(포탈)
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: "{{ data_type }}"
+    data_key: "{{ data_key }}"
+    template_id: "{{ fap.template_id }}"
+    job_id: "{{ fap.job_id }}"
+  delegate_to: localhost
+  when: content_value is defined

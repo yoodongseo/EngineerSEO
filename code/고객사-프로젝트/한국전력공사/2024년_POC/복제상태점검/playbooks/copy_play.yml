@@ -1,0 +1,46 @@
+---
+- name: 보안점검
+  hosts: all
+  strategy: free
+  gather_facts: false
+  ignore_errors: true
+  ignore_unreachable: true
+  tasks:
+    - block:
+      - name: vars 호출
+        include_vars: ../vars/copy_vars.yml
+
+      - name: "시스템현황 vars 호출"
+        include_vars: /fap/ansible/projects/COMPANY_시스템점검현황/vars/current_vars.yml
+      
+      - name: 작업
+        include_tasks: ../tasks/copy_task.yml
+        loop: >-
+          {{ Linux if vendor == 'Linux'
+          else L3 if vendor == 'L3' 
+          else Ibm if vendor == 'Ibm'
+          else Hitachi if vendor == 'Hitachi'
+          else Nas if vendor == 'Nas'
+          else Veritas if vendor == 'Veritas' }}
+        no_log: true
+
+        ### 추후 Veritas 접속문제 해결 시 else Veritas if vendor == 'Veritas' 추가
+
+      always:
+      - name: Make content value
+        set_fact:
+          content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+        delegate_to: localhost
+        when: merged_value is defined
+      
+      - name: Save to DB
+        fap.common.save_data:
+          content: "{{ content_value }}"
+          protocol: http
+          hostname: "{{ inventory_hostname }}"
+          data_type: report
+          data_key: prevention
+          template_id: "{{ fap.template_id | default(omit) }}"
+          job_id: "{{ fap.job_id | default(omit) }}"
+        delegate_to: localhost
+        when: content_value is defined

@@ -1,0 +1,56 @@
+---
+### L3 대상 점검 명령어 수행 및 점검결과 변수처리
+- name: "명령어 수행 {{ vendor }}" ### L3
+  win_shell: "{{ item.raw }}"
+  register: total_item
+
+### 점검주체별 명령어 수행결과 txt파일 저장(임시)
+- name: 명령어 결과 파일저장
+  raw: |
+    echo "{{ total_item.stdout }}" | sed "s/\['//;s/']//g" > "{{ item.tmp_file_path }}"
+  delegate_to: localhost
+
+### txt파일에 기입된 데이터 값 변수 저장
+- name: 전체 명령어 파일 reading
+  command: cat "{{ item.tmp_file_path }}"
+  register: total_item
+  delegate_to: localhost
+
+- name: 성공 변수
+  set_fact:
+    merged_value: >-
+      {{ [{
+          'host': inventory_hostname,
+          'id': item.id,
+          'name': item.cmd_name,
+          'command': item.cmd_name,
+          'result': total_item.stdout | default(None),
+          'message': item.message | default(None),
+          'is_success': true,
+          'os': vendor | default(None),
+          'compare': true
+        }] + (merged_value | default([])) }}
+  when: total_item.failed | default(true) == false
+
+- name: 실패 변수
+  set_fact:
+    merged_value: >-
+      {{ [{
+          'host': inventory_hostname,
+          'id': None,
+          'name': None,
+          'command': None,
+          'result': None,
+          'message': None,
+          'is_success': False,
+          'os': None,
+          'compare': None
+        }] + (merged_value | default([])) }}
+  when: merged_value is not defined
+
+### 점검 명령어 수행결과 txt 파일 삭제
+- name: Temp 삭제
+  file: 
+    path: "{{ item.tmp_file_path }}"
+    state: absent
+  delegate_to: localhost

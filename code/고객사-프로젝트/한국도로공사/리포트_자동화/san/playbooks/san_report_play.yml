@@ -1,0 +1,23 @@
+---
+- name: ex report
+  hosts: all
+  strategy: free
+  gather_facts: false
+  
+  tasks:
+    - name: vars include
+      include_vars: ../vars/san_report_vars.yml
+
+    - name: 일시 생성
+      command: "date +'%Y%m%d'"
+      register: today
+      delegate_to: localhost
+
+    - name: Report file get(switch)
+      raw: cat "{{ switch_file_path }}/SAN_X6-8-2_{{ today.stdout }}.log"
+      register: switch_report_data
+      when: switch_file_path | regex_replace('(?i)SAN')
+      
+    - name: switch tasks
+      include_tasks: ../tasks/ex_switch_report.yml
+      when: switch_file_path | regex_replace('(?i)SAN')

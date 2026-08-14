@@ -1,0 +1,42 @@
+---
+# report_type: 'replicationstatus'
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "storage"
+model: "IBM"
+data5: "에방점검_IBM"
+
+commands:
+############## IBM ##############
+  - {
+      cmd_id: "0001",
+      filter_key: "IBMRedundancyFilter",
+      name: "1. Path 이중화 상태 점검",
+      command: "lsrcconsistgrp attache_DR",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0002",
+      filter_key: "LogFilter",
+      name: "02. 로그 점검",
+      command: "lseventlog -count 50",
+      os: "{{ model }}",
+      inspection_criteria: "Unable",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}",
+    }

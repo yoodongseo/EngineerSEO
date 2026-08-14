@@ -1,0 +1,71 @@
+---
+- name: mongo_play
+  hosts: all
+  gather_facts: false
+  
+  vars_files:
+    - ../vars/mongodb_vars.yml
+  
+  module_defaults:
+    fap.custom.exec_command_prompt:
+      fap_vars: "{{ fap }}"
+      protocol: ssh                         # auto(default)|telnet|ssh
+      ip: "{{ inventory_hostname }}"
+      ssh_port: "{{ ansible_port | default(22) }}"
+      result_type: cli_data                  # list|dict|cli_data
+      user_id: "{{ ansible_user }}"
+      user_password: "{{ ansible_password | default('') }}"
+      become_method: "{{ ansible_become_method | default('') }}"
+      become_password: "{{ ansible_become_password | default('') }}"
+      target_type: "server"
+      # network_os: "{{ model | default('') }}"
+
+  tasks:
+    - block:
+        - name: 프로세스 명령어
+          raw: ps -ef | grep mongo
+          register: ps_result
+          
+        - name: 포트 확인
+          raw: netstat -nlpt
+          register: netstat_result
+          
+        - name: 명령어 debug
+          debug:
+            msg: |
+              프로세스 확인 :
+              {{ ps_result.stdout }}
+          
+              --
+          
+              포트 확인 :
+              {{ netstat_result.stdout }}
+      #   - name: 명령어 실행
+      #     fap.custom.exec_command_prompt:
+      #       command: "{{ inspection_commands }}"
+      #     register: prompt_result
+      #     delegate_to: localhost
+
+      #   # - name: 명령어 실행 결과 debug
+      #   #   debug:
+      #   #     msg: "{{ prompt_result.result.data_list }}"
+
+      #   - name: 명령어 결과 필터 처리
+      #     fap.custom.filter_exec_module:
+      #       stdout_lines: "{{ prompt_result.result.data_list | map(attribute='output') | list }}"
+      #       inspection_items: "{{ inspection_commands | selectattr('is_save', 'eq', true) }}"
+      #       host: "{{ inventory_hostname }}"
+      #       host_name: "{{ inventory_hostname }}"
+      #       report_type: "{{ report_type }}"
+      #       file_path: ""
+      #       system: "{{ system }}"
+      #     register: result_value
+      #     delegate_to: localhost
+        
+      #   # - name: 필터 결과 결과 debug
+      #   #   debug:
+      #   #     msg: "{{ result_value }}"
+
+      # always:
+      #   - name: DB 저장 Tasks 실행
+      #     include_tasks: /fap/ansible/projects/faplib/tasks/content_savedb.yml

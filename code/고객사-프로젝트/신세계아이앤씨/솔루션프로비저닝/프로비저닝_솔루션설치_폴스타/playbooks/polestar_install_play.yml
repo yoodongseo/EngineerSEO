@@ -1,0 +1,21 @@
+---
+- name: polestar_install_play
+  hosts: all
+  gather_facts: false
+  tasks:
+    - block:
+      - name: 연결 상태 체크
+        shell: hostname
+        register: connection_check
+
+      - name: 변수 호출
+        COMPANYlude_vars: ../vars/polestar_install_vars.yml
+
+      - name: Agent 설치 진행
+        COMPANYlude_tasks: ../tasks/polestar_install_tasks.yml
+      
+      always:
+        - name: Agent  설치 프로세스 확인
+          debug:
+            msg: "{{ install_success.stdout }}"
+          when: install_success.rc == 0

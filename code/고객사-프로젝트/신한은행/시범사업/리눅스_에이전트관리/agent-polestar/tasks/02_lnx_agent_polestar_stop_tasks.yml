@@ -1,0 +1,20 @@
+---
+- block:
+  - name: Agent 중지
+    shell: "{{ agent_mgmt_polestar['stop'] }}"
+    register: result_agent_stop
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. Agent 중지',
+          'command': 'Polestar uninstall cmd',
+          'result': result_agent_stop['stdout'] | default('unknown'),
+          'is_success': True,
+          'is_pass': False if result_agent_stop['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

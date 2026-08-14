@@ -1,0 +1,40 @@
+---
+- name: 05. UNIX - System Info
+  raw: prstat -Z 1 1 | grep -v Total | tail -1
+  register: system_info
+
+- name: 06. UNIX - CPU Usage
+  set_fact:
+    cpu_usage: "{{ system_info.stdout.split()[6] | regex_replace('%', '') }}"
+
+- name: set_fact
+  set_fact: 
+    merged_value: "{{ merged_value | combine({'cpu': cpu_usage }) }}"
+
+- name: 06. UNIX - CPU Cores
+  raw: psrinfo -p
+  register: cpu_info
+
+- name: 06. UNIX - CPU Cores Set Fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu_cores': cpu_info.stdout | int }) }}" # edit by lyh!!! 
+
+- name: 07. UNIX - Memory Usage
+  set_fact:
+    memory_info: "{{ system_info.stdout.split()[4] | regex_replace('%', '') }}"
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory': memory_info }) }}"
+
+- name: 07. Get Memory Size
+  raw: prtconf | grep "Memory size"
+  register: memory_size
+
+- name: 07. Memory Size -2
+  set_fact:
+    memory_sizes: "{{ memory_size.stdout | regex_replace('[^0-9]', '') }}"
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory_size': memory_sizes }) }}"

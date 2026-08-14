@@ -1,0 +1,26 @@
+---
+merged_value: [] ### Mertged_value 초기화
+system: 'Linux' ### 작업 보고서 시스템명
+report_type: 'Linux TOP,PS 일일점검'  ### 작업 보고서 작업 유형
+data_key: LNX_INSPECTION_DAILY  ### DB 저장용 Key
+today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}" ### 날짜 생성
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_id }}/" ### 로그 저장 등
+
+Linux:  ### vendor 선언
+  - cmd_name: "cat /etc/ssh/sshd_config"  ### 명령어명(DB 저장용)
+    cmd_command: 'cat /etc/ssh/sshd_config' ### 명령어(DB 저장용)
+    value: "str"  ### 커스텀 필터 적용 변수
+    com_value: "yes"  ### 실제 비교문
+    ### 리포트 등 명령어 항목 명
+    message: |
+        1. U-01. root 계정 원격 접속 제한
+    raw: "cat /etc/ssh/sshd_config | grep PermitRootLogin"  ### 실제 실행 명령어
+    multi_raw:  ### 다중 명령어 순차 실행
+      - ''
+    arr_num: 0  ### 표 결과에서 사용하는 커스텀 필터 변수
+    grep: ""  ### grep 명칭
+    time: 1 ### 명령어 대기 시간
+    criteria: "yes 결과 존재 시 비정상" ### 조건문
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_Linux.txt" ### 명령어 임시 저장
+    cmd_id: 1 ### 취약점 보고서 ID
+    id: 0001 ### 백업 관리 ID

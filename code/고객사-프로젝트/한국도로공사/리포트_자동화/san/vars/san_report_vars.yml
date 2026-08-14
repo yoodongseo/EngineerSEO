@@ -1,0 +1,15 @@
+---
+### raw 데이터 경로
+switch_file_path: /home/example_user/imsi/log
+
+### 엑셀 저장 경로
+switch_save_path: "/fap/report/{{ switch_report_name }}/{{ today.stdout }}/{{ fap.job_id }}/{{ inventory_hostname }}"
+
+### 엑셀명
+switch_name: "SAN_switch_line_{{ today.stdout }}.xlsx"
+
+### 파이썬 엑셀 output 경로
+switch_output_path: "{{ switch_save_path }}/{{ switch_name }}"
+
+### 보고서 info
+switch_report_name: "new_san_switchline"

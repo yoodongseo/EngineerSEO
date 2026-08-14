@@ -1,0 +1,45 @@
+---
+- name: switch python 실행
+  command: /usr/bin/python3 ../vars/ex_switch.py
+  environment:
+    report_data: "{{ switch_report_data.stdout }}"
+    save_path: "{{ switch_save_path }}"
+    output_name: "{{ switch_name }}"
+  register: report_py
+  delegate_to: localhost
+
+- name: switch result_value reset
+  set_fact:
+    result_value: []
+
+- name: switch 결과 파일 DB화 작업
+  set_fact:
+    result_value: "{{ result_value | default([]) + [{
+      'host': inventory_hostname,
+      'host_name': fap.host_ip,
+      'is_success': true,
+      'file_path': switch_save_path,
+      'report_type': switch_report_name,
+      'system': 'SANSwithch라인점검'
+      }] }}"
+    delegate_to: localhost
+
+- name: switch Make content value
+  set_fact:
+    content_value: "{{ content_value | default({}) | combine({'data_list': result_value}) }}"
+  delegate_to: localhost
+
+- name: switch Save DB
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: report
+    data_key: ex_report
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  delegate_to: localhost
+
+- set_fact: # 변수 초기화
+    merged_value: []
+    content_value: {}

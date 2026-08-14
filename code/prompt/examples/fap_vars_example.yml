@@ -1,0 +1,30 @@
+---
+fap:
+  agent_id: 2
+  agent_ip: "192.0.2.10"
+  current_job_id: 741
+  custom_vars:
+    host_ip: "192.0.2.10"
+  group_info:
+    - "linux: 5"
+  host_id: 1
+  host_ip: "192.0.2.10"
+  host_name: "me"
+  host_vars: {}
+  inventory_info:
+    - "Inventory: 10"
+  job_id: 741
+  model: "Linux"
+  os_type: "RedHat"
+  site_code: "FAP"
+  template_id: 26
+  template_info:
+    execute_permission: "T"
+    grade: 5
+    is_distributed: false
+    is_temporary: false
+    main_category: "DEFAULT"
+    sub_category: "DEFAULT"
+    template_name: "서유동_테스트"
+    template_type: "J"
+  vendor: "QEMU"

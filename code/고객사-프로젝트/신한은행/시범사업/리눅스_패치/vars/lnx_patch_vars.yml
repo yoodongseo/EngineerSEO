@@ -1,0 +1,102 @@
+---
+# SAVE VARS
+system: Linux
+report_type: "Linux 업데이트"
+data_key: "LNX_PATCH"
+
+reboot_flag: "{{ fap['host_vars']['reboot_flag'] | default('False') }}"
+
+# Play Jobs
+copy_src: 
+  - name: "../templates/2024_ver7_patch.tar"
+  - name: "../templates/2024_ver8_patch.tar"
+copy_dest: "/tmp/lnx_patch"
+timeout: 1200
+
+# 설치 쉘
+update_cli: |
+  COPY_DIR="{{ copy_dest }}"
+  VERSION=none
+  DATE_YYYYMMDDHHMMSS=$(date +%Y%m%d%H%M%S)
+  BACKUP_DIR=/tmp/"${DATE_YYYYMMDDHHMMSS}"
+  BACKUP_INFO_PKG="${BACKUP_DIR}"/PKG_INFO.log
+  BACKUP_STAT_PKG="${BACKUP_DIR}"/PKG_STAT.log
+
+  mkdir -p "${BACKUP_DIR}"
+  > "${BACKUP_INFO_PKG}"
+  > "${BACKUP_STAT_PKG}"
+
+  echo "Starting package backup..."
+
+  # 1. 패키지 백업
+  rpm -qa | sort > "${BACKUP_INFO_PKG}"
+  if [ $? -ne 0 ]; then
+  echo "Failed to execute rpm -qa"
+  exit 1
+  fi
+
+  # 2. YUM 설정정보 백업
+  echo "Moving YUM repositories..."
+  mkdir -p "/etc/yum.repos.d/backup_${DATE_YYYYMMDDHHMMSS}"
+  mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/backup_"${DATE_YYYYMMDDHHMMSS}"
+
+  # 3. REDHAT Version 정보 수집
+  echo "Determining Red Hat version..."
+  version=$(uname -a | awk '{print $3}' | awk -F'.' '{print $(NF-1)}')
+  if [[ "${version}" == *"el7"* ]]; then
+  VERSION=7
+  elif [[ "${version}" == *"el8"* ]]; then
+  VERSION=8
+  else
+  echo "NOT SUPPORTED VERSION"
+  VERSION=none
+  fi
+  echo "Red Hat version: ${VERSION}"
+
+  # 4. OS 버전 정보에 따른 패키지 파일 압축해제
+  echo "Extracting patch tar file..."
+  if [ "${VERSION}" = "7" ]; then
+  tar -xf "${COPY_DIR}/2024_ver7_patch.tar" -C /tmp
+  elif [ "${VERSION}" = "8" ]; then
+  tar -xf "${COPY_DIR}/2024_ver8_patch.tar" -C /tmp
+  else
+  echo "Unsupported version: ${VERSION}"
+  echo 'exit 1'
+  fi
+  if [ $? -ne 0 ]; then
+  echo "Failed to extract patch tar file"
+  exit 1
+  fi
+
+  # 5. 신규 레포지토리 생성
+  local_repo="/etc/yum.repos.d/local-patch.repo"
+  touch "${local_repo}"
+  case ${VERSION} in
+    7)
+      echo "[local-patch]" >> "${local_repo}"
+      echo "name=Local Patch Repository" >> "${local_repo}"
+      echo "baseurl=file:///tmp/2024_ver7_patch" >> "${local_repo}"
+      echo "enabled=1" >> "${local_repo}"
+      echo "gpgcheck=0" >> "${local_repo}"
+      ;;
+    8)
+      echo "[local-patch]" >> "${local_repo}"
+      echo "name=Local Patch Repository" >> "${local_repo}"
+      echo "baseurl=file:///tmp/2024_ver8_patch" >> "${local_repo}"
+      echo "enabled=1" >> "${local_repo}"
+      echo "gpgcheck=0" >> "${local_repo}"
+      ;;
+    *)
+      echo "Unsupported version: ${VERSION}" && exit 1
+      ;;
+  esac
+
+  # 6. Update 수행
+  yum clean all
+  yum update -y || yum update -y --allowerasing
+  r=$?
+  if [ ${r} -ne 0 ]; then
+  echo "Failed yum -y update"
+  exit $r
+  fi
+

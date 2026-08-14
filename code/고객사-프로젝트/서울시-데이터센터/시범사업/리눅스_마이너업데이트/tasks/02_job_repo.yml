@@ -1,0 +1,40 @@
+---
+- block:
+  # 설정 경로가 없는 경우 중단
+  - name: 2.1. /etc/yum.repos.d 경로 존재 여부 점검
+    stat:
+      path: /etc/yum.repos.d
+    register: repo_dir_status
+    failed_when: repo_dir_status['stat']['exists'] | default(False) == False
+
+  # STEP 1 - 기존 레포지토리 백업
+  - name: 2.2. 기존 레포지토리 설정 정보 백업 및 삭제
+    shell: "{{ del_origin_repo_cmd }}"
+    timeout: "{{ command_timeout }}"
+
+  # STEP 2 - 신규 레포지토리 설정 생성
+  - name: 2.3. 레포지토리 설정정보 파일 생성
+    copy:
+      dest: "{{ copy_repo['dest'] }}"
+      content: "{{ copy_repo['content'] }}"
+
+  # STEP 3 - 캐시 초기화
+  - name: 2.4. YUM 캐시 정리 및 메타데이터 refresh 
+    shell: "{{ yum_clean_cmd }}"
+    timeout: "{{ command_timeout }}"
+    register: result_clean
+
+  always:
+  - name: Save DATA Merged 생성
+    set_fact:
+      merged_value: "{{ merged_value + [{
+        'host': fap['host_ip'],
+        'host_name': fap['host_ip'],
+        'name': '02. 레포지토리 설정',
+        'command': 'yum_clean_cmd',
+        'result': result_clean['stderr'] | default('오류발생') if result_clean['failed'] | default(True) else result_clean['stdout'],
+        'is_success': True,
+        'is_pass': False if result_clean['failed'] else True,
+        'system': system,
+        'report_type': report_type
+          }] }}"

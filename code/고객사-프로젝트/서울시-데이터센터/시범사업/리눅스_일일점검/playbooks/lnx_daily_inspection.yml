@@ -1,0 +1,23 @@
+---
+- name: Linux 파일시스템, CPU 일일점검
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/lnx_daily_inspection_vars.yml
+  tasks:
+  - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_lnx_con_tasks.yml
+
+      - name: 2. 점검 수행
+        include_tasks: ../tasks/02_lnx_daily_inspection_tasks.yml
+        loop: "{{ lnx_inspection_item }}"
+        loop_control:
+          label: "{{ item['name'] }} 점검 수행"
+
+    always:
+      - name: 데이터 저장
+        include_tasks: ../tasks/save_data.yml

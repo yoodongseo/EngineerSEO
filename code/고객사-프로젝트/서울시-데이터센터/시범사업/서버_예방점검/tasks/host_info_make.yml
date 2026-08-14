@@ -1,0 +1,7 @@
+---
+- set_fact: # 호스트 정보 변수 생성
+    host_info: "{{ host_info | default({}) | combine({
+      'group_id': fap.group_info | map(attribute=inspection_group) | select('defined') | first,
+      'host_id': fap.host_id,
+      'inventory_id': fap.inventory_info | map('dict2items') | first | map(attribute='value') | first
+      }) }}"

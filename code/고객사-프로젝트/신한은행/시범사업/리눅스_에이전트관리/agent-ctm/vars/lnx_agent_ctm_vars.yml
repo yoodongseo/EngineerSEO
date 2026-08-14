@@ -1,0 +1,134 @@
+---
+# JOB_VARS
+## install, uninstall, start, stop, restart
+req_type: "{{ fap['host_vars']['req_type'] }}"
+
+# SAVE VARS
+system: Linux
+report_type: "Linux CTM {{ '설치' if req_type == 'install' 
+                                else '삭제' if req_type == 'uninstall' 
+                                else '기동' if req_type == 'start' 
+                                else '중지' if req_type == 'stop' 
+                                else '재기동' if req_type == 'restart' }}"
+data_key: LNX_AGENT_CTM
+
+# PLAY JOB VARS
+pkg_name: "DRKAI.9.0.20.200_Linux-x86_64.z"
+xml_name: "install_920.xml"
+inst_sh_name: "autoctm_Install.sh"
+username: "autoctm"
+user_id: "603"
+group_name: "infra"
+group_id: "600"
+home_dir: "/sw/bmc/autoctm"
+shell: "/bin/bash"
+sw_dir: "{{ home_dir }}"
+stat_path: "{{ sw_dir }}/ctm/exe"
+
+copy_src: 
+  - name: "../templates/{{ pkg_name }}"
+  - name: "../templates/{{ xml_name }}"
+  - name: "../templates/{{ inst_sh_name }}"
+copy_dest: "/tmp/CTM"
+
+timeout: 300
+
+# 설치 쉘
+install_cli: |
+  # 계정 설정 정보 변수 설정
+  username="{{ username }}"
+  user_id="{{ user_id }}"
+  group_name="{{ group_name }}"
+  group_id="{{ group_id }}"
+  home_dir="{{ home_dir }}"
+  shell="{{ shell }}"
+
+  # 설치 환경 정보 변수 설정
+  sw_dir="{{ sw_dir }}"
+  inst_files_dir="${sw_dir}/inst_files"
+  package_name="{{ pkg_name }}"
+  inst_sh_name="{{ inst_sh_name }}"
+
+  # 1. 필수 패키지 설치
+  echo "Installing required packages..."
+  yum install -q -y libnsl* psmisc || yum install -q -y libnsl psmisc
+  rc=$?
+  if [ "${rc}" -ne 0 ]; then
+    echo "Error: yum install error"
+    exit "${rc}"
+  fi
+
+  # 2. autoctm 계정 및 그룹 점검, 이미 있을 경우 영향없음
+  if ! id -u "${username}" >/dev/null 2>&1; then
+      echo "'${username}' not found. Creating..."
+
+      # 4.1. 그룹 점검 및 생성
+      grep -q "^${group_name}:" /etc/group || groupadd -g "${group_id}" "${group_name}"
+
+      # 4.2. 사용자 생성
+      mkdir -p "${sw_dir}"
+      useradd -u "${user_id}" -g "${group_id}" -d "${home_dir}" -s "${shell}" -m "${username}" || { echo "Failed to create   user '${username}'."; exit 1; }
+      echo "User '${username}' created."
+  else
+      echo "The user '${username}' already exists."
+  fi
+
+  # 3. 디렉토리 생성 및 권한 설정
+  rm -rf "${inst_files_dir}"
+  mkdir -p "${inst_files_dir}"
+  chown -R "${username}:${group_name}" "${sw_dir}"
+
+  # 4. 패키지 파일 이동
+  mv /tmp/CTM/* "${inst_files_dir}" && chmod +x "${inst_files_dir}/${inst_sh_name}"
+
+  # 5. 설치 작업 수행
+  cd "${inst_files_dir}" && ./${inst_sh_name}
+  exit $?
+
+expect_cli_list:
+  stop:
+    - name: 3. CTM 중지
+      cmd:
+        - cli: "cd /sw/bmc/autoctm/ctm/scripts && ./shut-ag"
+          found_list:
+            - found: 'username'
+              answer: 'Enter'
+            - found: 'ALL'
+              answer: 'Enter'
+  start:
+    - name: 3. CTM 기동
+      cmd:
+        - cli: "cd /sw/bmc/autoctm/ctm/scripts && ./start-ag"
+          found_list:
+            - found: 'username'
+              answer: 'Enter'
+            - found: 'ALL'
+              answer: 'Enter'
+  restart:
+    - name: 3. CTM 재기동
+      cmd:
+        - cli: "cd /sw/bmc/autoctm/ctm/scripts && ./shut-ag"
+          found_list:
+            - found: 'username'
+              answer: 'Enter'
+            - found: 'ALL'
+              answer: 'Enter'
+        - cli: "cd /sw/bmc/autoctm/ctm/scripts && ./start-ag"
+          found_list:
+            - found: 'username'
+              answer: 'Enter'
+            - found: 'ALL'
+              answer: 'Enter'
+  uninstall:
+    - name: 3. CTM 삭제
+      cmd:
+        - cli: "cd /sw/bmc/autoctm/ctm/scripts && ./shut-ag"
+          found_list:
+            - found: 'username'
+              answer: 'Enter'
+            - found: 'ALL'
+              answer: 'Enter'
+        - cli: "cd /sw/bmc/autoctm && rm -rf *"
+          found_list:
+            - found: ''
+              answer: ''

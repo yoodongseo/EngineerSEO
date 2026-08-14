@@ -1,0 +1,102 @@
+---
+- name: facts check
+  setup:
+  
+- name: 01. LINUX - OS, version, type, kernel
+  set_fact:
+    merged_value: "{{ merged_value | combine({'os_name': ansible_facts.distribution, 'os_type': ansible_facts.system }) }}"
+
+- name: 01. LINUX - kernel
+  set_fact:
+    merged_value: "{{ merged_value | combine({'kernel': ansible_facts.kernel, 'os_version': ansible_facts.distribution+' '+ansible_facts.distribution_version }) }}"
+
+- name: 02. LINUX - Disk info
+  command: "df -BM"
+  register: disk_info
+
+- name: 02. LINUX - set_fact
+  set_fact:
+    df_list: "{{ df_list | default([]) + [ \
+              { 'filesystem': (item.split())[0], \
+                'size': (item.split())[1]|replace('M',''), \
+                'used': (item.split())[2]|replace('M',''), \
+                'avail': (item.split())[3]|replace('M',''), \
+                'mounted': (item.split())[5] } \
+              ] }}"
+  loop: "{{ disk_info.stdout_lines[1:] }}"
+
+- name: Disk list set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_list': df_list}) }}"
+
+- name: 02. LINUX - Disk size
+  raw: "df | grep '^/dev/' | awk '{s+=$2} END {print s/1024}'"
+  register: disk_size
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_size': disk_size.stdout_lines | last }) }}"
+
+- name: 03. LINUX - Uptime info
+  command: uptime
+  register: uptime_info
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'uptime': uptime_info.stdout_lines[0].split(',')[0] }) }}"
+
+- name: 04. LINUX - CPU Usage
+  raw: cat /proc/stat |grep cpu |tail -1|awk '{print ($5*100)/($2+$3+$4+$5+$6+$7+$8+$9+$10)}'|awk '{print 100-$1}'
+  register: cpu_info
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu': cpu_info.stdout_lines | last }) }}"
+
+- name: 04. LINUX - CPU Cores
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu_cores': ansible_facts.processor_count }) }}"
+
+- name: 05. LINUX - Memory Usage
+  raw: free | grep Mem | awk '{print $3/$2 * 100.0}'
+  register: memory_info
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory': memory_info.stdout_lines | last }) }}"
+
+- name: 05. LINUX - Memory Size
+  raw: vmstat -s -S M|grep "total memory"| sed 's/[^0-9]*//g'
+  register: memory_size
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory_size': ansible_facts.memtotal_mb }) }}"
+    # merged_value: "{{ merged_value | combine({'memory_size': memory_size.stdout_lines | last }) }}"
+
+- name: 06. LINUX - User list
+  raw: "grep /bin/bash /etc/passwd | cut -f1 -d: | egrep '^.{3,16}$'"
+  register: user_list
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'user_list': user_list.stdout_lines | reject('search', 'setlocale') | select('match', '.+') | list } ) }}"
+
+- name: 07. LINUX - Service list
+  ansible.builtin.service_facts: 
+  register: service_info
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'service_list': service_info.ansible_facts.services | dict2items | map(attribute='value') | list }) }}"
+
+- name: 07. LINUX - package list
+  ansible.builtin.package_facts: 
+    manager: auto
+  register: package_info
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'package_list': package_info.ansible_facts.packages | dict2items | map(attribute='value') | list | flatten }) }}"
+
+# - debug: var=ansible_facts.memtotal_mb

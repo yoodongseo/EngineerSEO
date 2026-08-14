@@ -1,0 +1,35 @@
+---
+- name: 서버 점검 플레이북
+  hosts: all
+  strategy: free
+  gather_facts: false
+  ignore_errors: false
+  ignore_unreachable: true
+  vars_files:
+    - ../vars/hpe_vars.yml
+
+  tasks:
+    - block:
+      - name: 명령어 실행
+        raw: "{{ item.command }}"
+        register: prompt_result # ansible module의 결과값을 result 변수에 저장 한다.
+        loop: "{{ commands }}"
+        loop_control:
+          label: "{{ item.name }}"
+        failed_when: False
+
+      - name: 명령어 결과 필터 처리
+        filter_exec_module:
+          stdout_lines: "{{ prompt_result.results | map(attribute='stdout') | list }}"
+          inspection_items: "{{ commands | selectattr('is_save', 'eq', true) }}"
+          host: "{{ inventory_hostname }}"
+          host_name: "{{ inventory_hostname }}"
+          report_type: "{{ report_type }}"
+          system: "{{ system }}"
+          file_path: ""
+        register: result_value
+        delegate_to: localhost
+        
+      always:
+        - name: DB 저장 Tasks 호출
+          include_tasks: /fap/ansible/projects/faplib/tasks/save_db.yml

@@ -1,0 +1,38 @@
+---
+AIX_sysinfo:
+- { id: '0001', name: '0_sysinfo', command: 'sysinfo', os: 'os', compare: true }
+- { id: '0002', name: '1_hostname', command: 'AIX_hostname', os: 'os', compare: true }
+- { id: '0003', name: '2_HW info', command: 'AIX_hwinfo', os: 'os', compare: true } 
+- { id: '0004', name: '3_oslevel', command: 'AIX_oslevel', os: 'os', compare: true }
+- { id: '0005', name: '4_cluster status', command: 'AIX_cluster', os: 'os', compare: true }
+- { id: '0006', name: '5_network info', command: 'AIX_nw_info', os: 'os', compare: true }
+- { id: '0007', name: '6_disk info', command: 'AIX_diskinfo.sh', os: 'os', compare: true }
+- { id: '0008', name: '7_running process', command: 'AIX_running_process', os: '', compare: true }
+- { id: '0009', name: '8_ntp', command: 'AIX_ntp', os: 'os', compare: true } 
+
+Linux_sysinfo:
+- { id: '0001', name: '0_sysinfo', command: 'sysinfo', os: 'os', compare: true }
+- { id: '0002', name: '1_hostname', command: 'linux_hostname', os: 'os', compare: true }
+- { id: '0003', name: '2_HW info', command: 'linux_hwinfo', os: 'os', compare: true } 
+- { id: '0004', name: '3_oslevel', command: 'linux_oslevel', os: 'os', compare: true }
+- { id: '0005', name: '4_cluster status', command: 'linux_cluster', os: 'os', compare: true }
+- { id: '0006', name: '5_network info', command: 'linux_nwinfo', os: 'os', compare: true }
+- { id: '0007', name: '6_disk info', command: 'linux_diskinfo', os: 'os', compare: true }
+- { id: '0008', name: '7_running process', command: 'linux_running_process', os: '', compare: true }
+- { id: '0009', name: '8_ntp', command: 'linux_ntp', os: 'os', compare: true } 
+
+Solaris_sysinfo:
+- { id: '0001', name: '0_sysinfo', command: 'sysinfo', os: 'os', compare: true }
+- { id: '0002', name: '1_hostname', command: 'sun_hostname', os: 'os', compare: true }
+- { id: '0003', name: '2_HW info', command: 'sun_hwinfo', os: 'os', compare: true } 
+- { id: '0004', name: '3_oslevel', command: 'sun_oslevel', os: 'os', compare: true }
+- { id: '0005', name: '4_cluster status', command: 'sun_cluster', os: 'os', compare: true }
+- { id: '0006', name: '5_network info', command: 'sun_nwinfo', os: 'os', compare: true }
+- { id: '0007', name: '6_disk info', command: 'sun_diskinfo', os: 'os', compare: true }
+- { id: '0008', name: '7_running process', command: 'sun_running_process', os: '', compare: true }
+- { id: '0009', name: '8_ntp', command: 'sun_ntp', os: 'os', compare: true } 
+
+Oracle_sysinfo:
+- { id: '0001', name: '1_hostname', command: 'oracle', os: 'os', compare: true }
+
+

@@ -1,0 +1,29 @@
+---
+- block:
+  - name: 실패 변수 생성 --- 작업 성공시 Skip
+    set_fact: # 실패 변수 생성
+      merged_value: "{{ merged_value | default([]) + [{
+        'host': inventory_hostname,
+        'host_name': inventory_hostname,
+        'is_success': false,
+        'file_path': none,
+        'system': 'Linux',
+        'report_type': data_key
+        }] }}"
+    when: merged_value is undefined
+
+  - name: content_value 생성
+    set_fact:
+      content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+      
+  - name: Save to DB
+    fap.common.save_data:
+      content: "{{ content_value }}"
+      protocol: http
+      hostname: "{{ inventory_hostname }}"
+      data_type: report
+      data_key: "{{ data_key }}"
+      template_id: "{{ fap.template_id }}"
+      job_id: "{{ fap.job_id }}"
+      
+  delegate_to: localhost

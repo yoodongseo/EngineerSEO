@@ -1,0 +1,21 @@
+---
+- name: 멤버명 정의
+  set_fact:
+    member_name: "{{item.server_name ~ ':' ~ item.vserver_name}}"
+
+- name: Pool Member 삭제 -> {{member_name}}
+  ansible.builtin.uri:
+    url: "{{ host }}/{{ rest_api_info.default_api }}/pool/{{pool_type | lower }}/{{pool_name}}/members/{{member_name}}"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: DELETE
+    validate_certs: false
+  register: DelPoolMember
+  delegate_to: localhost
+# - debug: var=DelPoolMember
+
+- name: Pool Member 확인 정보 추출
+  set_fact:
+    rollback_data: "{{ DelPoolMember.json|default([]) }}"
+    rollback_err_msg: "{{ DelPoolMember.json|default({}) if DelPoolMember.status|int != 200 else {} }}"
+    rollback_err_flag: "{{ false if DelPoolMember.status|default(0)|int == 200 else true }}"

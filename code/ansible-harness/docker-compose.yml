@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ansible_harness
+      POSTGRES_USER: harness
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-CHANGE_ME_DB_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U harness"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://harness:${DB_PASSWORD:-CHANGE_ME_DB_PASSWORD}@db:5432/ansible_harness
+      ANSIBLE_DATA_DIR: ${ANSIBLE_DATA_DIR:-/ansible}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-CHANGE_ME_32_BYTE_ENCRYPTION_KEY}
+      CREDENTIAL_ENCRYPTION_KEY_ID: ${CREDENTIAL_ENCRYPTION_KEY_ID:-default}
+      AI_BASE_URL: ${AI_BASE_URL:-http://localhost:11434/v1}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-gemma4:e4b}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-ibm/granite-embedding:278m}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-120}
+      AI_RETRIEVAL_K: ${AI_RETRIEVAL_K:-3}
+      AI_RETRIEVAL_FETCH_K: ${AI_RETRIEVAL_FETCH_K:-20}
+      NVIDIA_AI_BASE_URL: ${NVIDIA_AI_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      NVIDIA_AI_API_KEY: ${NVIDIA_AI_API_KEY:-}
+      NVIDIA_AI_CHAT_MODEL: ${NVIDIA_AI_CHAT_MODEL:-nvidia/minimaxai/minimax-m2.7}
+      NVIDIA_AI_TIMEOUT_SECONDS: ${NVIDIA_AI_TIMEOUT_SECONDS:-120}
+    volumes:
+      - /opt/ansible-harness/shared/ansible:/ansible
+      - /opt/ansible-harness/shared/knowledge_base:/app/knowledge_base
+      - /opt/ansible-harness/shared/backend-data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+    ports:
+      - "3000:3000"
+    environment:
+      # Docker 내부 네트워크에서 backend 서비스에 접근
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

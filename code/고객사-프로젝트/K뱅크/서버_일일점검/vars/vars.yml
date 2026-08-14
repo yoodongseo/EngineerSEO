@@ -1,0 +1,52 @@
+---
+report_type: 'custom_report_excel'  ### 작업 보고서 작업 유형
+data_key: POC  ### DB 저장용 Key
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}" ### 날짜 생성
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_id }}/{{ fap.host_ip }}" ### 로그 저장 등
+src_path: "{{ 호스트 소스 경로 | default(none) }}" ### 호스트 src 경로
+data_type: 'report' ### content save backup 외 report, backup은 backup 보고서 타입 설정
+save_type: 'report'   ### report, path, backup
+system: 'Linux' # 호스트 변수의 추가 권장
+model: 'linux' # 호스트 변수의 추가 권장
+
+backup_commands: # 명칭 변경 가능
+# json 문법 
+- name: sudo처리 # expect 방식의 경우 name 추가 필요( 필터 사용 시 X )
+  command: sudo cat /var/log/messages | tail -n 10
+  is_save: true  
+  timeout: 5 # `command`를 수행하고 timeout 전에 프롬프트 패턴을 만나면 곧바로 expect 구문을 수행합니다. 그렇지 않으면 timeout이 지나야 exepct 구문을 수행 합니다.
+  expect: # `command`를 수행하고 예상되는 값에 대한 데이터를 송신하기 위한 옵션 입니다.
+  - prompt: 
+    - 'password' # 예상되는 문자열을 기입 합니다. 예상되는 문자열을 만나지 않은 경우는 error 처리되고 작업이 `중지` 됩니다.
+    - '암호'
+    answer: '{{ ansible_password }}' # 예상되는 문자열을 만났을때 송신하는 데이터를 입력합니다.
+- { name: 'CPU 점검', command: "top -bn1 | grep 'Cpu(s)'", os: "{{ model }}", inspection_criteria: "80", is_save: true, timeout: 3, sleep: 1 }
+- { name: 'Memory 점검', command: 'free -m', os: "{{ model }}", inspection_criteria: "50", is_save: true, is_compare: true, timeout: 3, sleep: 1}
+- { name: 'Disk 점검', command: 'df -h', os: "{{ model }}", inspection_criteria: "10", is_save: true, is_compare: true, timeout: 3, sleep: 1}
+- { name: 'Log 점검', command: 'sudo cat /var/log/secure | tail -n 10', os: "{{ model }}", inspection_criteria: "10", is_save: true, is_compare: true, timeout: 3, sleep: 1}
+- { name: 'Messages 점검', command: 'sudo cat /var/log/messages | tail -n 10', os: "{{ model }}", inspection_criteria: "10", is_save: true, is_compare: true, timeout: 3, sleep: 1}
+
+# sar 명령어를 사용한 상세 성능 점검
+- { name: 'CPU 상세점검', command: 'sar -u 1 1', os: "{{ model }}", inspection_criteria: "80", is_save: true, timeout: 5, sleep: 1 }
+- { name: 'Memory 상세점검', command: 'sar -r 1 1', os: "{{ model }}", inspection_criteria: "50", is_save: true, is_compare: true, timeout: 5, sleep: 1 }
+- { name: 'Disk I/O 점검', command: 'sar -d 1 1', os: "{{ model }}", inspection_criteria: "80", is_save: true, timeout: 5, sleep: 1 }
+- { name: 'Network 점검', command: 'sar -n DEV 1 1', os: "{{ model }}", inspection_criteria: "1000", is_save: true, timeout: 5, sleep: 1 }
+
+# yaml 문법
+# - command: cd /etc/ssh
+#   is_save: true 
+
+# - command: sh deploy_web.sh  
+#   is_save: true  
+#   timeout: 5 # `command`를 수행하고 timeout 전에 프롬프트 패턴을 만나면 곧바로 expect 구문을 수행합니다. 그렇지 않으면 timeout이 지나야 exepct 구문을 수행 합니다.
+#   expect: # `command`를 수행하고 예상되는 값에 대한 데이터를 송신하기 위한 옵션 입니다.
+#   - prompt: 'Would you like to proceed with the deployment? (Y/y: proceed, N/n: exit)' # 예상되는 문자열을 기입 합니다. 예상되는 문자열을 만나지 않은 경우는 error 처리되고 작업이 `중지` 됩니다.
+#     answer: 'y' # 예상되는 문자열을 만났을때 송신하는 데이터를 입력합니다. 
+#   - prompt: 'Please enter the number of the deployment file to use:'
+#     answer: '1' 
+#   - prompt: 'Selected file is fap.war. Would you like to proceed? (Y/y: proceed, N/n: exit)'  
+#     answer: 'y' 
+#     timeout: 30  # 예상되는 문자열을 최대 30초 까지 기다리기 위한 옵션입니다. 기본은 3초 입니다. answer 수행 후, 시간이 오래걸리는 경우 사용합니다.
+    
+# - command: cat ssh_config
+#   is_save: true

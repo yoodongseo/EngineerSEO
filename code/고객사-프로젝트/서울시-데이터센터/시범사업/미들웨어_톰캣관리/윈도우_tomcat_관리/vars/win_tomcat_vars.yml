@@ -1,0 +1,26 @@
+---
+system: Windows
+report_type: 'Tomcat_Management'
+data_key: 'Tomcat_Management'
+### Tomcat 실행
+tomcat_action: "{{ fap['host_vars']['tomcat_action'] }}"
+
+### 배포 경로
+download_path: 'C:\rtnet'
+
+### 설치 파일
+jdk: "jdk-23_windows-x64_bin.exe"
+tomcat: "apache-tomcat-9.0.96-windows-x64.zip"
+
+### 설치 경로
+java_install_path: 'C:\Program Files\Java\jdk-23'
+tomcat_install_path: "{{ download_path }}\\apache-tomcat-9.0.96"
+tomcat_bin: '{{ tomcat_install_path }}\bin'
+
+### 배포 파일
+files:
+  - name: "{{ jdk }}"
+  - name: "{{ tomcat }}"
+
+### 환경변수
+java_bin: '%JAVA_HOME%\bin'

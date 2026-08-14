@@ -1,0 +1,43 @@
+aix_combined_command: |
+  echo "===os_info==="
+  echo "os_name=`uname -s`"
+  echo "os_version=`oslevel -s`"
+  echo "kernel=`uname -s` `uname -r` `uname -v`"
+  echo "os_type=Unix"
+
+  echo "===df_lines==="
+  df -k
+
+  echo "===disk_size==="
+  df -kP | awk 'NR>1 {s+=$2} END {print int(s/1024/1024)}'
+
+  echo "===uptime==="
+  uptime | awk '{print $1, $2, $3, $4}'
+
+  echo "===cpu==="
+  vmstat | tail -1 | awk '{print 100 - $16}'
+
+  echo "===cpu_cores==="
+  lsdev -Cc processor | wc -l
+
+  echo "===memory==="
+  lsps -s | awk 'NR==2 {gsub("%","", $2); print $2}'
+
+  echo "===memory_size==="
+  lsattr -El sys0 -a realmem | awk '{print int($2/1024)}'
+
+  echo "===user_list==="
+  awk -F: '($7 ~ /(sh|bash|ksh|csh)$/ && length($1) >= 3 && length($1) <= 16) {print $1}' /etc/passwd
+
+  echo "===service_list==="
+  lssrc -a | awk 'NR>1 {printf("{\"name\": \"%s\", \"state\": \"%s\", \"source\": \"SRC\"}\n", $1, $NF)}'
+
+  echo "===package_list==="
+  arch=$(uname -p)
+  lslpp -L | awk 'NR > 2 && NF >= 2 {
+    name = $1
+    version = $2
+    release = "-"
+    epoch = "-"
+    printf "{\"name\": \"%s\", \"version\": \"%s\", \"release\": \"%s\", \"epoch\": \"%s\", \"arch\": \"%s\", \"source\": \"lslpp\"}\n", name, version, release, epoch, arch
+    }'

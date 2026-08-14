@@ -1,0 +1,10 @@
+---
+- block:
+  - name: 연결 상태 확인
+    shell: hostname
+    register: result_hostname
+  
+  - name: 실패 처리 # (DB에 데이터를 입력하면서 명시적으로 실패하기 위해 사용)
+    fail:
+      msg: "{{ fap['host_ip'] }}"
+    when: result_hostname['failed'] | default(True)

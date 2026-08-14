@@ -1,0 +1,37 @@
+## 20241106 오민지수정중
+---
+merged_value: []
+report_type: "dr_report"
+file_dir: "/fap/report/dr_live/step1/{{ fap.job_id }}/{{ fap.host_name }}_{{ inventory_hostname }}"
+file_path: "{{ file_dir }}/tomcat_down_{{ today }}.txt"
+
+was_instance:
+  - name: landinfo ## 운영 WAS 토지정보 #1 중지
+    was_path: /DATA/wasadmin/instance/landinfo/bin/shutdown.sh
+
+  - name: extax-was-01 ## 운영 WAS 헬프데스크 (신규) #1 중지
+    was_path: /DATA/wasadmin/instances/extax-was-01/bin/shutdown.sh
+
+  - name: nitdesk-was-01 ## 운영 WAS 헬프데스크 (신규) #1 중지
+    was_path: /DATA/wasadmin/instances/nitdesk-was-01/bin/shutdown.sh
+
+  - name: digitalib ## 운영 WAS 사회공헌관리 및 온라인도서관_신규 #1 중지
+    was_path: /DATA/wasadmin/instance/digitalib/bin/shutdown.sh
+
+  - name: scportal ## 운영 WAS 사회공헌관리 및 온라인도서관_신규 #1 중지
+    was_path: /DATA/wasadmin/instance/scportal/bin/shutdown.sh
+
+  - name: nkms ## 운영 WAS 신규 지식광장 #1 중지
+    was_path: /DATA/wasadmin/instance/nkms/bin/shutdown.sh
+
+  - name: nplan ## 운영 WAS 기획/지원정보 #1 중지
+    was_path: /DATA/wasadmin/instance/nplan/bin/shutdown.sh
+
+  - name: nsso ## 운영 WAS 통합인증 SSO #1 중지 
+    was_path: /DATA/wasadmin/instance/nsso/bin/shutdown.sh
+
+  - name: admin ## 운영 WAS 인터넷(사내) 방송 #1 중지
+    was_path: /DATA/wasadmin/instance/admin/bin/shutdown.sh
+
+  - name: user ## 운영 WAS 인터넷(사내) 방송 #1 중지
+    was_path: /DATA/wasadmin/instance/user/bin/shutdown.sh

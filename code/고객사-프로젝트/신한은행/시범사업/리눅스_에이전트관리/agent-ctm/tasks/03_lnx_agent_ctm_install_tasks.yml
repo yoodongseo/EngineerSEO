@@ -1,0 +1,35 @@
+---
+- block:
+  - name: 배포 경로 생성
+    file:
+      path: "{{ copy_dest }}"
+      state: directory
+
+  - name: 설치 패키지 배포
+    copy:
+      src: "{{ item['name'] }}"
+      dest: "{{ copy_dest }}"
+    loop: "{{ copy_src }}"
+    loop_control:
+      label: "{{ item['name'] }} 배포"
+
+  - name: 설치 작업 수행
+    shell: "{{ install_cli }}"
+    register: result_install_cli
+    timeout: "{{ timeout }}"
+    no_log: True
+
+  always:
+    - name: Save DATA Merged 생성 -- 환경 설정 오류 시
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '3. CTM 설치',
+          'command': 'CTM Agent INSTALL',
+          'result': result_install_cli['stdout'] | default(''),
+          'is_success': True,
+          'is_pass': False if result_install_cli['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

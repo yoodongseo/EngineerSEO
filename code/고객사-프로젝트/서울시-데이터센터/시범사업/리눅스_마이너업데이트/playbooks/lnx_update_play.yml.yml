@@ -1,0 +1,23 @@
+---
+- name: Linux Update
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/lnx_cmd_vars.yml
+  tasks:
+  - block:
+    - name: 1. 버전 정보 확인
+      include_tasks: ../tasks/01_chk_rocky.yml  
+
+    - name: 2. 레포지토리 설정 작업
+      include_tasks: ../tasks/02_job_repo.yml
+
+    - name: 3. 업데이트 수행
+      include_tasks: ../tasks/03_lnx_update.yml
+
+    always:
+      - name: 데이터 저장
+        include_tasks: ../tasks/save_data.yml

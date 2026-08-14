@@ -1,0 +1,47 @@
+---
+# save_to_db vars
+today: "{{ lookup('ansible.builtin.pipe', 'date +%Y-%m-%d')}}"
+data_key: linux_ora_vulnercheck_2_SSG
+local_dir_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_id }}/{{ result_connection.stdout }}_{{ inventory_hostname }}"
+
+# job vars
+service_user: oracle
+
+file:
+  path: "/tmp/cmtinfo"
+copy:
+  dest: "{{ file.path }}"
+  mode: "0700"
+  src: "{{ fap.host_vars.sql_script }}"
+
+sql_filename: "{{ fap.host_vars.sql_script }}"
+
+download_file: "result_{{ result_connection.stdout }}.tar.gz"
+
+vulner_running_shell_ora: |
+  cd {{ copy.dest }}
+    sqlplus / as sysdba <<EOF
+    @{{ sql_filename }}
+    echo
+    {{ fap.host_vars.start_data }}
+    {{ fap.host_vars.end_data }}
+    EOF
+
+vulner_tar_gz: |
+  cd {{ copy.dest }}
+  rm -rf "{{ sql_filename }}"
+  ls -alht
+  check_count=$(ls | wc -l)
+  if [[ $check_count -ge 1 ]]; then
+      ls -alht
+      tar -zcf {{ download_file }} *
+      chmod 0755 *
+      ls | grep {{ download_file }}
+      if [[ $? -eq 0 ]]; then
+          exit 0
+      else
+          exit 1
+      fi
+  else
+      exit 1
+  fi

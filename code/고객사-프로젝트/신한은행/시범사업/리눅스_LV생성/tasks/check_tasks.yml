@@ -1,0 +1,4 @@
+---
+- name: check_tasks
+  hosts: all
+  tasks: []

@@ -1,0 +1,21 @@
+---
+script_name: "DB_Oracle_Linux_1.0.sql"
+file_list: ../templates/DB_Oracle_Linux_1.0.sql ../templates/make_result_ver1.0.sh ../templates/oracle_main.sh
+#script_path: "../vars/{{ script_name }}"
+output_path: "/tmp/Oracle_vulnerability"
+save_path: "/fap/report/{{ report_name }}/{{ today }}/{{ fap.job_id }}/{{ inventory_hostname }}"
+report_name: "vulnerability"
+file_name: "oracle_{{ hostname_check.stdout_lines[1] }}"
+
+### oracle sid ###
+# oraclesid:
+#   - sid: "{{ oracle_sid1 }}"
+#   - sid: "{{ oracle_sid2 }}"
+#   - sid: "{{ oracle_sid3 }}"
+#   - sid: "{{ oracle_sid4 }}"
+#   - sid: "{{ oracle_sid5 }}"
+#   - sid: "{{ oracle_sid6 }}"
+#   - sid: "{{ oracle_sid7 }}"
+#   - sid: "{{ oracle_sid8 }}"
+
+

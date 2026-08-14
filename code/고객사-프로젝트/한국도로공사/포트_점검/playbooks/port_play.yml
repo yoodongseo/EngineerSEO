@@ -1,0 +1,43 @@
+---
+- name: Port check
+  hosts: all
+  ignore_errors: true
+  gather_facts: no
+
+  vars:
+    result: []
+    ansible_become_timeout: 60
+    file_name: "port_scan_results_{{ fap.host_ip }}.xlsx"
+    save_path: "/fap/report/{{ report_name }}/{{ today }}/{{ fap.job_id }}/{{ inventory_hostname }}"
+    report_name: "port_check"
+
+  tasks:
+  - block:
+    - name: Linux Port tasks
+      include_tasks: ../tasks/port_tasks.yml
+      when: ansible_port != 5985
+
+    - name: Windows Port tasks
+      include_tasks: ../tasks/port_windows.yml
+      when: ansible_port == 5985
+
+    always:
+    - name: Make content value
+      set_fact:
+        #content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+        content_value: "{{ content_value | default({}) | combine({'data_list': result_value}) }}"
+      delegate_to: localhost
+      #when: merged_value is defined
+    - debug: var=content_value
+
+    - name: Save DB
+      fap.common.save_data:
+        content: "{{ content_value }}"
+        protocol: http
+        hostname: "{{ inventory_hostname }}"
+        data_type: report
+        data_key: port_check_down
+        template_id: "{{ fap.template_id | default(omit) }}"
+        job_id: "{{ fap.job_id | default(omit) }}"
+      delegate_to: localhost
+

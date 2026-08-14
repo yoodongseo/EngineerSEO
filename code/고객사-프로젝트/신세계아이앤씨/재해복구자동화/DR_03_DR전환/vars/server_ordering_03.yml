@@ -1,0 +1,106 @@
+---
+STANDBY_DB_IP: "{{ fap.host_vars.standby_db_ip }}"
+# STANDBY_DB_IP: "192.0.2.10"
+
+### oracle sid loop 변수 ###
+ORACLE:
+- oracle_user: "{{ fap.host_vars.oracle_user_1 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_1 | default(none) }}"
+- oracle_user: "{{ fap.host_vars.oracle_user_2 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_2 | default(none) }}"
+- oracle_user: "{{ fap.host_vars.oracle_user_3 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_3 | default(none) }}"
+
+#### 백업 디렉토리
+BACKUP_DIR: "/fap/report/dr_log/{{ today }}/step3"
+
+#### Step3. DR DB 기동
+DR_DB_IP_EXE_FILE: "step3_{{ fap.host_name }}_dr_db_ip_exe.log"
+DR_DB_READ_WRITE_FILE: "step3_{{ fap.host_name }}_dr_db_read_write.log"
+LSNCRCTL_STATUS: "step3_{{ fap.host_name }}_lsncrctl_status.log"
+local_listener_status: "step3_{{ fap.host_name }}_local_listener.log"
+
+DR_DB_IP_EXE_LIST:
+- eth: "{{ fap.host_vars.eth0 | default(none) }}"
+  ip: "{{ fap.host_vars.ip0 | default(none) }}"
+- eth: "{{ fap.host_vars.eth1 | default(none) }}"
+  ip: "{{ fap.host_vars.ip1 | default(none) }}"
+- eth: "{{ fap.host_vars.eth2 | default(none) }}"
+  ip: "{{ fap.host_vars.ip2 | default(none) }}"
+- eth: "{{ fap.host_vars.eth3 | default(none) }}"
+  ip: "{{ fap.host_vars.ip3 | default(none) }}"
+- eth: "{{ fap.host_vars.eth4 | default(none) }}"
+  ip: "{{ fap.host_vars.ip4 | default(none) }}"
+- eth: "{{ fap.host_vars.eth5 | default(none) }}"
+  ip: "{{ fap.host_vars.ip5 | default(none) }}"
+# - eth: "eth0:2"
+#   ip: "192.0.2.10"
+# - eth: "eth0:3"
+#   ip: "192.0.2.10"
+# - eth: "eth0:4"
+#   ip: "192.0.2.10"
+# - eth: "eth0:5"
+#   ip: "192.0.2.10"
+# - eth: "eth0:6"
+#   ip: "192.0.2.10"
+# - eth: "{{ fap.host_vars.eth5 | default(none) }}"
+#   ip: "{{ fap.host_vars.ip5 | default(none) }}"
+
+LISTENER_ORA: listener.ora
+LISTENER_ORA_ORG: listener.ora_org
+LISTENER_ORA_DR: listener.ora_dr 
+
+read_write_sh: |
+    export ORACLE_SID="{{ item.oracle_sid }}"
+    sqlplus / as sysdba << EOF
+    ALTER DATABASE CONVERT TO SNAPSHOT STANDBY;
+    shutdown immediate;
+    startup;
+    exit
+
+    EOF
+
+tnslsnr_kill: |
+  ps -ef | grep 'tnslsnr LISTENER' | grep -v 'grep' | awk '{ print $2 }' | while read pid; do
+    echo "Killing process $pid"
+    kill -9 $pid
+  done
+
+# listener_change: |
+#     export ORACLE_SID="{{ item.oracle_sid }}"
+#     sqlplus / as sysdba << EOF
+#     show parameter local_listener;
+#     alter system set local_listener =
+#     '(ADDRESS=(PROTOCOL=TCP)(HOST=192.0.2.10)(PORT=1521))',
+#     '(ADDRESS=(PROTOCOL=TCP)(HOST=192.0.2.10)(PORT=1521))';
+#     show parameter local_listener;
+#     exit
+
+#     EOF
+
+listener_change: |
+    export ORACLE_SID="{{ item.oracle_sid }}"
+    sqlplus / as sysdba << EOF
+    show parameter local_listener;
+    alter system set local_listener =
+    '(ADDRESS=(PROTOCOL=TCP)(HOST={{ fap.host_vars.vip_1 }})(PORT=1521))',
+    '(ADDRESS=(PROTOCOL=TCP)(HOST={{ fap.host_vars.vip_2 }})(PORT=1521))';
+    show parameter local_listener;
+    exit
+
+    EOF
+
+# VIP만 등록하기로 하여 사용하지 않음
+# listener_change_2: |
+#   sqlplus / as sysdba << EOF
+#   show parameter local_listener;
+#   alter system set local_listener =
+#   {% for item in DR_DB_IP_EXE_LIST %}
+#   {% if item.ip is not none and item.ip != '' %}
+#   '(ADDRESS=(PROTOCOL=TCP)(HOST={{ item.ip }})(PORT=1521))'{% if not loop.last %},{% endif %}
+#   {% endif %}
+#   {% endfor %};
+#   show parameter local_listener;
+#   exit
+
+#   EOF

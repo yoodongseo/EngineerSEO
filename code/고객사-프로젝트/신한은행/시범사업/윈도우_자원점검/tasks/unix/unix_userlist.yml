@@ -1,0 +1,8 @@
+---
+- name: 08. UNIX - User list
+  raw: "grep '/bin/sh' /etc/passwd | cut -d: -f1"
+  register: user_list
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'user_list': user_list.stdout_lines | reject('search', 'setlocale') | select('match', '.+') | list } ) }}"

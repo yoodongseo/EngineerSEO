@@ -1,0 +1,64 @@
+---
+- name: 수집 결과 파싱
+  set_fact:
+    current_data: >-
+      {{
+        current_data | default({}) |
+        combine({
+          fap.host_ip: {
+            'cmd_id': item.id,
+            'cmd_name': item.name,
+            'cmd': item.command,
+            'output': item.fail_reason
+          }
+        })
+      }}
+  
+- name: 1. DB 저장된 이전 데이터와 비교 (diff)
+  fap.common.diff_data:
+    fap_vars: "{{ fap }}"
+    table_name: "ansible_cli_data"
+    key_columns:
+      - { column: "host_name", value: "{{ fap.host_ip }}" }
+      - { column: "data_type", value: "backup" }
+      - { column: "data_key", value: "company" }
+      - { column: "cmd_id", value: "{{ current_data[fap.host_ip].cmd_id }}" }
+    target_column: "output"
+    content: "{{ current_data[fap.host_ip].output | default('') }}"   # 현재 수집한 데이터
+  when: fap.host_ip in current_data
+  register: diff_data
+  delegate_to: localhost
+  
+# - name: diff_data debug
+#   debug:
+#     msg: "{{ diff_data }}"
+  
+#### 기존 alarm_content ###
+      # ---------------------------------
+      # ■ 대상 장비: {{ fap.host_name }}({{ fap.host_ip }})
+      # ■ 실행 명령어: {{ current_data[fap.host_ip].cmd }}
+      # ■ 변경 데이터: {{ diff_data.data.diff_text }}
+############################
+        
+# 2. 개별 알림 Content 생성
+- name: 2. 개별 알림 Content 생성
+  set_fact:
+    alarm_value: "{{ alarm_value | default([]) + [result_item] }}"
+  vars:
+    alarm_content: |-
+      <table width="100%" cellspacing="0" cellpadding="0" border="1" style="border=color:#d9d9d9;"">
+        <tr><td width="70px">실행일시</td><td>{{ diff_data.data.time }}</td></tr>
+        <tr><td >실행내용</td><td>{{ fap.template_info.template_name }}</td></tr>
+        <tr><td >대상장비</td><td>{{ fap.host_name }}({{ fap.host_ip }})</td></tr>
+        <tr><td >점검항목</td><td>{{ item.name }}</td></tr>
+        <tr><td >발생명령어</td><td>{{ current_data[fap.host_ip].cmd }}</td></tr>
+        <tr><td >변경구분</td><td>{{ diff_data.data.summary_message }}</td></tr>
+        <tr><td >세부내용</td><td>{{ diff_data.data.diff_text | regex_replace('\r?\n', '<BR/>') }}</td></tr>
+      </table><br/>
+    result_item:
+      host: "{{ fap.host_ip }}"
+      host_name: "{{ fap.host_name }}"
+      output: "{{ diff_data.data | to_json }}"
+      message: "{{ alarm_content }}"
+  when: diff_data is defined and (diff_data.data.is_changed | default(false))
+  delegate_to: localhost

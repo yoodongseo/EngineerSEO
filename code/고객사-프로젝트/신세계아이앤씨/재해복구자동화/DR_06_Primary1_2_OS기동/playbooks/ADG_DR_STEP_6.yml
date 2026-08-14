@@ -1,0 +1,36 @@
+---
+- name: "DR 1node 06 Primary #1 #2 OS 기동"
+  hosts: all
+  gather_facts: true
+  tasks:
+  - name: 일시 생성
+    set_fact:
+      today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+    delegate_to: localhost
+    run_once: true
+    
+  - name: 변수 호출
+    COMPANYlude_vars: ../vars/server_ordering_6.yml
+
+  - name: 첫번째 DB의 호스트 정보
+    debug: 
+      msg:
+      - "첫 번째 DB 정보"
+      - "IP: {{ FIRST_ACTIVE_DB_IP }}"
+      - "HOSTNAME: {{ ansible_facts.fqdn }}"
+    when: fap.host_ip == FIRST_ACTIVE_DB_IP | default('none')
+
+  - name: 두번째 DB의 호스트 정보
+    debug: 
+      msg:
+      - "IP: {{ SECOND_ACTIVE_DB_IP }}"
+      - "HOSTNAME: {{ ansible_facts.fqdn }}"
+    when: fap.host_ip == SECOND_ACTIVE_DB_IP | default('none')
+
+  - name: "Step 6 - Primary 복원"
+    COMPANYlude_tasks: ../tasks/Step_6.yml
+    when: fap.host_ip == FIRST_ACTIVE_DB_IP | default('none') or fap.host_ip == SECOND_ACTIVE_DB_IP | default('none')
+
+  - debug:
+      msg:
+      - "[Step 6] 완료 Primary 복원"

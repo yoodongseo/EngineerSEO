@@ -1,0 +1,25 @@
+---
+- block:
+  - name: SSH Port 활성여부 확인
+    wait_for:
+      port: "{{ ansible_port | default('22') }}"
+      host: "{{ fap['host_ip'] }}"
+      timeout: 10
+    register: result_connection
+    failed_when: result_connection['state'] | default('timeout') != 'started'
+    delegate_to: localhost
+
+  always:
+    - name: Save DATA Merged 생성 -- lnx_con_tasks
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '1. 연결상태',
+          'command': 'wait_for',
+          'result': '비정상' if result_connection['state'] | default('timeout') != 'started' else '정상',
+          'is_success': False if result_connection['state'] | default('timeout') != 'started' else True,
+          'is_pass': False if result_connection['state'] | default('timeout') != 'started' else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

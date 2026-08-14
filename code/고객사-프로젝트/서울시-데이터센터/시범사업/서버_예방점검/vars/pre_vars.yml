@@ -1,0 +1,1230 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: 'preventive'
+### 실제 FAP 그룹이랑 그룹명 동일하게 지정해야함
+inspection_group: '예방점검'
+
+### merged_value --- List 선언
+merged_value: []
+
+### 점검항목 --- 장비 별 분류
+Linux:
+  # - cmd_name: 'CPU' # 대분류 / FAP 상세내역 작업 명
+  #   cmd_command: 'top' # 점검 명령어 (점검 명령어 보고서 표출 X 임의 작성 가능)
+  #   value: 'int' # python filter 분류 --- 비교 기준 함수 타입(int,str,etc...)
+  #   com_value: '80' # python filter 기준값 --- 비교 기준 데이터 값
+  #   message: | # 대분류_소분류 행 바꿈 필요 시 \n 또는 아래와 같이 줄 바꿈
+  #     CPU 사용 상태 및 용량 점검
+  #   raw: "top -bn1 | grep 'Cpu(s)' | awk '{ print 100 - $8 }'" # 점검시 실제 사용할 명령어
+  #   arr_num: 0 # List 형 데이터 line별 비교 시 행 기준 배열 자리수
+  #   grep: '' # 데이터 파싱을 위한 점검결과 1차 txt파일 저장
+  #   criteria: 'cpu 사용률이 80% 이상일 경우 비정상'
+
+  - cmd_name: '기본 운영 프로세스 확인 [ps]'
+    cmd_command: ''
+    com_value: ''
+    value: 'check'
+    message: |
+      01. 기본 운영 프로세스 확인
+    raw: "ps -eo %cpu,comm,pid --sort=-%cpu | awk '!seen[$2]++ {print $1, $2, $3}'"
+    arr_num: 0
+    grep: ''
+    criteria: '기본 운영 프로세스 확인'
+    time: 1
+
+  - cmd_name: 'CPU 사용량 중 유휴 상태(Idle Time) [top wa]'
+    cmd_command: 'top wa'
+    com_value: '10'
+    value: 'int'
+    message: |
+      02. 시스템 기본 상태 확인(CPU)
+    raw: "top -b -n 1 | grep 'Cpu(s)' | awk '{print $10}'"
+    arr_num: 0
+    grep: ''
+    criteria: 'wa 값이 10% 이상일 경우 비정상'
+    time: 1
+
+  - cmd_name: 'Memory 사용률 [free] '
+    cmd_command: 'free'
+    com_value: '80'
+    value: 'int'
+    message: |
+      03. 시스템 기본 상태 확인(Memory)
+    raw: "free -h | awk '{ print $4 }' | tail -1 | sed 's/[^0-9.]*//g'"
+    arr_num: 0
+    grep: ''
+    criteria: 'Memory 사용률이 80% 이상일 경우 비정상'
+    time: 1
+
+  - cmd_name: 'Disk 상태 [df]'
+    cmd_command: 'df -h'
+    com_value: '80'
+    value: 'list_int'
+    message: |
+      04. 디스크 상태 점검
+    unit: '%'
+    raw: 'df -h'
+    arr_num: 4
+    grep: ''
+    criteria: 'Disk 사용률이 80% 이상일 경우 비정상'
+    time: 1
+
+  - cmd_name: 'LVM으로 관리되는 볼륨 그룹 정보 확인 [vgdisplay]'
+    cmd_command: 'vgdisplay'
+    com_value: ''
+    value: 'check'
+    message: |
+      05. 디스크의 논리적 관리
+    raw: 'vgdisplay -v'
+    arr_num: 4
+    grep: ''
+    criteria: '논리볼륨(LV) 및 물리볼륨(PV) 상태'
+    time: 1
+
+  - cmd_name: '네트워크 설정 확인 [netstat]'
+    cmd_command: 'netstat'
+    com_value: ''
+    value: 'check'
+    message: |
+      06. 네트워크 설정 확인
+    raw: 'netstat -rn'
+    arr_num: 4
+    grep: ''
+    criteria: '네트워크 설정 확인'
+    time: 1
+
+  - cmd_name: '시간 동기화 상태 확인 [timedatectl]'
+    cmd_command: 'ntp'
+    com_value: 'yes'
+    value: 'notstr'
+    message: |
+      07. NTP 시간 동기화 상태 확인
+    raw: 'timedatectl'
+    arr_num: 0
+    grep: 'System clock synchronized'
+    criteria: 'ntp 시간 동기화 상태 확인'
+    time: 1
+
+  - cmd_name: '시스템 계정 취약점 점검 [cat etc/passw]'
+    cmd_command: 'etc/passwd'
+    com_value: ''
+    value: 'check'
+    message: |
+      08. 시스템 계정 취약점 점검
+    raw: "cat /etc/passwd | cut -f1 -d: | egrep '^.{3,16}$'"
+    arr_num: 0
+    grep: ''
+    criteria: '불필요한 계정 확인'
+    time: 1
+
+  - cmd_name: '시스템 주요응용설정 취약점 점검 [ps]'
+    cmd_command: 'ps'
+    com_value: |
+      ftp
+      telnet
+      snmp
+      ssh
+      xhost
+    value: 'str'
+    message: |
+      09. 시스템 주요응용설정 취약점 점검
+    raw: 'ps -ef'
+    arr_num: 7
+    grep: ''
+    criteria: 'ftp,telnet,snmp,ssh,xhost 설정 여부 확인'
+    time: 1
+
+  - cmd_name: '시스템 보안설정 취약점 점검 [cat /etc/hosts]'
+    cmd_command: 'etc/hosts'
+    com_value: ''
+    value: 'check'
+    message: |
+      10. 시스템 보안설정 취약점 점검
+    raw: 'cat /etc/hosts'
+    arr_num: 0
+    grep: ''
+    criteria: '시스템 보안설정 취약점 점검'
+    time: 1
+
+  - cmd_name: '이벤트 로그 [cat /var/log/messages]'
+    cmd_command: 'cat /var/log/messages'
+    com_value: |
+      error
+      fail
+      warning
+    value: 'str'
+    message: |
+      11. 시스템 로그파일 점검
+    raw: 'cat /var/log/messages | tail -100'
+    arr_num: 0
+    grep: ''
+    criteria: '점검 결과 error,fail,warning 존재 시 비정상'
+    time: 1
+
+  # - cmd_name: 'openssl'
+  #   cmd_command: 'openssl'
+  #   com_value: 'openssl'
+  #   value: 'str'
+  #   message: |
+  #     openssl_점검
+  #   raw: 'rpm -qa'
+  #   arr_num: 0
+  #   grep: ''
+  #   criteria: 'openssl 문자열이 존재할 경우 비정상'
+
+Cisco:
+  - cmd_name: 'Uptime [show version]'
+    cmd_command: 'show version'
+    value: 'list_int'
+    com_value: '365'
+    message: |
+      01. 장비 Uptime 점검
+    raw: 'show version | in uptime'
+    arr_num: 3
+    grep: ''
+    unit: ''
+    criteria: 'Uptime 365 day 이상일 경우 비정상'
+    time: 1
+
+  - cmd_name: 'CPU [show processes]'
+    cmd_command: 'show processes cpu'
+    value: 'list_int'
+    com_value: '80'
+    message: |
+      02. 시스템 기본 상태 확인 (CPU)
+    raw: "show processes cpu | include CPU | head -n 1 | awk '{print $4}'"
+    arr_num: 0
+    grep: ''
+    unit: '%'
+    criteria: '사용률이 80% 이상 일 경우 비정상.'
+    time: 4
+
+  - cmd_name: 'Memory [show processes]'
+    cmd_command: 'show processes memory'
+    value: 'memory'
+    com_value: ''
+    message: |
+      03. 시스템 기본 상태 확인(Memory)
+    raw: 'show processes memory | in Pool Total'
+    arr_num: 0
+    grep: ''
+    criteria: '사용률이 70% 이상 일 경우 비정상.'
+    time: 2
+
+  - cmd_name: 'Power [show environment]'
+    cmd_command: 'show environment'
+    value: 'str'
+    com_value: |
+      fail
+      overtemp
+      overload
+      shutdown
+    message: |
+      04. 설비 동작 상태 점검
+      (Power 상태)
+    raw: 'show environment | in Power'
+    arr_num: 0
+    grep: ''
+    criteria: 'Fail, Overtemp, Overload, Shutdown 결과 존재 시 비정상'
+    time: 1
+
+  - cmd_name: 'FAN [show environment] '
+    cmd_command: 'show environment'
+    value: 'str'
+    com_value: 'Fail'
+    message: |
+      05. 설비 동작 상태 점검
+      (FAN 상태)
+    raw: 'show environment | in Fan'
+    arr_num: 0
+    grep: ''
+    criteria: 'Fail 결과 존재 시 비정상'
+    time: 1
+
+  - cmd_name: 'TEMP [show environment]'
+    cmd_command: 'show environment '
+    value: 'str'
+    com_value: |-
+      high
+      critical
+    message: |
+      06. 설비 동작 상태 점검
+      (Temp 상태)
+    raw: 'show environment | in Temperature'
+    arr_num: 0
+    grep: ''
+    criteria: 'status가 high 또는 critical 일 경우 비정상'
+    time: 1
+
+  # - cmd_name: 'show - module'
+  #   cmd_command: 'show module'
+  #   value: 'str'
+  #   com_value: |
+  #     offline
+  #     faulty
+  #     fail
+  #     disabled
+  #     down
+  #   message: |
+  #     07. 설비 동작 상태 점검
+  #     (Module 상태)
+  #   raw: 'show module'
+  #   arr_num: 0
+  #   grep: ''
+  #   criteria: 'Down, Offline, Disabled, Fail, Faulty 결과 존재 시 비정상'
+  #   time: 1
+
+  - cmd_name: 'interface [show] '
+    cmd_command: 'show interface status'
+    value: 'str'
+    com_value: 'disconnect'
+    message: |
+      08. 인터페이스 상태 점검
+    raw: 'show interface status'
+    arr_num: 0
+    grep: ''
+    criteria: 'status : disconnect 시 미흡'
+    time: 1
+
+  - cmd_name: 'NTP 시간 동기화 상태 확인 [show] '
+    cmd_command: 'show ntp status'
+    value: 'str'
+    com_value: |
+      Fail
+      Unreachable
+      unsynchronized
+      Stratum
+      Disabled
+    message: |
+      09. NTP 연동상태 확인
+    raw: 'show ntp status'
+    arr_num: 0
+    criteria: 'Fail, Unreachable, unsynchronized, Stratum, Disabled 문자열 포함 시 비정상'
+    time: 1
+
+  # - cmd_name: 'show - Version'
+  #   cmd_command: 'show version | in Version'
+  #   value: 'version'
+  #   com_value: '9.3'
+  #   message: |
+  #     10. 제품 OS Version 및 Serial Number 확인
+  #   raw: 'show version | include Version'
+  #   arr_num: 0
+  #   unit: 2
+  #   grep: ''
+  #   criteria: 'version 9.3(7k) 이상일 경우 정상'
+  #   time: 1
+
+  # - cmd_name: 'show - System log'
+  #   cmd_command: 'show log'
+  #   value: 'check'
+  #   com_value:
+  #   message: |
+  #     11. 설비 이벤트 및 장애 확인
+  #   raw: "show logging | include 'error|warning|alert|login'"
+  #   arr_num: 0
+  #   grep: ''
+  #   time: 1
+  #   criteria: 'Log점검(Login/Error/Alert/Warning 로그)'
+
+  - cmd_name: '관리자 접속 점검 [show]'
+    cmd_command: 'show log'
+    value: 'str'
+    com_value: |
+      error
+      fail
+    message: |
+      12. 관리자 접속 이상유무 점검
+    raw: 'show logging | include admin | include {{ month.stdout }}'
+    arr_num: 0
+    grep: ''
+    criteria: 'Error 또는 Fail 결과 존재 시 비정상'
+    time: 1
+
+  - cmd_name: 'ip route [show]'
+    cmd_command: 'show ip route'
+    value: 'pass'
+    com_value: ''
+    message: |
+      13. 설비 설정정보 최적화
+    raw: 'show ip route'
+    arr_num: 0
+    grep: ''
+    criteria: '라우팅 테이블 파일 백업'
+    time: 1
+
+  - cmd_name: 'running-config [show]'
+    cmd_command: 'show running-config'
+    value: 'check'
+    com_value: 'pass'
+    message: |
+      14. 설비 운영정보 최적 유지
+    raw: 'show running-config'
+    arr_num: 0
+    grep: ''
+    criteria: 'Config 백업'
+    time: 1
+
+L3_aruba:
+  - cmd_name: '시스템 정보'
+    cmd_command: 'show system'
+    value: 'check'
+    com_value: ''
+    message: |
+      01. 시스템 점검
+    raw: 'show system'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Network L3 시스템 점검'
+    id: 0006
+
+  - cmd_name: 'System log'
+    cmd_command: 'show logging -r -a'
+    value: 'check'
+    com_value: ''
+    message: |
+      02. 시스템 로그점검
+    raw: ' show logging -r -a | include error|warning|alert|login|{{ month.stdout }}'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Network L3 Log점검(Login/Error/Alert/Warning 로그)'
+    id: 0015
+
+  - cmd_name: 'interface'
+    cmd_command: 'show interface status'
+    value: 'check'
+    com_value: ''
+    message: |
+      03. 인터페이스 상태 점검
+    raw: 'show interface status'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Network L3 인터페이스 상태 점검'
+    id: 0008
+
+  - cmd_name: 'FAN'
+    cmd_command: 'show system fan'
+    value: 'str'
+    com_value: |
+      fail
+    message: |
+      04. 설비 동작 상태 점검
+      (FAN 상태)
+    raw: 'show system fan'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Fail 결과 존재 시 비정상'
+    id: 0007
+
+  - cmd_name: 'Power'
+    cmd_command: 'show system power-supply'
+    value: 'str'
+    com_value: |
+      fail
+      overtemp
+      overload
+      shutdown
+    message: |
+      05. 설비 동작 상태 점검
+      (Power 상태)
+    raw: 'show system power-supply'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Fail, Overtemp, Overload, Shutdown 결과 존재 시 비정상'
+    id: 0007
+
+  - cmd_name: 'TEMP'
+    cmd_command: 'show environment temperature'
+    value: 'str'
+    com_value: |-
+      YES
+    message: |
+      06. 설비 동작 상태 점검
+      (Temp 상태)
+    raw: 'show system temperature'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'overtemp가 YES 일 경우 비정상'
+    id: 0010
+
+  - cmd_name: 'module'
+    cmd_command: 'show module'
+    value: 'str'
+    com_value: |
+      offline
+      faulty
+      fail
+      disabled
+      down
+    message: |
+      07. 설비 동작 상태 점검
+      (Module 상태)
+    raw: 'show module'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Down, Offline, Disabled, Fail, Faulty 결과 존재 시 비정상'
+    id: 0017
+
+  - cmd_name: 'NTP'
+    cmd_command: 'show ntp status'
+    value: 'notstr'
+    com_value: |
+      Synchronized
+    message: |
+      08. NTP 연동상태 확인
+    raw: 'show ntp status'
+    arr_num: 0
+    grep: 'Synchronization Status'
+    time: 1
+    criteria: '시간동기화 상태가 Synchronized 일 경우 정상'
+    id: 0014
+
+  - cmd_name: '관리자 접속 점검'
+    cmd_command: 'show log'
+    value: 'str'
+    com_value: |
+      error
+      fail
+    message: |
+      09. 관리자 접속 이상유무 점검
+    raw: 'show logging | include admin | include {{ month.stdout }}'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Error 또는 Fail 결과 존재 시 비정상'
+    id: 0016
+
+  - cmd_name: 'Version'
+    cmd_command: 'show version'
+    value: 'check'
+    com_value: ''
+    message: |
+      10. 제품 버전 확인
+    raw: 'show version'
+    arr_num: 0
+    unit: 2
+    grep: ''
+    time: 1
+    criteria: '제품 버전 확인'
+    id: 0009
+
+L3_hp:
+  - cmd_name: '시스템 정보'
+    cmd_command: 'show system'
+    value: 'check'
+    com_value: ''
+    message: |
+      01. 시스템 점검
+      (Cpu)
+    raw: 'show cpu-usage'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Network L3 시스템 점검'
+    id: 0006
+
+  - cmd_name: '시스템 정보'
+    cmd_command: 'show memory'
+    value: 'check'
+    com_value: ''
+    message: |
+      02. 시스템 점검
+      (Memory)
+    raw: 'show memory'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Network L3 시스템 점검'
+    id: 0006
+
+  - cmd_name: 'System log'
+    cmd_command: 'show logfile buffer'
+    value: 'check'
+    com_value: ''
+    message: |
+      03. 시스템 로그점검
+    raw: 'show logfile buffer | include error|warning|alert|login|{{ month.stdout }}'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Network L3 Log점검(Login/Error/Alert/Warning 로그)'
+    id: 0015
+
+  - cmd_name: 'interface'
+    cmd_command: 'show interface link-info'
+    value: 'check'
+    com_value: ''
+    message: |
+      04. 인터페이스 상태 점검
+    raw: 'show interface link-info'
+    arr_num: 0
+    grep: ''
+    time: 2
+    criteria: 'Network L3 인터페이스 상태 점검'
+    id: 0008
+
+  - cmd_name: 'FAN'
+    cmd_command: 'show fan'
+    value: 'str'
+    com_value: |
+      fail
+    message: |
+      05. 설비 동작 상태 점검
+      (FAN 상태)
+    raw: 'show fan'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Fail 결과 존재 시 비정상'
+    id: 0007
+
+  - cmd_name: 'Power'
+    cmd_command: 'show power'
+    value: 'str'
+    com_value: |
+      fail
+      overtemp
+      overload
+      shutdown
+    message: |
+      06. 설비 동작 상태 점검
+      (Power 상태)
+    raw: 'show power'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Fail, Overtemp, Overload, Shutdown 결과 존재 시 비정상'
+    id: 0007
+
+  - cmd_name: 'NTP'
+    cmd_command: 'show ntp status'
+    value: 'notstr'
+    com_value: |
+      synchronized
+    message: |
+      07. NTP 연동상태 확인
+    raw: 'show ntp status'
+    arr_num: 0
+    grep: 'Clock status:'
+    time: 1
+    criteria: '시간동기화 상태가 Synchronized 일 경우 정상'
+    id: 0014
+
+  - cmd_name: 'Version'
+    cmd_command: 'show version'
+    value: 'check'
+    com_value: ''
+    message: |
+      08. 제품 버전 확인
+    raw: 'show version'
+    arr_num: 0
+    unit: 2
+    grep: ''
+    time: 1
+    criteria: '제품 버전 확인'
+    id: 0009
+
+L4:
+  - cmd_name: '설비 동작 상태 점검'
+    cmd_command: 'show'
+    value: 'check'
+    com_value: ''
+    message: |
+      SNMP 설정 및 data 송수신 체크
+    raw: 'show snmp'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'SNMP 설정 및 data 송수신 체크'
+
+  - cmd_name: '설비 동작 상태 점검'
+    cmd_command: 'show'
+    value: 'check'
+    com_value: ''
+    message: |
+      NTP 체크
+    raw: 'show ntp'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'NTP 체크'
+
+  - cmd_name: '설비 동작 상태 점검'
+    cmd_command: 'show'
+    value: 'check'
+    com_value: ''
+    message: |
+      NTP 체크
+    raw: 'show clock'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'NTP 체크'
+
+  - cmd_name: '설비 동작 상태 점검'
+    cmd_command: 'show'
+    value: 'check'
+    com_value: ''
+    message: |
+      syslog 설정 체크
+    raw: 'show logging'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'syslog 설정 체크'
+
+  # - cmd_name: '설비 동작 상태 점검'
+  #   cmd_command: 'tcpdump'
+  #   value: 'check'
+  #   com_value: ''
+  #   message: |
+  #     syslog 패킷 송수신 체크
+  #   raw: 'tcpdump -vvnni DC_BB host 192.168.1.60 -c 10' 명령어 실행 안됨 (IP 수집 필요)
+  #   arr_num: 0
+  #   grep: ''
+  #   time: 1
+  #   criteria: 'syslog 패킷 송수신 체크'
+
+  # - cmd_name: '설비 동작 상태 점검'
+  #   cmd_command: 'tcpdump'
+  #   value: 'check'
+  #   com_value: ''
+  #   message: |
+  #     STP 설정 체크
+  #   raw: 'show stp' 명령어 실행 안됨 (=? show spanning-tree)
+  #   arr_num: 0
+  #   grep: ''
+  #   time: 1
+  #   criteria: 'STP 설정 체크'
+
+  - cmd_name: '설비 인터페이스 상태 점검'
+    cmd_command: 'show'
+    value: 'check'
+    com_value: ''
+    message: |
+      인터페이스 설정 확인
+    raw: 'show interface'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: '인터페이스 설정 확인'
+
+  - cmd_name: '설비 인터페이스 상태 점검'
+    cmd_command: 'show'
+    value: 'check'
+    com_value: ''
+    message: |
+      인터페이스 설정 확인
+    raw: 'show port'
+    arr_num: 0
+    grep: ''
+    time: 2
+    criteria: '인터페이스 설정 확인'
+
+  - cmd_name: '설비 인터페이스 상태 점검'
+    cmd_command: 'show'
+    value: 'check'
+    com_value: ''
+    message: |
+      인터페이스 설정 확인
+    raw: 'show port-statistics'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: '인터페이스 Error 패킷 여부 및 증가량 확인'
+
+  - cmd_name: '설비 성능 분석'
+    cmd_command: 'show'
+    value: 'check'
+    com_value: ''
+    message: |
+      설비 성능 분석
+    raw: 'show resource'
+    arr_num: 0
+    grep: ''
+    time: 2
+    criteria: 'CPU, Memory 사용량 체크'
+
+  # - cmd_name: '설비 성능 분석'
+  #   cmd_command: 'show system resources'
+  #   value: 'notstr'
+  #   com_value: 'OK'
+  #   message: |
+  #     Memory 사용률 점검
+  #   raw: 'show system resources | last 5'
+  #   arr_num: 0
+  #   grep: 'Current memory status'
+  #   time: 2
+  #   criteria: 'Current memory status: OK가 아닐경우 비정상'
+
+  - cmd_name: '설비 이벤트 및 장애 분석'
+    cmd_command: 'show log'
+    value: 'check'
+    com_value: ''
+    message: |
+      Log 점검
+    raw: 'show log keyword error'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Log 점검'
+
+  - cmd_name: '설비 이벤트 및 장애 분석'
+    cmd_command: 'show system-check'
+    value: 'check'
+    com_value: ''
+    message: |
+      성능 정상 동작 점검
+    raw: 'show system-check'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: '성능 정상 동작 점검'
+
+  - cmd_name: '설비 설정 정보 최적화'
+    cmd_command: 'show system-check'
+    value: 'check'
+    com_value: ''
+    message: |
+      개별 VLAN 할당 포트 확인
+    raw: 'show vlan'
+    arr_num: 0
+    grep: ''
+    time: 3
+    criteria: '개별 VLAN 할당 포트 확인'
+
+  - cmd_name: '설비 설정 정보 최적화'
+    cmd_command: 'show failover'
+    value: 'check'
+    com_value: ''
+    message: |
+      게이트웨이 이중화 동작 점검(VRRP)
+    raw: 'show failover'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: '게이트웨이 이중화 동작 점검(VRRP)'
+
+  - cmd_name: '설비 설정 정보 최적화'
+    cmd_command: 'show route'
+    value: 'check'
+    com_value: ''
+    message: |
+      라우팅 테이블 백업
+    raw: 'show route'
+    arr_num: 0
+    grep: ''
+    time: 3
+    criteria: '라우팅 테이블 백업'
+
+  - cmd_name: 'L4 스위칭 최적화 점검/설정'
+    cmd_command: 'show slb'
+    value: 'check'
+    com_value: ''
+    message: |
+      SLB 헬스 체크 확인
+    raw: 'show slb'
+    arr_num: 0
+    grep: ''
+    time: 4
+    criteria: 'SLB 헬스 체크 확인'
+
+  - cmd_name: 'L4 스위칭 최적화 점검/설정'
+    cmd_command: 'show fwlb'
+    value: 'check'
+    com_value: ''
+    message: |
+      FWLB 헬스 체크 확인
+    raw: 'show fwlb'
+    arr_num: 0
+    grep: ''
+    time: 3
+    criteria: 'FWLB 헬스 체크 확인'
+
+  - cmd_name: 'L4 스위칭 최적화 점검/설정'
+    cmd_command: 'show info slb'
+    value: 'check'
+    com_value: ''
+    message: |
+      SLB 설정 및 동작 상태 점검
+    raw: 'show info slb'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'SLB 설정 및 동작 상태 점검'
+
+  - cmd_name: 'L4 스위칭 최적화 점검/설정'
+    cmd_command: 'show info fwlb'
+    value: 'check'
+    com_value: ''
+    message: |
+      FWLB 설정 및 동작 상태 점검
+    raw: 'show info fwlb'
+    arr_num: 0
+    grep: ''
+    time: 2
+    criteria: 'FWLB 설정 및 동작 상태 점검'
+
+  - cmd_name: 'L4 스위칭 최적화 점검/설정'
+    cmd_command: 'show running-config slb'
+    value: 'check'
+    com_value: ''
+    message: |
+      SLB 이중화 동작 상태 점검
+    raw: 'show running-config slb'
+    arr_num: 0
+    grep: ''
+    time: 3
+    criteria: 'SLB 이중화 동작 상태 점검'
+
+  - cmd_name: 'L4 스위칭 최적화 점검/설정'
+    cmd_command: 'show running-config fwlb'
+    value: 'check'
+    com_value: ''
+    message: |
+      FWLB 이중화 동작 상태 점검
+    raw: 'show running-config fwlb'
+    arr_num: 0
+    grep: ''
+    time: 3
+    criteria: 'FWLB 이중화 동작 상태 점검'
+
+  - cmd_name: '설비 운영정보 최적 유지'
+    cmd_command: 'show running-config'
+    value: 'check'
+    com_value: ''
+    message: |
+      config backup
+    raw: 'show running-configning-config'
+    arr_num: 0
+    grep: ''
+    time: 5
+    criteria: 'config backup'
+
+Windows:
+  - cmd_name: '기본 운영 프로세스 확인 [tasklist]'
+    cmd_command: 'tasklist'
+    com_value: ''
+    value: 'check'
+    message: |
+      01. 기본 운영 프로세스 확인
+    raw: 'tasklist'
+    arr_num: 0
+    criteria: '기본 운영 프로세스 확인'
+    time: 1
+
+  - cmd_name: 'CPU 사용량 [wmic]'
+    cmd_command: 'wmic cpu get loadpercentage'
+    com_value: '90'
+    value: 'list_int'
+    message: |
+      02. 시스템 기본 상태 확인(CPU)
+    raw: 'wmic cpu get loadpercentage'
+    arr_num: 0
+    criteria: 'CPU 사용률이 90% 이상일 경우 비정상'
+    time: 1
+
+  - cmd_name: 'Memory 사용률 [Get-CimInstance]'
+    cmd_command: 'show processes memory'
+    com_value: ''
+    value: 'memory_win'
+    message: |
+      03. 시스템 기본 상태 확인(Memory)
+    raw: 'Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize, FreePhysicalMemory'
+    arr_num: 0
+    criteria: '사용률이 80% 이상 일 경우 비정상.'
+    time: 1
+
+  - cmd_name: 'Disk 상태 [Get-Volume]'
+    cmd_command: 'Get-Volume'
+    com_value: '80'
+    value: 'disk_win'
+    message: |
+      04. 디스크 상태 점검
+    unit: '%'
+    raw: Get-Volume | Select-Object -Property DriveLetter, HealthStatus, OperationalStatus, SizeRemaining, Size
+    arr_num: 0
+    criteria: '디스크상태: Healthy 동작상태: OK 사용율: 80% 이하 조건을 만족하지 않으면 비정상'
+    time: 1
+
+  # - cmd_name: 'Disk'
+  #   cmd_command: 'Get-Volume'
+  #   com_value: ''
+  #   value: 'check'
+  #   message: |
+  #     디스크 상태 점검
+  #   raw: 'Get-Volume | Select-Object -Property DriveLetter, FileSystemLabel, FileSystem, Size, SizeRemaining'
+  #   arr_num: 0
+  #   time: 1
+  #   criteria: '디스크 상태 점검'
+
+  - cmd_name: '네트워크 설정 확인 [netstat]'
+    cmd_command: 'netstat'
+    com_value: ''
+    value: 'check'
+    message: |
+      05. 네트워크 설정 확인
+    raw: 'netstat -rn'
+    arr_num: 0
+    time: 1
+    criteria: '네트워크 설정 확인'
+
+  - cmd_name: '시간 동기화 상태 확인 [w32tm]'
+    cmd_command: 'w32tm'
+    com_value: ''
+    value: 'check'
+    message: |
+      06. NTP 시간 동기화 상태 확인
+    raw: 'w32tm /query /status'
+    arr_num: 0
+    time: 1
+    criteria: 'NTP 시간 동기화 상태 확인'
+
+  - cmd_name: '시스템 계정 취약점 점검 [Get-user]'
+    cmd_command: 'Get-user'
+    com_value: ''
+    value: 'check'
+    message: |
+      07. 시스템 계정 취약점 점검
+    raw: 'Get-LocalUser'
+    arr_num: 0
+    criteria: '시스템 계정 취약점 점검'
+    time: 1
+
+  - cmd_name: '시스템 주요응용설정 취약점 점검 [Tasklist]'
+    cmd_command: 'Tasklist'
+    com_value: |
+      inetinfo
+      ftpsvc
+      tlntsvr
+      snmp
+      sshd
+    value: 'str'
+    message: |
+      08. 시스템 주요응용설정 취약점 점검
+    raw: 'tasklist'
+    arr_num: 0
+    time: 1
+    criteria: '시스템 주요응용설정 취약점 점검'
+
+  - cmd_name: '시스템 보안설정 취약점 점검 [Get-NetFirewallRule]'
+    cmd_command: 'Get-NetFirewallRule'
+    com_value: ''
+    value: 'check'
+    message: |
+      09. 시스템 보안설정 취약점 점검
+    # raw: 'Get-NetFirewallRule -PolicyStore ActiveStore | Where-Object { $_.Enabled -eq "True"} | Format-Table -AutoSize'
+    raw: 'Get-NetFirewallRule -PolicyStore ActiveStore | Where-Object { $_.Enabled -eq "True"} | Select-Object DisplayName, Direction, Action, Enabled, LocalPort'
+    arr_num: 0
+    time: 1
+    criteria: '시스템 보안설정 취약점 점검'
+
+  - cmd_name: '시스템 로그관리 취약점 점검 [Get-EventLog]'
+    cmd_command: 'Get-EventLog'
+    com_value: |
+      error
+      fail
+      warning
+    value: 'str'
+    message: |
+      10. 시스템 로그파일 점검
+    # raw: 'Get-EventLog -LogName System -Newest 20 '
+    # raw: 'Get-EventLog -LogName System -Newest 20 | Format-List -Property *'
+    raw: 'Get-EventLog -LogName System -Newest 10 | Format-List -Property TimeGenerated, EntryType, Source, EventID, Message'
+    arr_num: 0
+    criteria: '시스템 로그관리 취약점 점검'
+    time: 1
+
+Secui:
+  - cmd_name: '시스템 Fan 동작상태'
+    cmd_command: 'fan'
+    com_value: ''
+    value: 'check'
+    message: |
+      시스템 Fan 동작상태 점검
+    raw: 'fan'
+    arr_num: 0
+    time: 1
+    criteria: 'Fan 동작 상태 점검'
+
+  - cmd_name: '시스템 PowerSupply 상태'
+    cmd_command: 'psu'
+    com_value: ''
+    value: 'check'
+    message: |
+      시스템 PowerSupply 상태 점검
+    raw: 'psu'
+    arr_num: 0
+    time: 1
+    criteria: 'PowerSupply 동작 상태 점검'
+
+  - cmd_name: 'Cpu 사용률 점검'
+    cmd_command: 'cpu'
+    com_value: ''
+    value: 'check'
+    message: |
+      Cpu 사용률 점검
+    raw: 'cpu'
+    arr_num: 0
+    time: 1
+    criteria: 'Cpu 사용률 점검'
+
+  - cmd_name: 'Memory 사용률 점검'
+    cmd_command: 'mem'
+    com_value: ''
+    value: 'check'
+    message: |
+      Memory 사용률 점검
+    raw: 'mem'
+    arr_num: 0
+    time: 1
+    criteria: 'Memory 사용률 점검'
+
+  - cmd_name: 'Disk 사용률 점검'
+    cmd_command: 'disk'
+    com_value: ''
+    value: 'check'
+    message: |
+      Disk 사용률 점검
+    raw: 'disk'
+    arr_num: 0
+    time: 1
+    criteria: 'Disk 사용률 점검'
+
+  - cmd_name: 'Ethernet Board 및 Interface 상태 점검'
+    cmd_command: 'interface'
+    com_value: ''
+    value: 'check'
+    message: |
+      Interface 상태 점검
+    raw: 'interface'
+    arr_num: 0
+    time: 1
+    criteria: 'Ethernet Board 및 Interface 상태 점검'
+
+  - cmd_name: '시각동기 체크'
+    cmd_command: 'time'
+    com_value: ''
+    value: 'check'
+    message: |
+      시각동기 체크
+    raw: 'time'
+    arr_num: 0
+    time: 1
+    criteria: '시각동기 체크'
+
+    #  - cmd_name: 'System Log 분석'
+    #    cmd_command: 'syslog'
+    #    com_value: ''
+    #    value: 'check'
+    #    message: |
+    #      System Log 분석
+    #    raw: 'syslog'
+    #    arr_num: 0
+    #    time: 1
+    #    criteria: 'System Log 분석'
+
+Axgate:
+  - cmd_name: 'Power Supply'
+    cmd_command: 'system'
+    value: 'notstr'
+    com_value: 'OK'
+    message: |
+      Power Supply 상태 확인
+    raw: 'show system power'
+    arr_num: 0
+    grep: 'unit'
+    time: 1
+    criteria: 'Power Supply 상태 OK 확인'
+
+  - cmd_name: 'version'
+    cmd_command: 'system'
+    value: 'check'
+    com_value: ''
+    message: |
+      System Version 확인
+    raw: 'show system version'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'System Version Check'
+
+  - cmd_name: 'Fan'
+    cmd_command: 'system'
+    value: 'str'
+    com_value: 'OK'
+    message: |
+      Fan 상태 확인
+    raw: 'show system fan'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'FAN 상태 OK 확인'
+
+  - cmd_name: 'Uptime'
+    cmd_command: 'system'
+    value: 'check'
+    com_value: ''
+    message: |
+      Uptime 상태 확인
+    raw: 'show system uptime'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'upitme 상태 check'
+
+  - cmd_name: 'Interface'
+    cmd_command: 'system'
+    value: 'check'
+    com_value: ''
+    message: |
+      Interface 상태 확인
+    raw: 'show interface'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'interface 상태 check'
+
+  - cmd_name: 'CPU'
+    cmd_command: 'resource'
+    value: 'check'
+    com_value: ''
+    message: |
+      CPU 사용량
+    raw: 'show resource cpu'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'CPU 상태 check'
+
+  - cmd_name: 'Memory'
+    cmd_command: 'resource'
+    value: 'check'
+    com_value: ''
+    message: |
+      Memory 사용량
+    raw: 'show resource memory'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'memory 상태 check'
+
+  - cmd_name: 'Disk'
+    cmd_command: 'resource'
+    value: 'check'
+    com_value: ''
+    message: |
+      Disk 사용량
+    raw: 'show resource storage'
+    arr_num: 0
+    grep: ''
+    time: 1
+    criteria: 'Disk 상태 check'

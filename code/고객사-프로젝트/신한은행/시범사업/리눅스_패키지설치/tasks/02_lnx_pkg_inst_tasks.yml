@@ -1,0 +1,22 @@
+---
+- block:
+  - name: 패키지 설치 작업 수행 -- "{{ pkg_name }}"
+    yum:
+      name: "{{ pkg_name }}"
+      state: latest
+    register: result_yum_install
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. 패키지 설치',
+          'command': 'Linux_PKG',
+          'result': '비정상' if result_yum_install['failed'] else '정상',
+          'is_success': True,
+          'is_pass': False if result_yum_install['failed'] else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

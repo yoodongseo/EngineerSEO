@@ -1,0 +1,31 @@
+---
+- block:  
+  #  - name: 파일 배포 작업 수행 -- "{{ copy_file }}"
+  #    copy:
+  #      src: "../templates/{{ file_name }}"
+  #      dest: "{{ file_dest }}"
+  #      owner: "{{ file_owner }}" 
+  #      group: "{{ file_group }}"
+  #      mode: "{{ file_mode }}"
+  #    register: result_copy
+
+  - name: 파일 배포 작업 수행 -- "{{ copy_file }}"
+    win_copy:
+      src: "../templates/{{ file_name }}"
+      dest: "{{ file_dest }}"
+    register: result_copy
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. 파일 배포 결과',
+          'command': 'Linux_Copy',
+          'result': '비정상' if result_copy['failed'] else '정상',
+          'is_success': True,
+          'is_pass': False if result_copy['failed'] else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

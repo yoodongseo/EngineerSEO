@@ -1,0 +1,7 @@
+---
+- name: "연결 상태 체크"
+  shell: hostname
+  register: result_connection
+  failed_when: false
+  ignore_unreachable: true
+  ignore_errors: true

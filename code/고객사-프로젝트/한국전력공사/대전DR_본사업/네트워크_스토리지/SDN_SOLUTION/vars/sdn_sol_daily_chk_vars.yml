@@ -1,0 +1,201 @@
+---
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "network"
+model: "sdn_solution"
+data5: "에방점검_SDN분석솔루션"
+
+commands:
+  - cmd_id: "0001"
+    filter_key: "SdnUptimeFilter"
+    name: "01. 시스템 Uptime 점검"
+    command: "uptime"
+    os: "{{ model }}"
+    # inspection_criteria: min_minutes는 최소 정상 uptime(분) 기준
+    inspection_criteria:
+      min_minutes: 1
+    is_save: true
+    is_compare: true
+    timeout: 3
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0002"
+    filter_key: "SdnAcidiagAvreadFilter"
+    name: "02. ND Cluster 상태 점검"
+    command: "kubectl get nodes"
+    os: "{{ model }}"
+    # inspection_criteria: Status 상태 기준
+    inspection_criteria:
+      ok_status: "Ready"
+      bad_statuses: ["NotReady"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0003"
+    filter_key: "SdnInterfaceBriefFilter"
+    name: "03. 인터페이스 상태 점검"
+    command: "ip link"
+    os: "{{ model }}"
+    # inspection_criteria: allow_admin_down 허용 여부와 bad_statuses 검출 기준
+    inspection_criteria:
+      required_flags: ["UP", "LOWER_UP"]
+      required_state: "UP"
+      loopback_ok_states: ["UNKNOWN"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0004"
+    filter_key: "cpu"
+    name: "04. CPU 점검"
+    command: "top -bn1 | grep 'Cpu(s)'"
+    os: "{{ model }}"
+    # inspection_criteria: cpu_max_pct, mem_max_pct는 최대 허용 사용률(%)
+    inspection_criteria: 80
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0005"
+    filter_key: "memory"
+    name: "05. Memory 점검"
+    command: "free -m"
+    os: "{{ model }}"
+    # inspection_criteria: cpu_max_pct, mem_max_pct는 최대 허용 사용률(%)
+    inspection_criteria: 80
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0006"
+    filter_key: "disk"
+    name: "06. DISK 사용량 점검"
+    command: "df -h"
+    os: "{{ model }}"
+    # inspection_criteria: max_use_percent 초과 또는 min_avail_gb 미만이면 비정상
+    inspection_criteria:
+      max_use_percent: 80
+      min_avail_gb: 10
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0007"
+    filter_key: "SdnAcidiagHealthFilter"
+    name: "07. PSU/FAN 상태 점검"
+    command: "dmesg | egrep -i 'fan|power|psu|thermal'"
+    os: "{{ model }}"
+    # inspection_criteria: bad_patterns 검출, ignore_patterns 제외 기준
+    inspection_criteria:
+      bad_patterns: ["fail", "fault", "critical", "major", "minor", "degraded", "not ok", "not present", "unknown"]
+      ignore_patterns: []
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0008"
+    filter_key: "messages"
+    name: "08. NDI 로그 수집 상태 점검"
+    command: "tail -100 /logs/loghandler/handler.log"
+    os: "{{ model }}"
+    # inspection_criteria: bad_patterns 로그 검출, ignore_patterns 제외 기준
+    inspection_criteria: [failed", "error", "critical", "fatal", "exception"]
+    is_save: true
+    is_compare: true
+    timeout: 10
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0009"
+    filter_key: "SdnFaultInstFilter"
+    name: "09. ND Fault 점검"
+    command: "kubectl get pods -A"
+    os: "{{ model }}"
+    # inspection_criteria: bad_severities 심각도 fault가 있으면 비정상
+    inspection_criteria:
+      normal_statuses: ["Running", "Completed", "ContainerCreating", "Terminating", "Pending"]
+      status_messages:
+        ContainerCreating: "Pod 생성중 오래 지속될 경우 점검이 필요합니다."
+        Terminating: "Pod 삭제중, 삭제 대상인지 확인이 필요합니다."
+        Pending: "스케쥴링 미등록 상태 입니다."
+    is_save: true
+    is_compare: true
+    timeout: 10
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0010"
+    filter_key: "messages"
+    name: "10. CIMC Fault Log 점검"
+    command: "dmesg | tail -100"
+    os: "{{ model }}"
+    # inspection_criteria: bad_severities 심각도 fault가 있으면 비정상
+    inspection_criteria:
+      bad_patterns: ["error", "critical", "failed", "panic", "segfault"]
+      ignore_patterns: []
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0011"
+    filter_key: "SdnNtpqFilter"
+    name: "11. NTP 상태 점검"
+    command: "ntpq -p"
+    os: "{{ model }}"
+    # inspection_criteria: min_reach 이상이고 tally 문자(*,+,o) 확인 시 정상
+    inspection_criteria:
+      min_reach: 1
+      require_tally: true
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0012"
+    filter_key: "messages"
+    name: "12. SITE 연동 상태 점검"
+    command: "kubectl get events -A"
+    os: "{{ model }}"
+    # inspection_criteria: 미검출 시 정상
+    inspection_criteria: ["connection refused", "failed", "error"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0013"
+    filter_key: "messages"
+    name: "13. show version"
+    command: "show version"
+    os: "{{ model }}"
+    # inspection_criteria: 미검출 시 정상
+    inspection_criteria: ["connection refused", "failed", "error"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"

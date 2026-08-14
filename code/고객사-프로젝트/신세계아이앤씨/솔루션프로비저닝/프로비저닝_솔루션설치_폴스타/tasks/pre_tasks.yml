@@ -1,0 +1,43 @@
+---
+- name: root 계정 확인
+  shell: whoami
+  register: whoami_result
+
+- name: root 계정이 아닌 경우 - 작업종료
+  fail:
+    msg:
+      - "현재 로그인 계정 : {{ whoami_result.stdout }}"
+      - "root 계정으로 작업이 필요합니다."
+      - "작업을 종료합니다."
+  when: whoami_result.stdout != "root"
+
+- name: 사전 Agent 설치 확인
+  shell: ps -ef | grep {{ item.name }} | grep -v grep
+  register: pre_install_result
+  retries: 5
+  delay: 3
+  until: pre_install_result.stdout == ""
+  loop: "{{ AGENT }}"
+  ignore_errors: true
+
+- name: Agent 설치 판단 - 작업 종료
+  fail:
+    msg: 
+      - "이미 Agent가 설치되어 있습니다"
+      - "작업을 종료합니다."
+  when: item.stdout != ""
+  loop: "{{ pre_install_result.results }}"
+
+- name: Agent 설치 압축 파일 해제
+  shell: "unzip {{ install_file_path }}/{{ install_zip }}"
+  register: unzip_result
+
+- name: Agent 설치 디렉터리 생성
+  shell: "mkdir {{ install_dir }}"
+  register: mkdir_result
+  when: unzip_result.failed | default(true) == false
+
+- name: 설치 파일 복사
+  shell: "mv {{ install_file_path }}/{{ install_gz }} {{ install_dir }}"
+  register: mv_result
+  when: mkdir_result.failed | default(true) == false

@@ -1,0 +1,61 @@
+---
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: 'Linux'
+report_type: 'Linux LV 확장'
+data_key: LNX_EXTEND_LV
+
+# JOB_VARS
+lv_name: "{{ fap['host_vars']['lv_name'] }}" ## lv_cheong
+lv_extend_size: "{{ fap['host_vars']['lv_extend_size'] | regex_replace('([0-9]+).*', '\\1G') }}" ## 1G
+
+# JOB SHELL
+lv_extend_job_cmd: |
+  lv_name="{{ lv_name }}"
+  lv_extend_size="{{ lv_extend_size }}"
+
+  # STEP 0: LV 존재여부 확인
+  lv_exists=$(lvs --noheadings -o lv_name | grep -w "$lv_name")
+  if [ -z "$lv_exists" ]; then
+    echo "Error: Logical Volume '$lv_name' does not exist."
+    exit 1
+  fi
+
+  # STEP 1: VG 여유공간 확인
+  lv_path=$(lvdisplay | grep "$lv_name" | grep 'LV Path' | awk '{print $3}')
+  vg_name=$(lvdisplay "$lv_path" | grep 'VG Name' | awk '{print $3}')
+  vg_free_space=$(vgs --noheadings -o vg_free --units g "$vg_name" | awk '{print int($1)}')
+  requested_size=$(echo "$lv_extend_size" | sed 's/G//') # 요청사이즈에서 G 문자 제거(정수 비교)
+
+  if [ "$vg_free_space" -lt "$requested_size" ]; then
+    echo "ERROR: VG Available: ${vg_free_space}G, Requested Size: ${requested_size}G."
+    exit 1
+  fi
+
+  # STEP 2: LV 여유공간 확장
+  lvextend -L +${lv_extend_size} "$lv_path"
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to extend $lv_path Logical Volume."
+    exit 1
+  fi
+
+  # STEP 3: 파일시스템 확장
+  fs_type=$(blkid -o value -s TYPE "$lv_path")
+  mount_path=$(mount | grep "$lv_name" | awk '{print $3}')
+
+  if [ "$fs_type" = "ext4" ]; then
+      resize2fs "$lv_path"
+  elif [ "$fs_type" = "xfs" ]; then
+      xfs_growfs "$mount_path"
+  else
+      echo "Error: Unsupported filesystem type '$fs_type'."
+      exit 1
+  fi
+
+  # 파일 시스템 확장 명령어 실패 확인
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to extend the filesystem on '$lv_path'."
+    exit 1
+  fi 
+
+  # STEP 4: 결과 출력
+  df -Th $mount_path

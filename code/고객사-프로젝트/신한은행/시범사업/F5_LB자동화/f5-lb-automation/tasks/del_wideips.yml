@@ -1,0 +1,44 @@
+#WideIps 정보 조회 후 있으면 삭제 없으면 패스
+---
+- when: err_flag == false
+  block:
+    - name: 도메인 정보 조회 (WIDEIPs)
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/wideip/{{pool_type|lower}}"
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: GET
+        validate_certs: "{{ validate_certs }}"
+      register: WIDEIPSList
+      delegate_to: localhost
+    # - debug: var=WIDEIPSList
+
+    - name: 롤백 대상 검증 -> {{wideips_name}}
+      set_fact:
+        del_flag: "{{ 1 if wideips_name in WIDEIPSList['json']['items'] | map(attribute='name') | list  else 0}}"
+
+    - when: del_flag|default(0)|int == 1
+      block:
+        - name: 도메인 삭제 -> {{wideips_name}}
+          ansible.builtin.uri:
+            url: "{{ host }}/{{ rest_api_info.default_api }}/wideip/{{pool_type|lower}}/{{wideips_name}}"
+            user: "{{ username }}"
+            password: "{{ password }}"
+            method: DELETE
+            validate_certs: false
+          register: DelWideIPs
+          delegate_to: localhost
+          # - debug: var=DelWideIPs
+
+        - name: 도메인 롤백 결과 추출
+          set_fact:
+            rollback_data: "{{ DelWideIPs.json|default([]) }}"
+            rollback_err_msg: "{{ DelWideIPs.json|default({}) if DelWideIPs.status|int != 200 else {} }}"
+            rollback_err_flag: "{{ false if DelWideIPs.status|default(0)|int == 200 else true }}"
+
+    # - when: del_flag|default(0)|int == 0
+    #   name: WIDEIPS 롤백 정보 추출
+    #   set_fact:
+    #     rollback_data: []
+    #     rollback_err_msg: []
+    #     rollback_err_flag: false

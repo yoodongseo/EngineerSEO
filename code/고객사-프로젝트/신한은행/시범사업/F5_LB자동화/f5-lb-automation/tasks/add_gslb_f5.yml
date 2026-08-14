@@ -1,0 +1,72 @@
+---
+# - name: 접속, active 상태확인 작업호출
+#   include_tasks: '/fap/ansible/projects/KB_custom/tasks/gslb_check_active.yml'
+
+# - debug: var=result_active['json']['apiRawValues']['apiAnonymous']|regex_search('active')
+# - debug: var=is_active
+# - debug: var=net_type
+
+# - when: is_active|default(0)|int != 1
+#   name: GSLB StandBy 구분 전달
+#   set_fact:
+#     job_result: "{{ job_result|default([]) + [{
+#       'resActive': false,
+#       'data': [],
+#       'err_msg': '',
+#       'err_flag': err_flag
+#       }] }}"
+
+# - when: is_active|default(0)|int == 1
+#   block:
+#     - name: GSLB 등록 검증 실행 1
+#       include_tasks: '../tasks/check_task.yml'
+
+#     - name: GSLB 등록 검증 실행 2
+#       include_tasks: '../tasks/check_task2.yml'
+#       loop: '{{ vinfo }}'
+
+  # always:
+  #   - name: GSLB 등록 검증 정보 추출
+  #     set_fact:
+  #       job_result: "{{ job_result|default([]) + [{
+  #         'resActive': true,
+  #         'data': data,
+  #         'err_msg': err_msg,
+  #         'err_flag': err_flag
+  #         }] }}"
+
+  #   - name: GSLB 등록 검증 판단
+  #     fail:
+  #       msg:
+  #         - 'GSLB 등록 검증 결과: 실패'
+  #         - '{{err_msg}}'
+  #     ignore_errors: false
+  #     ignore_unreachable: false
+  #     # when: err_flag|default(true)
+  #     when: workable_wideips == false
+  #       or workable_pool == false
+  #       or workable_server == false
+  #       or workable_vserver == false
+
+    - name: work_result 초기화
+      set_fact:
+        work_result: []
+      when: err_flag|default(true) == false
+
+    # - debug: var=is_check
+
+    - name: job_result,vserver_idx 초기화
+      set_fact:
+        job_result: []        
+        vserver_idx: 0
+      when: err_flag|default(true) == false
+      # when: err_flag|default(true) == false and is_check|default(true) == false
+
+    # - name: vserver_idx 초기화
+    #   set_fact:
+    #     vserver_idx: 0
+    #   when: err_flag|default(true) == false and is_check|default(true) == false
+
+    - name: GSLB 등록 작업 실행
+      include_tasks: '../tasks/exec_task.yml'
+      when: err_flag|default(true) == false and is_check|default(true) == false

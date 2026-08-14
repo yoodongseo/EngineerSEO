@@ -1,0 +1,15 @@
+---
+- name: 저장변수 생성
+  set_fact:
+    content_value: "{{ content_value | default ({}) | combine({ 'data_list': merged_value}) }}"
+  
+- name: 데이터 저장
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ fap.host_ip }}"
+    data_type: "{{ data_type }}"
+    data_key: "{{ data_key }}"
+    template_id: "{{ fap.template_id }}"
+    job_id: "{{ fap.job_id }}"
+  delegate_to: localhost

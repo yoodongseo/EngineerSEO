@@ -1,0 +1,21 @@
+---
+- block:
+  - name: 재부팅
+    win_reboot:
+      reboot_timeout: 600
+    register: result_reboot
+
+  always:
+    - name: Save DATA Merged 생성 -- lnx_con_tasks
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '3. 재기동',
+          'command': 'hostname',
+          'result': '비정상' if result_reboot['failed'] | default(True) else '정상',
+          'is_success': True,
+          'is_pass': False if result_reboot['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

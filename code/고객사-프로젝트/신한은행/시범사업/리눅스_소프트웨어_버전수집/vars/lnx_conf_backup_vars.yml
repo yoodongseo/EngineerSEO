@@ -1,0 +1,17 @@
+system: Linux
+report_type: 'SW 버전정보'
+data_key: 'sw_version'
+
+backup_cli:
+  - id: '0001'
+    name: '1. Polestar'
+    command: 'cat /sw/nnpagent/NNPAgent/MAgent/conf/MasterAgent.conf | grep MASTER_AGENT_VERSION'
+  - id: '0002'
+    name: '2. LogSaver'
+    command: '/usr/local/logsaver/logsaverNet -h | grep Version'
+  - id: '0003'
+    name: '3. Avamar'
+    command: 'rpm -qa | grep abmr'
+  - id: '0004'
+    name: '4. CTM'
+    command: cat /sw/bmc/autoctm/installed-versions.txt

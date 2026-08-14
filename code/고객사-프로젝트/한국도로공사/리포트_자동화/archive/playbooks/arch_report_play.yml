@@ -1,0 +1,27 @@
+---
+- name: ex archive report
+  hosts: all
+  strategy: free
+  gather_facts: false
+  
+  tasks:
+    - name: vars include
+      include_vars: ../vars/arch_report_vars.yml
+
+    - name: 일시 생성
+      command: "date +'%Y%m%d'"
+      register: today
+      delegate_to: localhost
+
+    - name: Report file get(archive)
+      raw: cat "{{ archive_file_path }}/archive.log_{{ today.stdout }}_060458"
+      register: archive_report_data
+      when: archive_file_path | regex_replace('(?i)archive')
+
+    - name: archive tasks
+      include_tasks: ../tasks/ex_archive_report.yml
+      when: archive_file_path | regex_replace('(?i)archive')
+
+
+
+    

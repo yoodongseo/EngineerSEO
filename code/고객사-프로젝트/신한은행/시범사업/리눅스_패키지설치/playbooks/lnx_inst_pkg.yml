@@ -1,0 +1,21 @@
+---
+- name: Linux 패키지 설치
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/lnx_pkg_vars.yml
+  tasks:
+  - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_lnx_con_tasks.yml
+
+      - name: 2. 패키지 설치 작업 수행 - "{{ pkg_name }}"
+        include_tasks: ../tasks/02_lnx_pkg_inst_tasks.yml
+
+    always:
+      - name: 데이터 저장
+        include_tasks: ../tasks/save_data.yml
+

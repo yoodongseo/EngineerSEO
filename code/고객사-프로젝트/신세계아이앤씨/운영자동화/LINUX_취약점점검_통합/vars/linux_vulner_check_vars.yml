@@ -1,0 +1,42 @@
+---
+# save_to_db vars
+today: "{{ lookup('ansible.builtin.pipe', 'date +%Y-%m-%d')}}"
+data_key: linux_vulnercheck_total
+local_dir_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_id }}/{{ result_connection.stdout }}_{{ inventory_hostname }}"
+
+# job vars
+file:
+  path: "/tmp/cmtinfo"
+copy:
+  src: "{{ fap.host_vars.script_name }}"
+# src: "/app/fap/upload/sync_files/{{ fap.host_vars.FILE }}"
+  dest: "{{ file.path }}"
+  mode: "0700"
+script: "{{ copy.dest }}/*.sh"  # 스크립트 실행 변수
+download_file: "result_{{ result_connection.stdout }}.tar.gz"
+vulner_running_shell: |
+  cd {{ copy.dest }}
+  script_name=$(ls | grep '\.sh$')
+  if [ -z "$script_name" ]; then
+      rm -rf {{ copy.dest }}
+      exit 1
+  fi
+
+### 결과 파일 압축 
+vulner_tar_gz: |
+  cd {{ copy.dest }}
+  ls -alht
+  check_count=$(ls | wc -l)
+  if [[ $check_count -ge 1 ]]; then
+      ls -alht
+      tar -zcf {{ download_file }} *
+      chmod 0755 *
+      ls | grep {{ download_file }}
+      if [[ $? -eq 0 ]]; then
+          exit 0
+      else
+          exit 1
+      fi
+  else
+      exit 1
+  fi

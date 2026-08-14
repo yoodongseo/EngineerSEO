@@ -1,0 +1,69 @@
+---
+- name: cisco_play
+  hosts: all
+  strategy: free
+  gather_facts: false
+  ignore_errors: true
+  ignore_unreachable: true
+  vars:
+  # 백업용 임시 변수 생성
+  vars_files: ../vars/backup_vars.yml
+  tasks:
+    - block:
+      - name: 점검 명령어 실행
+        raw: "{{ item.command }}"
+        register: prompt_result
+        loop: "{{ commands }}"
+        
+      - name: 저장 변수 생성
+        set_fact:
+          merged_value: "{{ merged_value | default([]) + [{
+            'host': fap.host_ip,
+            'id': item.item.id,
+            'name': item.item.name,
+            'command': item.item.command,
+            'result': item.stdout,
+            'is_success': True,
+            'system': system,
+            }] }}"
+        loop: "{{ prompt_result.results }}"
+        loop_control:
+          label: "{{ item.item.name }}"
+        
+      always:
+        - name: 알림 설정 task 호출
+          include_tasks: ../tasks/diff_notice.yml
+          loop: "{{ prompt_result.results }}"
+          loop_control:
+            label: "{{ item.item.name }}"
+            
+        
+        # 4. DB 저장된 알림 데이터를 취합 후 통보 (UI 및 Email 발송)
+        #    작업이 완전히 종료된 후 Post 작업으로 수행. DB에 저장된 알림 Content 내용을 하나로 묶어서 통보
+        #    key_columns 조건으로 조회 후, target_merge_column으로 지정된 값을 Merge (데이터가 없으면 통보 생략)
+        #    UI 공지 및 이메일 통보 각각 설정 가능 (send_ui_*, send_mail_*)
+        #    UI 공지만 표출 필요 시 send_mail_enable 값은 False
+        #    E-MAIL 알람만 필요 시 send_ui_enable 값은 False
+        - name: 4. 작업 종료 후 알림 데이터 취합 후 발송
+          fap.common.send_batch_notice:
+            fap_vars: "{{ fap }}"
+            title: "[FAP] 데이터 변경 알림"
+            table_name: "ansible_cli_data"
+            target_merge_column: "message"
+            key_columns:
+              - { column: "job_id", value: "{{ fap.job_id }}" }
+              - { column: "data_type", value: "ALARM_DATA" }
+              - { column: "data_key", value: "MERGE_DIFF_DATA" }
+            send_ui_enable: true
+            #send_ui_organization_name: "{{ target_organization_name }}"
+            send_ui_team_name: "{{ target_team_name }}"
+            send_ui_post_period: "day"
+            send_mail_enable: true
+            send_mail_noti_name: "{{ smtp_noti_name }}"
+            # send_mail_recipients: "{{ target_mailing_list | default(omni) }}"
+            send_mail_content_type: "TEXT"
+          delegate_to: localhost
+          run_once: true
+
+        - name: db 저장 task 호출
+          include_tasks: ../tasks/save_db.yml

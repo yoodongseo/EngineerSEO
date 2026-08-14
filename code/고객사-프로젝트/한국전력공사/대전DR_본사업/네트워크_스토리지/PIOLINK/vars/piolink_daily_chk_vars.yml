@@ -1,0 +1,159 @@
+---
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "network"
+model: "piolink"
+data5: "에방점검_Piolink"
+
+commands:
+  - cmd_id: "0001"
+    filter_key: "PiolinkInterfaceFilter"
+    name: "01. 인터페이스 정보 점검/변동 현황 정비"
+    command: "show interface"
+    os: "{{ model }}"
+    inspection_criteria:
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0002"
+    filter_key: "PiolinkPortFilter"
+    name: "02. 인터페이스 CRC, ERROR 확인"
+    command: "show port"
+    os: "{{ model }}"
+    inspection_criteria:
+      bad_status_when_link_ip: ["Disable"]
+      bad_duplexes: ["Half"]
+    is_save: true
+    is_compare: true
+    timeout: 3
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0003"
+    filter_key: "PiolinkResourceFilter"
+    name: "03. 설비 성능 확인"
+    command: "show resource"
+    os: "{{ model }}"
+    inspection_criteria:
+      cpu_threshold: 80
+      memory_threshold: 80
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0004"
+    filter_key: "messages"
+    name: "04. 로그 점검"
+    command: "show log"
+    os: "{{ model }}"
+    inspection_criteria: ["error", "failed"]
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0005"
+    filter_key: "PiolinkRouteFilter"
+    name: "05. 다이나믹 라우팅 프로토콜 동작 점검"
+    command: "show route"
+    os: "{{ model }}"
+    inspection_criteria:
+      require_default_gateway: true
+      min_network_count: 2
+      require_dynamic_route: true
+      connected_gateway_value: "0.0.0.0"
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+################# 이중화 상태 점검 명령어 미존재 - 해당없음 처리 #################
+  - cmd_id: "0006"
+    filter_key: "CheckFilter"
+    name: "06. 게이트웨이 이중화 동작 점검"
+    command: "show failover"
+    os: "{{ model }}"
+    inspection_criteria:
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+################# 이중화 상태 점검 명령어 미존재 - 해당없음 처리  #################
+
+  - cmd_id: "0007"
+    filter_key: "BackupFilter"
+    name: "07. 라우팅 테이블 파일 백업"
+    command: "show route"
+    os: "{{ model }}"
+    inspection_criteria:
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+################# SLB 명령어 미존재 - 해당없음 처리 ################# 
+
+  - cmd_id: "0008"
+    filter_key: "CheckFilter"
+    name: "08. SLB 헬스체크 설정 및 동작상태 점검/설정"
+    command: "show info slb"
+    os: "{{ model }}"
+    inspection_criteria:
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0009"
+    filter_key: "CheckFilter"
+    name: "09. SLB 설정 및 동작 상태 점검/설정"
+    command: "show info slb"
+    os: "{{ model }}"
+    inspection_criteria:
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0010"
+    filter_key: "CheckFilter"
+    name: "10. SLB Real IP 접속상태 및 VIP 서비스 통계 점검"
+    command: "show info slb"
+    os: "{{ model }}"
+    inspection_criteria:
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+################# SLB 명령어 미존재 - 해당없음 처리 ################# 
+
+  - cmd_id: "0011"
+    filter_key: "BackupFilter"
+    name: "11. Config 백업"
+    command: "show running-config"
+    os: "{{ model }}"
+    inspection_criteria:
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"

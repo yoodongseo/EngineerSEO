@@ -1,0 +1,38 @@
+---
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: 'Linux'
+report_type: 'Linux TOP,PS 일일점검'
+data_key: LNX_INSPECTION_DAILY
+
+lnx_inspection_item:
+  - name: 2. CPU (TOP)
+    cmd: |
+      total_cpu_usage=0
+      check_num=5
+      for i in $(seq 1 $check_num); do
+        cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')
+        total_usage=$(echo "$total_cpu_usage + $cpu_usage" | bc)
+      done
+      avg_cpu_usage=$(echo "$total_usage / $check_num" | bc -l) && format_avg=$(printf "%.2f" $avg_cpu_usage); echo $format_avg && exit 0
+    compare_value: 80
+    unit: "%"
+  - name: 3. 파일시스템(/root)
+    cmd: |
+      if df | grep -wq '/'; then
+        usage=$(df -Th | grep -w '/' | awk '{print $6}') && echo $usage | tr -d '%'
+      else
+        echo "/root filesystem is not found"
+        exit 1
+      fi
+    compare_value: 80
+    unit: "%"
+  - name: 4. 파일시스템(/docker)
+    cmd: |
+      if df | grep -wq '/docker'; then
+        usage=$(df -Th | grep -w '/docker' | awk '{print $6}') && echo $usage | tr -d '%'
+      else
+        echo "/docker filesystem is not found"
+        exit 1
+      fi
+    compare_value: 80
+    unit: "%"

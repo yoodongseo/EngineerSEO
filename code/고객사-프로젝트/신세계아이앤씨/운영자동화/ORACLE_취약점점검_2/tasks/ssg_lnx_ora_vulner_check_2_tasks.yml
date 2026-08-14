@@ -1,0 +1,67 @@
+---
+- name: 배포 경로 초기화
+  file:
+    path: "{{ file.path }}"
+    state: "{{ item }}"
+    owner: "{{ service_user if item == 'directory' else omit }}"
+  loop:
+    - absent
+    - directory
+
+- name: 취약점 진단 스크립트 배포 수행
+  copy:
+    src: "{{ copy.src }}"
+    dest: "{{ copy.dest }}"
+    mode: "{{ copy.mode }}"
+    owner: oracle
+    group: dba
+  register: result_copy
+
+- name: 취약점 진단 수행
+  shell: su - oracle -c "{{ vulner_running_shell_ora }}"
+  register: result_running_oracle
+  timeout: 600
+
+- name: 스크립트 파일 삭제 및 결과 파일 압축
+  shell: "su - {{ ansible_user }} - c {{ vulner_tar_gz }}"
+  args:
+    chdir: "{{ copy.dest }}"
+
+- name: 자동화 서버 점검 결과 저장경로 생성
+  file:
+    path: "{{ local_dir_path }}"
+    state: directory
+  delegate_to: localhost
+
+- name: 취약점 점검 결과 다운로드
+  fetch:
+    src: "{{ copy.dest }}/{{ download_file }}"
+    dest: "{{ local_dir_path }}/{{ download_file }}"
+    flat: true
+
+- name: 배포 경로 삭제
+  file:
+    path: "{{ file.path }}"
+    state: absent
+
+- name: 다운로드 한 압축파일 해제
+  unarchive:
+    src: "{{ local_dir_path }}/{{ download_file }}"
+    dest: "{{ local_dir_path }}"
+  delegate_to: localhost
+
+- name: 다운로드 한 압축파일 삭제
+  file:
+    path: "{{ local_dir_path }}/{{ download_file }}"
+    state: absent
+  delegate_to: localhost
+
+- set_fact: # 성공 변수 생성
+    merged_value: "{{ merged_value | default([]) + [{
+      'host': inventory_hostname,
+      'host_name': inventory_hostname,
+      'is_success': true,
+      'file_path': local_dir_path,
+      'system': 'Linux',
+      'report_type': data_key
+      }] }}"

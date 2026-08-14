@@ -1,0 +1,56 @@
+---
+# SAVE VARS
+system: Linux
+report_type: "Linux 커널 패치"
+data_key: "LNX_KERNEL_PATCH"
+
+reboot_flag: "{{ fap['host_vars']['reboot_flag'] | default('Y') }}"
+
+pkg_tar_7: rhel79
+pkg_tar_8: rhel88
+
+# Play Jobs
+copy_src: 
+  - name: "../templates/{{ pkg_tar_7 }}.tar"
+  - name: "../templates/{{ pkg_tar_8 }}.tar"
+copy_dest: "/tmp/lnx_update_kernel"
+update_timeout: 900
+
+update_reboot:
+  reboot_timeout: 600
+  boot_time_command: uptime
+
+# 커널 버전 업데이트 쉘
+lnx_kernel_update_cli: |
+  # 0. 변수 정보
+  update_path="{{ copy_dest }}"
+  pkg_tar_7="{{ pkg_tar_7 }}"
+  pkg_tar_8="{{ pkg_tar_8 }}"
+
+  # 1. 커널 업데이트 대상 버전 정보 수집
+  version=$(uname -a | awk '{print $3}' | awk -F'.' '{print $(NF-1)}')
+  if [[ "${version}" == *"el7"* ]]; then
+  pkg_name="${pkg_tar_7}"
+  elif [[ "${version}" == *"el8"* ]]; then
+  pkg_name="${pkg_tar_8}"
+  else
+  echo "NOT SUPPORTED VERSION"
+  exit 1
+  fi
+
+  # 2. 커널 업데이트 수행
+  echo "Update PKG Name: ${pkg_name}"
+  cd "${update_path}"
+  tar -xf "${pkg_name}.tar"
+  cd "${pkg_name}"
+  yum -y localinstall ./* 
+  rc=$?
+
+  # 3. 성공 정보 리턴
+  if [ "${rc}" -ne 0 ]; then
+    echo "Error: yum localinstall, path: /tmp/${pkg_name}"
+    exit "${rc}"
+  else
+    echo "Complete!"
+    exit "${rc}"
+  fi

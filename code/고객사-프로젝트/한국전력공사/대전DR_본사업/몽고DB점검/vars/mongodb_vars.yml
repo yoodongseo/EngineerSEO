@@ -1,0 +1,141 @@
+---
+report_type: 'preventive'
+data_key: 'company'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_id }}/{{ fap.host_ip }}"
+data_type: 'report'
+save_type: 'report'
+system: 'Linux'
+model: 'mongo'
+target_type: "server"
+report_target: "서버"
+message_data: "{{ report_type }}_{{ save_today }}"
+
+####### DB ########
+mongo_user: "mdm2"
+
+inspection_commands:
+  - filter_key: ""
+    cmd_id: "0000"
+    name: "00. 사용자 전환"
+    command: "su - {{ mongo_user }}"
+    os: "{{ model }}"
+    inspection_criteria:
+    is_compare: false
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - filter_key: "diskstatfilter"
+    cmd_id: "0001"
+    name: "01. DB 사용량 점검"
+    command: "du -sh $(grep -i \"dbPath\" /home/mdm2/mongodb/conf_auth/*.conf | awk -F: '{print $2}' | tr -d ' ')"
+    os: "{{ model }}"
+    inspection_criteria: 10
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - filter_key: "diskstatfilter"
+    cmd_id: "0002"
+    name: "02. Log 사용량 점검"
+    command: "du -sh $(grep -i \"path\" /home/mdm2/mongodb/conf_auth/*.conf | grep -i log | awk -F: '{print $2}' | tr -d ' ')"
+    os: "{{ model }}"
+    inspection_criteria: 10
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - filter_key: "ProcessFilter"
+    cmd_id: "0003"
+    name: "03. 프로세스 점검"
+    command: "ps -ef | grep mongod | grep -v grep"
+    os: "{{ model }}"
+    inspection_criteria: ''
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - filter_key: "MongodbJsonFilter"
+    cmd_id: "0004"
+    name: "04. Ping 점검"
+    command: "mongo --quiet --port {{ db_port }} --eval 'printjson(db.adminCommand({ping:1}))'"
+    os: "{{ model }}"
+    inspection_criteria:
+      ok: 1
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - filter_key: "MongodbJsonFilter"
+    cmd_id: "0005"
+    name: "05. DB 접속 수 점검"
+    command: "mongo --quiet --port {{ db_port }} -u admin -p 'admin' --eval 'printjson(db.serverStatus().connections)'"
+    os: "{{ model }}"
+    inspection_criteria:
+      current: "<=100"
+    is_compare: true
+    is_save: true
+    timeout: 10
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - filter_key: "PsPercentFilter"
+    cmd_id: "0006"
+    name: "06. 메모리 점검"
+    command: "ps -p $(pgrep -d',' -f 'mongod|mongos') -o %mem,rss,cmd"
+    os: "{{ model }}"
+    inspection_criteria: 10
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - filter_key: "PsPercentFilter"
+    cmd_id: "0007"
+    name: "07. CPU 점검"
+    command: "ps -p $(pgrep -d',' -f 'mongod|mongos') -o %cpu,cmd"
+    os: "{{ model }}"
+    inspection_criteria: 10
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - filter_key: "logfilter"
+    cmd_id: "0008"
+    name: "08. LOG 확인"
+    command: "tail -100 $(grep -i \"path\" /home/mdm2/mongodb/conf_auth/*.conf | grep -i log | awk -F: '{print $2}' | tr -d ' ')"
+    os: "{{ model }}"
+    inspection_criteria: "error,fail"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - filter_key: "MongodbJsonFilter"
+    cmd_id: "0009"
+    name: "09. 이중화 점검"
+    command: "mongo --quiet --port {{ db_port }} -u admin -p 'admin' --authenticationDatabase admin --eval 'printjson(rs.status())'"
+    os: "{{ model }}"
+    inspection_criteria:
+      members[*].stateStr: [PRIMARY, SECONDARY]
+      members[*].health: 1
+    is_compare: true
+    is_save: true
+    timeout: 10
+    sleep: 1
+    message: "{{ message_data }}"

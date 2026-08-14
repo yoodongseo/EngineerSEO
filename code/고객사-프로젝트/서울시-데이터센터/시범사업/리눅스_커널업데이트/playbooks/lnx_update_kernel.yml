@@ -1,0 +1,30 @@
+---
+- name: Linux 커널 Update
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/lnx_update_kernel_vars.yml
+  tasks:
+  - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_lnx_con_tasks.yml
+
+      - name: 2. 사전 버전 정보 수집
+        include_tasks: ../tasks/02_before_version_chk.yml
+
+      - name: 3. 커널 버전 업데이트 수행
+        include_tasks: ../tasks/03_lnx_update_kernel_tasks.yml
+
+      - name: 4. 재기동
+        include_tasks: ../tasks/04_reboot_tasks.yml
+        when: reboot_flag == 'Y'
+      
+      - name: 5. 작업 이후 버전정보 수집
+        include_tasks: ../tasks/05_after_version_chk.yml
+
+    always:
+      - name: 데이터 저장 
+        include_tasks: ../tasks/save_data.yml 

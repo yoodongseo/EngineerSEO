@@ -1,0 +1,23 @@
+---
+- block:
+  - name: 점검 실패 처리
+    fail:
+      msg: "점검 실패: Vendor 미 선언 상태"
+    
+  always:
+    - name: Save DATA Merged 생성 -- Con_tasks
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '00.연결상태',
+          'command': 'uname',
+          'result': '비정상',
+          'is_success': False,
+          'is_pass': '-1',
+          'system': system,
+          'report_type': report_type,
+          'data5': report_target,
+          'fail_reason': '점검 자동화 오류'
+            }] }}"
+      when: save_type == 'report'

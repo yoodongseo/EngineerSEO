@@ -1,0 +1,99 @@
+---
+- name: fap.host_vars.script_name 디버깅
+  debug:
+    var: fap.host_vars.script_name
+
+- name: copy.src 디버깅
+  debug:
+    var: copy.src
+
+- name: 배포 경로 초기화
+  file:
+    path: "{{ file.path }}"
+    state: "{{ item }}"
+  loop:
+    - absent
+    - directory
+
+- name: 취약점 진단 스크립트 배포 수행
+  copy:
+    src: "{{ copy.src }}"
+    dest: "{{ copy.dest }}"
+    mode: "{{ copy.mode }}"
+  register: result_copy
+
+- name: 취약점 진단 스크립트 배포 확인
+  shell: "{{ vulner_running_shell }}"
+  register: result_running_shell
+
+- name: 작업 실패 --- 작업 성공 시 Skip
+  fail:
+    msg:
+      - "취약점 진단 수행 결과 실패 판단"
+  when: result_running_shell.rc | default(1)
+  ignore_errors: false
+
+- name: 취약점 진단 스크립트 실행
+  shell: "echo 'y' | {{ script }}"
+  register: result_finish_shell
+  until: |
+    'The file has successfully' in result_finish_shell.stdout
+    or 'F I N I S H' in result_finish_shell.stdout
+    or 'Security Check Finished.' in result_finish_shell.stdout
+  retries: 10
+  delay: 90
+  become: yes
+  args:
+    chdir: "{{ file.path }}"
+
+- name: 결과 파일 압축
+  shell: "{{ vulner_tar_gz }}"
+  register: result_tar
+
+- name: 스크립트 결과 파일 확인
+  raw: "ls -alht {{ copy.dest }}"
+  register: check_file
+
+- name: 자동화 서버 점검 결과 저장경로 생성
+  file:
+    path: "{{ local_dir_path }}"
+    state: directory
+  delegate_to: localhost
+
+- name: 취약점 점검 결과 다운로드
+  fetch:
+    src: "{{ copy.dest }}/{{ download_file }}"
+    dest: "{{ local_dir_path }}/{{ download_file }}"
+    flat: true
+
+- name: 배포 경로 삭제
+  file:
+    path: "{{ file.path }}"
+    state: absent
+
+- name: 다운로드 한 압축파일 해제
+  unarchive:
+    src: "{{ local_dir_path }}/{{ download_file }}"
+    dest: "{{ local_dir_path }}"
+  delegate_to: localhost
+
+- name: 스크립트 파일 삭제
+  shell: "rm -rf {{ local_dir_path }}/*.sh"
+  delegate_to: localhost
+
+- name: 다운로드 한 압축파일 삭제
+  file:
+    path: "{{ local_dir_path }}/{{ download_file }}"
+    state: absent
+  delegate_to: localhost
+
+- name: merged_value 생성
+  set_fact: # 성공 변수 생성
+    merged_value: "{{ merged_value | default([]) + [{
+      'host': inventory_hostname,
+      'host_name': inventory_hostname,
+      'is_success': true,
+      'file_path': local_dir_path,
+      'system': 'Linux',
+      'report_type': data_key
+      }] }}"

@@ -1,0 +1,88 @@
+---
+# #### Active 1번 DB 정보 입력
+# FIRST_ACTIVE_DB_IP: 192.0.2.10 
+# FIRST_ACTIVE_DB_HOSTNAME: scsic-idctest1
+
+# #### Active 2번 DB 정보 입력
+# SECOND_ACTIVE_DB_IP: 192.0.2.10
+# SECOND_ACTIVE_DB_HOSTNAME: scsic-idctest2
+
+# #### Standby DB 정보 입력
+# STANDBY_DB_IP: 192.0.2.10
+# STANDBY_DB_HOSTNAME: scsic-idctest3
+
+merged_value: []
+data_key: DR_LOG
+report_type: 'DR_LOG'
+system: 'DR'
+
+FIRST_ACTIVE_DB_IP: "{{ fap.host_vars.first_active_db_ip }}"
+# FIRST_ACTIVE_DB_HOSTNAME: "{{ fap.host_vars.first_active_db_hostname }}"  # 사용하지 않음
+SECOND_ACTIVE_DB_IP: "{{ fap.host_vars.second_active_db_ip }}"
+# SECOND_ACTIVE_DB_HOSTNAME: "{{ fap.host_vars.second_active_db_hostname }}"  # 사용하지 않음
+STANDBY_DB_IP: "{{ fap.host_vars.standby_db_ip }}"
+# STANDBY_DB_HOSTNAME: "{{ fap.host_vars.standby_db_hostname }}"  # 사용하지 않음
+ORACLE_SID: "{{ fap.host_vars.oracle_sid }}"
+
+#######시스템 연계변수 선언으로 인한 변수처리
+
+#### 백업 디렉토리
+LOG_DIR: "/fap/report/dr_log/{{ today }}"
+BACKUP_DIR: "{{ LOG_DIR }}/step7"
+
+
+#### Step7. Primary DB 복원
+DB_RECOVERY_FILE: "step7_{{ fap.host_name }}_db_recovery.log"
+
+DR_DB_CEHCK_CMD:
+- ps -ef | grep pmon | grep -v grep | cat 
+- ps -ef | grep tns | grep -v grep | cat 
+- lsnrctl status
+
+#### Step7. DR 동기화, 복제 상태 점검
+DR_CHECK_FILE: step7_db_check.log
+ALTER_SYSTEM_CHECK_FILE: step7_alter_system_check.log
+DB_COPY_CHECK_FILE: step7_db_copy_check.log
+
+DR_CHECK_PATH: /home/oracle/work
+DR_CHECK_SCRIPTS:
+- 1.sql
+- 2.sql
+
+switch_logfile_sh: |
+  sqlplus / as sysdba << EOF    
+  alter system switch logfile;
+  exit
+
+  EOF
+  sleep 1
+  sqlplus / as sysdba << EOF    
+  alter system switch logfile;
+  exit
+
+  EOF
+  sleep 1
+  sqlplus / as sysdba << EOF    
+  alter system switch logfile;
+  exit
+
+  EOF
+
+db_copy: |
+  cd {{ DR_CHECK_PATH }} &&
+  sqlplus / as sysdba << EOF
+  @{{ DR_CHECK_SCRIPTS[0] }}    
+  @{{ DR_CHECK_SCRIPTS[1] }}
+  exit
+
+  EOF
+
+db_adg_sync: |
+  cd {{ DR_CHECK_PATH }} &&
+  sqlplus / as sysdba << EOF
+  startup;
+  ALTER DATABASE RECOVER MANAGED STANDBY DATABASE USING CURRENT LOGFILE DISCONNECT;
+  select name, db_unique_name, open_mode, database_role, switchover_status from v\\\$database;
+  exit
+  
+  EOF

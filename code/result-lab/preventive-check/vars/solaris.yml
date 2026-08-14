@@ -1,0 +1,262 @@
+---
+system: "{{ vendor }}_2_3_4_5_6"
+
+inspection_commands:
+- rule_key: "cpu_usage"
+  cmd_id: "0001"
+  name: "01.CPU 점검"
+  command: "prstat 1 1"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    process: 20
+    total: 70
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "cpu_core"
+  cmd_id: "0002"
+  name: "02.CPU 코어별 상태 점검"
+  command: "psrinfo -v"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "memory_usage"
+  cmd_id: "0003"
+  name: "03.Memory 사용률"
+  command: "prtconf | awk '/Memory size/ {printf \"Total Memory: %s MB\\n\",$3}'; vmstat | tail -1 | awk '{printf \"Free Memory : %.0f MB\\n\", $5/1024}'"
+  os: "{{ vendor }}"
+  inspection_criteria: 80
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "memory_scan"
+  cmd_id: "0004"
+  name: "04.Memory 상태 확인"
+  command: "prtdiag"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "paging_space"
+  cmd_id: "0005"
+  name: "05.Paging Space"
+  command: "swap -l"
+  os: "{{ vendor }}"
+  inspection_criteria: 50
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "filesystem_usage"
+  cmd_id: "0006"
+  name: "06.파일시스템 사용량"
+  command: "df -h | awk 'NF>=6 {print $0}'"
+  os: "{{ vendor }}"
+  inspection_criteria: 80
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "disk_swap_usage"
+  cmd_id: "0007"
+  name: "07.Disk Swap 사용률"
+  command: "swap -l"
+  os: "{{ vendor }}"
+  inspection_criteria: 50
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "disk_redundancy"
+  cmd_id: "0008"
+  name: "08.DISK 이중화 정상 여부"
+  command: "metastat"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "dev_stat"
+  cmd_id: "0009"
+  name: "09.DISK 인식 여부 점검"
+  command: "format < /dev/null"
+  os: "{{ vendor }}"
+  inspection_criteria: "Unknown,not Available"
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "disk_stat"
+  cmd_id: "0010"
+  name: "10.DISK I/O 점검"
+  command: "iostat -x"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    wait_max: 0
+    wait_pct_max: 0
+    busy_max: 80
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "inode_usage"
+  cmd_id: "0011"
+  name: "11.DISK I-Node 정상여부"
+  command: "df -o i"
+  os: "{{ vendor }}"
+  inspection_criteria: 80
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "kernel_parameter"
+  cmd_id: "0012"
+  name: "12.Kernel parameter Check"
+  command: "sysdef"
+  os: "{{ vendor }}"
+  inspection_criteria: ""
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "system_log"
+  cmd_id: "0013"
+  name: "13.로그 점검"
+  command: "dmesg | tail -300"
+  os: "{{ vendor }}"
+  inspection_criteria: "panic,fail,error"
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "cluster_status"
+  cmd_id: "0014"
+  name: "14.Cluster 데몬 상태"
+  command: "scstat"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    ok_if_command_missing: true
+    node_ok: "online"
+    path_ok: "path online"
+    rg_ok: "online"
+    nic_ok: "online"
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "shared_volume_status"
+  cmd_id: "0015"
+  name: "15.공유 볼륨 점검 상태"
+  command: "mount"
+  os: "{{ vendor }}"
+  inspection_criteria: "shared"
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "network_link_status"
+  cmd_id: "0016"
+  name: "16.NW 링크 상태"
+  command: "dladm show-dev"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    # link_ok: 정상으로 볼 link 상태
+    # duplex_ok / speed_min_mbps: 결과 설명용 기준값이며, 현재 판정은 link 상태 중심으로 수행한다.
+    link_ok: "up"
+    duplex_ok: "full"
+    speed_min_mbps: 1
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "nic_redundancy_status"
+  cmd_id: "0017"
+  name: "17.NIC 이중화 상태"
+  command: "ipmpstat -i"
+  os: "{{ vendor }}"
+  inspection_criteria:
+    min_ifaces_per_group: 2
+    required_active: "yes"
+    required_link: "up"
+    required_state: "ok"
+  is_compare: true
+  is_save: true
+  timeout: 1
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "ping_loss_status"
+  cmd_id: "0018"
+  name: "18.PingLoss 상태"
+  command: "ping `route -n get default | awk '/gateway/ {print $2}'` 5"
+  os: "{{ vendor }}"
+  inspection_criteria: "is alive"
+  is_compare: true
+  is_save: true
+  timeout: 3
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "path_redundancy_status"
+  cmd_id: "0019"
+  name: "19.Path 이중화 상태"
+  command: "mpathadm list lu | awk '{print $1}' | while read lu; do echo \"$lu\"; mpathadm show lu \"$lu\"; echo; done"
+  os: "{{ vendor }}"
+  inspection_criteria: "CONNECTED"
+  is_compare: true
+  is_save: true
+  timeout: 10
+  sleep: 1
+  message: "{{ message_data }}"
+
+- rule_key: "hba_connection_status"
+  cmd_id: "0020"
+  name: "20.HBA 연결상태 점검"
+  command: "fcinfo hba-port"
+  os: "{{ vendor }}"
+  inspection_criteria: "online"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: "{{ message_data }}"

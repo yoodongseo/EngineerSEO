@@ -1,0 +1,31 @@
+---
+- name: os_parameter_change
+  hosts: all
+  gather_facts: true
+  tasks:
+  - block:
+    - name: "연결 상태 체크"
+      shell: hostname
+      register: result_connection
+      failed_when: false
+      ignore_unreachable: true
+      ignore_errors: true
+
+    - name: 변수 호출
+      include_vars: ../vars/vars.yml
+
+    - name: OS 파라미터 변경 작업 호출
+      include_tasks: ../tasks/change_os_parameter_tasks.yml
+      when: result_connection.failed|default(true) == false and ansible_os_family == "RedHat"
+
+    always:
+      - name: "작업 결과"
+        debug: 
+          msg:
+            - "{{ fap.host_name }}({{ inventory_hostname }})"
+            - "{{ sysctl_file | default('unknown') }} 백업결과 - {{ result_copy_sysctl.failed|default('unknown') | ternary(fail, sysctl_file + '_' + result_date.stdout) }}"
+            - "{{ limits_file | default('unknown') }} 백업결과 - {{ result_copy_limits.failed|default('unknown') | ternary(fail, limits_file + '_' + result_date.stdout) }}"
+            - "{{ sysctl_file | default('unknown') }} 설정결과({{ sysctl_state }})"
+            - "{{ result_sysctl.results | map(attribute = 'item') | list }}"
+            - "{{ limits_file | default('unknown') }} 설정결과"
+            - "{{ result_limits.results | map(attribute = 'msg') | list }}"

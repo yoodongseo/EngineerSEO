@@ -1,0 +1,132 @@
+---
+# 로그 저장 디렉토리 생성
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+- name: oracle home 수집
+  shell: |
+    source /home/oracle/.bash_profile
+    echo $ORACLE_HOME
+  register: oraclehome
+
+- name: oracle home 변수 변경
+  set_fact:
+    ORACLE_HOME: "{{ oraclehome.stdout }}"
+  
+# step5. 1작업
+- name: DR 스냅샷 모드 원복 (Read Only 모드로 변경)
+  shell: su - "{{ item.oracle_user }}" -c "{{ read_only_sh }}"
+  loop: "{{ ORACLE }}"
+  loop_control:
+    label: "{{ item.oracle_sid }}"
+  when: item.oracle_sid != ""
+  register: result
+
+- name: "DR 스냅샷 모드 원복 (Read Only 모드로 변경) 추출"
+  set_fact:
+   dr_recovery_results: "{{ dr_recovery_results|default([]) + [ '='*30 + 'Read Only 모드로 변경' + '='*30 + '\n' + item.stdout ] }}"
+  loop: "{{ result.results }}"
+  when: item.stdout is defined
+
+# step5. 2작업
+- name: IP 삭제
+  shell: "/usr/sbin/ifconfig {{ item.eth }} {{ item.ip }} down"
+  loop: "{{ DR_DB_IP_RECOVERY_LIST }}"
+  register: result_DR_DB_IP_RECOVERY
+  when: item.eth != ""
+
+- name: IP 삭제 확인
+  shell: /usr/sbin/ifconfig -a
+  register: ifconfig_result
+  failed_when: ifconfig_result.rc not in [0,1]
+
+### IP 삭제시에 '요청한 주소를 배정할 수 없습니다.' 로그 출력 -> ifconfig로 확인 시, 삭제 되서 에러 대상에서 제외 시킴
+- name: "IP 추출 - 1"
+  set_fact:
+    result_dr_db_ip_recovery: "{{ result_dr_db_ip_recovery|default([]) + [ (item.rc==0)|ternary(item.stdout, item,stderr) ] }}"
+  loop: "{{ result_DR_DB_IP_RECOVERY.results }}"
+  loop_control:
+    label: "{{ item.item}}"
+  when: item.stdout is defined
+
+- name: "IP 추출 - 2"
+  set_fact:
+   dr_recovery_results: "{{ dr_recovery_results|default([]) + [ '='*30 + 'IP 삭제' + '='*30 + '\n' + result_dr_db_ip_recovery|join('\n') ] }}"
+
+# step5. 3작업    
+- name: "{{ LISTENER_ORA }}, {{ LISTENER_ORA_ORG }} 파일 확인"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+  - "{{ ORACLE_HOME }}/network/admin/{{ LISTENER_ORA }}"
+  - "{{ ORACLE_HOME }}/network/admin/{{ LISTENER_ORA_ORG }}"
+  register: result_listener_ora
+
+- name: "{{ LISTENER_ORA }}, {{ LISTENER_ORA_ORG }} 파일 존재여부 추출"
+  set_fact:
+    file_stat_debug: "{{ file_stat_debug|default([]) + [ item.item + ' ---> ' + item.stat.exists|string ] }}"
+    file_stat_bools: "{{ file_stat_bools|default([]) + [ item.stat.exists ] }}"
+  loop: "{{ result_listener_ora.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: "작업 중단 여부 확인(판단기준: {{ LISTENER_ORA }}, {{ LISTENER_ORA_ORG }} 파일 존재여부)"
+  fail:
+    msg: "{{ file_stat_debug }}"
+  when: item == false
+  loop: "{{ file_stat_bools }}"
+
+# # step5. 3-2 Ping 체크
+# - name: Ping 체크
+#   command: ping -c 1 "{{ item.ip }}"
+#   register: ping_result
+#   until: ping_result.rc == 0
+#   retries: 600  # Number of retries
+#   delay: 6   # Wait 10 seconds between retries
+#   loop: "{{ DR_DB_IP_RECOVERY_LIST }}"
+#   loop_control:
+#     label: "{{ item.ip }}"
+#   when: item.eth != ""
+#   delegate_to: localhost
+
+# step5. 4작업
+- name: 리스너 설정 변경 전 lsnrctl stop 작업
+  shell: "{{ tnslsnr_kill }}"
+  register: result_stop
+
+- name: lsnrctl stop status 명령어 결과 추출
+  set_fact:
+   dr_recovery_results: "{{ dr_recovery_results|default([]) + [ '='*30 + 'lsnrctl stop(Kill) 명령어 결과' + '='*30 + '\n' + result_stop.stdout ] }}"
+
+# step5. 5작업
+- name: DR DB Read Write 모드 변경 및 리스너 설정 추가
+  shell: |
+    su - oracle -c "cd {{ ORACLE_HOME }}/network/admin &&
+    mv {{ LISTENER_ORA }} {{ LISTENER_ORA_DR }} &&
+    mv {{ LISTENER_ORA_ORG }} {{ LISTENER_ORA }}"
+
+# step5. 6작업
+# - name: DR DB Read Write 모드 변경 및 리스너 설정 추가
+- name: 리스너 설정 변경 후 lsnrctl start 작업
+  shell: |
+    su - oracle -c "cd {{ ORACLE_HOME }}/network/admin &&
+    lsnrctl start &&
+    lsnrctl status"
+  register: result
+
+- name: lsnrctl start status 명령어 결과 추출
+  set_fact:
+   dr_recovery_results: "{{ dr_recovery_results|default([]) + [ '='*30 + 'lsnrctl start status 명령어 결과' + '='*30 + '\n' + result.stdout ] }}"
+
+- name: DB 복구 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_DB_RECOVERY_FILE }}"
+    create: true
+    block: |
+      {{ dr_recovery_results|join('\n') }}
+    marker: "# {mark} DB 복구 결과 백업"
+  register: blockinfile_result
+  delegate_to: localhost

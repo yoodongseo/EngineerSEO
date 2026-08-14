@@ -1,0 +1,21 @@
+---
+- name: Make content value
+  set_fact:
+    content_value: >
+      {{ content_value | default({}) | combine({
+          'host': inventory_hostname,
+          'host_info': merged_value
+        }) 
+      }}
+  delegate_to: localhost
+
+- name: Save to DB
+  fap.common.save_data:
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: SERVER_INFO
+    data_key: SERVER_INFO
+    content: "{{ content_value }}"
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  delegate_to: localhost

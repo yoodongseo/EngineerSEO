@@ -1,0 +1,8 @@
+---
+- name: 04. UNIX - Uptime info
+  command: uptime
+  register: uptime_info
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'uptime': uptime_info.stdout_lines[0].split(',')[0] }) }}"

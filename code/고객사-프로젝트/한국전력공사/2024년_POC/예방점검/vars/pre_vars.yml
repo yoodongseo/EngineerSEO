@@ -1,0 +1,1210 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: "preventive"
+inspection_group: "예방점검"
+
+### merged_value --- List 선언
+merged_value: []
+
+### 점검항목 --- 장비 별 분류
+# Linux:
+#   - cmd_name: "cpu" # 대분류 / FAP 상세내역 작업 명
+#     cmd_command: 'top' # 점검 명령어 (점검 명령어 보고서 표출 X 임의 작성 가능)
+#     value: "int" # python filter 분류 --- 비교 기준 함수 타입(int,str,etc...)
+#     com_value: "80" # python filter 기준값 --- 비교 기준 데이터 값
+#     message: | # 대분류_소분류 행 바꿈 필요 시 \n 또는 아래와 같이 줄 바꿈
+#         CPU 사용 상태 및 용량 점검
+#     raw: "top -bn1 | grep 'Cpu(s)' | awk '{ print 100 - $8 }'" # 점검시 실제 사용할 명령어
+#     arr_num: 0 # List 형 데이터 line별 비교 시 행 기준 배열 자리수
+#     grep: "" # 데이터 파싱을 위한 점검결과 1차 txt파일 저장
+#     criteria: "cpu 사용률이 80% 이상일 경우 비정상"
+
+#   - cmd_name: "memory"
+#     cmd_command: 'free'
+#     value: "int"
+#     com_value: "20"
+#     message: |
+#         Memory 사용 상태 및 용량 점검
+# #    raw: "free -h | awk '{ print $4 }' | tail -1 | sed 's/[^0-9.]*//g'"
+#     raw: free -m | awk 'NR==2{printf "%.2f", ($3/$2)*100}'
+#     arr_num: 0
+#     grep: ""
+#     criteria: "Memory 사용률이 80% 이상일 경우 비정상"
+    
+#   - cmd_name: "openssl"
+#     cmd_command: 'openssl'
+#     com_value: "openssl"
+#     value: "str"
+#     message: |
+#         openssl_점검
+#     raw: "rpm -qa"
+#     arr_num: 0
+#     grep: ""
+#     criteria: "openssl 문자열이 존재할 경우 비정상"
+
+#   - cmd_name: "disk"
+#     cmd_command: 'df'
+#     com_value: "1"
+#     value: "percent"
+#     message: |
+#         디스크_점검
+#     raw: "df -h"
+#     arr_num: 4
+#     grep: ""
+#     criteria: "disk 사용률이 80% 이상일 경우 비정상"
+
+#   - cmd_name: "cat /var/log/messages"
+#     system: Linux
+#     cmd_command: 'cat /var/log/messages'
+#     com_value: ["error", "fail","warning"]
+#     value: "str"
+#     message: |
+#         message_log_점검
+#     raw: "cat /var/log/messages | tail -10 | grep {{ month.stdout }}"
+#     arr_num: 0
+#     grep: ""
+#     criteria: "cat /var/log/messages 명령어 grep 결과 중 error,fail,warning 존재 시 비정상"
+    
+L3:
+  - cmd_name: "FAN"
+    cmd_command: 'show environment'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        설비 동작 상태 점검
+        (FAN 상태)
+    raw: "show environment fan"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    id: 0006
+
+  - cmd_name: "Power"
+    cmd_command: 'show environment'
+    value: "str"
+    com_value: |
+      fail
+      overtemp
+      overload
+      shutdown
+    message: |
+        설비 동작 상태 점검
+        (Power 상태)
+    raw: "show environment power"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail, Overtemp, Overload, Shutdown 결과 존재 시 비정상"
+    id: 0007
+
+  - cmd_name: "interface"
+    cmd_command: 'show interface status'
+    value: "str"
+    com_value: "disconnect"
+    message: |
+        인터페이스 상태 점검
+    raw: "show interface status"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "status : disconnect 시 미흡"
+    id: 0008
+
+  - cmd_name: "Version"
+    cmd_command: 'show version | in Version'
+    value: "version"
+    com_value: "9.3"
+    message: |
+      제품 OS Version 및 Serial Number 확인
+    raw: "show version | include NXOS"
+    arr_num: 0
+    unit: 2
+    grep: ""
+    time: 1
+    criteria: "version 9.3(7k) 이상일 경우 정상"
+    id: 0009
+
+  - cmd_name: "TEMP"
+    cmd_command: 'show environment temperature'
+    value: "str"
+    com_value: |-
+      high
+      critical
+    message: |
+        설비 동작 상태 점검
+        (Temp 상태)
+    raw: "show environment temperature"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "status가 high 또는 critical 일 경우 비정상"
+    id: 0010
+
+  - cmd_name: "Uptime"
+    cmd_command: 'show version'
+    value: "list_int"
+    com_value: "365"
+    message: |
+      장비 Uptime 점검
+    raw: "show version | in uptime"
+    arr_num: 3
+    grep: ""
+    time: 1
+    unit: ""
+    criteria: "Uptime 365 day 이상일 경우 비정상"
+    id: 0011
+
+  - cmd_name: "CPU"
+    cmd_command: 'show processes cpu'
+    value: "list_int"
+    com_value: "80"
+    message: |
+      CPU 사용률 점검
+    raw: "show processes cpu | include CPU | head -n 1 | awk '{print $4}'"
+    arr_num: 0
+    grep: ""
+    time: 4
+    unit: "%"
+    criteria: "사용률이 80% 이상 일 경우 비정상."
+    id: 0012
+
+  - cmd_name: "Memory"
+    cmd_command: 'show system resources'
+    value: "notstr"
+    com_value: "OK"
+    message: |
+      Memory 사용률 점검
+    raw: "show system resources | last 5"
+    arr_num: 0
+    grep: "Current memory status" 
+    time: 2
+    criteria: "Current memory status: OK가 아닐경우 비정상"
+    id: 0013
+
+  - cmd_name: "NTP"
+    cmd_command: 'show ntp status'
+    value: "str"
+    com_value: |
+      Fail
+      Unreachable
+      unsynchronized
+      Stratum
+      Disabled
+    message: |
+      NTP 연동상태 확인
+    raw: "show ntp status"
+    arr_num: 0
+    time: 1
+    criteria: "Fail, Unreachable, unsynchronized, Stratum, Disabled 문자열 포함 시 비정상"
+    id: 0014
+
+  - cmd_name: "System log"
+    cmd_command: 'show log'
+    value: "check"
+    com_value: 
+    message: |
+      설비 이벤트 및 장애 확인
+    raw: "show logging | include 'error|warning|alert|login'"
+    arr_num: 0
+    grep: "" 
+    time: 1
+    criteria: "Log점검(Login/Error/Alert/Warning 로그)"
+    id: 0015
+
+  - cmd_name: "관리자 접속 점검"
+    cmd_command: 'show log'
+    value: "str"
+    com_value: |
+      error
+      fail
+    message: |
+      관리자 접속 이상유무 점검
+    raw: "show logging | include admin | include {{ month.stdout }}"
+    arr_num: 0
+    grep: "" 
+    time: 1
+    criteria: "Error 또는 Fail 결과 존재 시 비정상"
+    id: 0016
+
+  - cmd_name: "module"
+    cmd_command: 'show module'
+    value: "str"
+    com_value: |
+      offline
+      faulty
+      fail
+      disabled
+      down
+    message: |
+        설비 동작 상태 점검
+        (Module 상태)
+    raw: "show module"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Down, Offline, Disabled, Fail, Faulty 결과 존재 시 비정상"
+    id: 0017
+
+  - cmd_name: "ip route"
+    cmd_command: 'show ip route'
+    value: "pass"
+    com_value: ""
+    message: |
+      설비 설정정보 최적화
+    raw: "show ip route"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "라우팅 테이블 파일 백업"
+    id: 0018
+
+  - cmd_name: "running-config"
+    cmd_command: 'show running-config'
+    value: "check"
+    com_value: "pass"
+    message: |
+      설비 운영정보 최적 유지
+    raw: "show running-config"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Config 백업"
+    id: 0019
+
+Nas:
+  - cmd_name: "node run"
+    cmd_command: 'node run'
+    value: "str"
+    com_value: |
+      warning
+      critical
+    message: |
+        Power, FAN, LED 상태
+        FAN
+    raw: "system node environment sensors show"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Power 및 FAN 상태, LED 정상상태(초록불) 확인"
+    id: 0020
+
+  - cmd_name: "node run"
+    cmd_command: 'node run'
+    value: "str"
+    com_value: |
+      failed
+      faulty
+      degraded
+    message: |
+        Power, FAN, LED 상태
+        POWER
+    raw: "system controller fru show"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Power 및 FAN 상태, LED 정상상태(초록불) 확인"
+    id: 0021
+
+  - cmd_name: "node run"
+    cmd_command: 'node run'
+    value: "check"
+    com_value: ""
+    message: |
+      Cable 연결상태
+    raw: "storage port show"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Cable 연결상태 및 장애여부 확인"
+    id: 0022
+
+  - cmd_name: "vol show"
+    cmd_command: 'vol show'
+    value: "multi_com"
+    com_value: "online"
+    message: |
+      DISK 상태
+      vol show
+    raw: "vol show"
+    arr_num: 6
+    unit: "%"
+    grep: 80
+    time: 1
+    criteria: "디스크 연결상태 확인 및 사용량 확인"
+    id: 0023
+
+  - cmd_name: "disk show"
+    cmd_command: 'disk show'
+    value: "str"
+    com_value: |
+      bad
+      error
+    message: |
+      DISK 상태
+      disk show
+    raw: "disk show"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "디스크 연결상태 확인 및 사용량 확인"
+    id: 0024
+
+  - cmd_name: "node run"
+    cmd_command: 'node run'
+    value: "str"
+    com_value: |
+      failed
+      faulty
+      degraded
+    message: |
+      Controller 상태
+    raw: "system controller fru show"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Controller 구성상태 확인"
+    id: 0025
+
+  - cmd_name: "node run"
+    cmd_command: 'node run'
+    value: "str"
+    com_value: |
+      warning
+      critical
+    message: |
+      Battery 상태
+    raw: "system node environment sensors show"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Battery 장애여부 확인"
+    id: 0026
+
+  - cmd_name: "nfs show"
+    cmd_command: 'nfs show'
+    value: "notstr"
+    com_value: "true"
+    message: |
+      Host Interface 상태
+    raw: "nfs show"
+    arr_num: 0
+    grep: "General Access" 
+    time: 1
+    criteria: "컨트롤러와 호스트간 연결상태 확인"
+    id: 0027
+
+  - cmd_name: "interface"
+    cmd_command: 'net int show'
+    value: "str"
+    com_value: "up/down"
+    message: |
+      Network Interface
+    raw: "net int show"
+    arr_num: 0
+    time: 1
+    criteria: "네트워크 통신상태 확인"
+    id: 0028
+
+  - cmd_name: "RAID 상태"
+    cmd_command: 'aggr show'
+    value: "str"
+    com_value: |
+      degraded
+      offline
+      failed
+    message: |
+      RAID Configuration
+    raw: "aggr show"
+    arr_num: 0
+    time: 1
+    criteria: "RAID 구성 및 연결상태 확인"
+    id: 0029
+
+  - cmd_name: "HOST 상태"
+    cmd_command: 'cf status'
+    value: "str"
+    com_value: |
+      false
+      Disconnected 
+      Not connected
+    message: |
+      Host 연결상태
+    raw: "cf status"
+    arr_num: 0
+    time: 1
+    criteria: "Host와 스토리지간 상태확인"
+    id: 0030
+
+  - cmd_name: "event log"
+    cmd_command: 'event log show'
+    value: "str"
+    com_value: "ERROR"
+    message: |
+      Event Log
+    raw: "event log show"
+    arr_num: 0
+    time: 1
+    criteria: "시스템 Log 상태를 확인하여 오류여부 확인"
+    id: 0031
+
+Ibm:
+  - cmd_name: "디스크 상태"
+    cmd_command: 'lsmdiskgrp'
+    value: "notstr"
+    com_value: "online"
+    message: |
+      디스크 상태
+    raw: "lsmdiskgrp -delim : DR_Pool"
+    arr_num: 0
+    grep: "status"
+    time: 1
+    criteria: "Pools에서 Internal Storage 확인"
+    id: 0032
+
+  - cmd_name: "Array 상태"
+    cmd_command: 'lsarray'
+    value: "str"
+    com_value: |
+      offline
+      degraded
+    message: |
+      Array 상태
+    raw: "lsarray"
+    arr_num: 0
+    time: 1
+    criteria: |
+      Pools에서 Mdisks by Pools에서 
+      Array 상태 및 Pool 할당량 정보 확인
+    id: 0033
+
+  - cmd_name: "전원 & 팬"
+    cmd_command: 'lsenclosurefanmodule'
+    value: "notstr"
+    com_value: "online"
+    message: |
+      전원 및 FAN 점검
+    raw: >-
+      echo "### fan ###";lsenclosurefanmodule;
+      echo "### power ###";lsenclosurepsv
+    arr_num: 0
+    grep: "online"
+    time: 1
+    criteria: |
+      Monitoring에서 System Overview에서
+      컴포넌트별 상태 확인
+    id: 0034
+
+  - cmd_name: "전원 & 팬"
+    cmd_command: 'lsenclosurefanmodule'
+    value: "notstr"
+    com_value: "online"
+    message: |
+      전원 및 FAN 점검
+    raw: >-
+      echo "### slot ###";lsenclosureslot;
+      echo "### battery ###";lsenclosurebattery;
+      echo "### temp";lsenclosurestats
+    arr_num: 0
+    grep: "online"
+    time: 1
+    criteria: |
+      Monitoring에서 System Overview에서
+      컴포넌트별 상태 확인
+    id: 0035
+
+  - cmd_name: "Event log"
+    cmd_command: 'lseventlog'
+    value: "str"
+    com_value: |
+      alter
+      error
+    message: |
+      Event log
+    raw: "lseventlog | tail -100"
+    arr_num: 0
+    time: 1
+    criteria: |
+      Monitoring에서 Events 확인
+    id: 0036
+
+  - cmd_name: "시스템"
+    cmd_command: 'lspartnership'
+    value: "check"
+    com_value: ""
+    message: |
+      시스템 성능
+    raw: lssystemstats
+    arr_num: 0
+    time: 1
+    criteria: |
+      Monitoring에서 CPU 및 IOPS 성능 확인
+    id: 0037
+
+  - cmd_name: "DR 상태"
+    cmd_command: 'lspartnership'
+    value: "pass"
+    com_value: ""
+    message: |
+      DR 장비 정보
+    raw: >-
+      echo "### Cluster_FS5200 ###";lspartnership Cluster_FS5200;
+      echo "### GC4200-FILE ###";lspartnership GC4200-FILE;
+    arr_num: 0
+    time: 1
+    criteria: |
+      Copy Service에서 Remote Copy 확인
+    id: 0038
+
+  - cmd_name: "DR 상태"
+    cmd_command: 'lsvdiskcopy'
+    value: "str"
+    com_value: "offline"
+    message: |
+      DR 상태
+    raw: "lsvdiskcopy"
+    arr_num: 0
+    time: 1
+    criteria: |
+      Copy Service에서 Remote Copy 확인
+    id: 0039
+
+Sdn_switch:
+  - cmd_name: "Power,FAN,LED"
+    cmd_command: 'show environment'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        Power 및 FAN 상태, LED 정상상태
+        (초록불) 확인
+    raw: "show environment | include Fan"
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    id: 0040
+
+  - cmd_name: "Version"
+    cmd_command: 'show version | grep Version'
+    value: "version"
+    com_value: "15.2"
+    message: |
+      제품 OS Version 및 Serial Number 확인
+    raw: "show version | grep version"
+    arr_num: 3
+    unit: 2
+    grep: ""
+    time: 3
+    criteria: "version 15.2(4e) 이상일 경우 정상"
+    id: 0041
+
+  - cmd_name: "TEMP"
+    cmd_command: 'show env temperature'
+    value: "str"
+    com_value: |-
+      high
+      critical
+    message: |
+      장비 온도 체크
+    raw: "show env temperature"
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "status가 high 또는 critical 일 경우 비정상"
+    id: 0042
+
+  - cmd_name: "Uptime"
+    cmd_command: 'show version'
+    value: "list_int"
+    com_value: "365"
+    message: |
+      장비 Uptime 점검
+    raw: "show system uptime"
+    arr_num: -8
+    grep: ""
+    time: 1
+    criteria: "Uptime 365 day 이상일 경우 비정상"
+    id: 0043
+
+  - cmd_name: "CPU"
+    cmd_command: 'show processes cpu'
+    value: "list_int"
+    com_value: "80"
+    message: |
+      CPU 사용률 점검
+    raw: "show processes cpu | tail -4"
+    arr_num: 2
+    grep: ""
+    unit: "%"
+    time: 3
+    criteria: "사용률이 80% 이상 일 경우 비정상."
+    id: 0044
+
+  - cmd_name: "Memory"
+    cmd_command: 'show system resources'
+    value: "notstr"
+    com_value: "OK"
+    message: |
+      Memory 사용률 점검
+    raw: "show system resources | tail -5"
+    arr_num: 0
+    grep: "Current memory status" 
+    time: 1
+    criteria: "Current memory status: OK가 아닐경우 비정상"
+    id: 0045
+
+  - cmd_name: "Port"
+    cmd_command: 'show interface status'
+    value: "str"
+    com_value: |
+      down
+      notconnect
+      disabled
+    message: |
+      Port 상태 점검
+    raw: "show interface status"
+    arr_num: 0
+    grep: ""
+    time: 5
+    criteria: "Down, Notconnect, Disabled 결과 존재 시 비정상"
+    id: 0046
+
+  - cmd_name: "module"
+    cmd_command: 'show inventory'
+    value: "str"
+    com_value: |
+      unresponsive
+      faulty
+      failed
+    message: |
+      모듈 상태 점검
+    raw: "show inventory"
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Unresponsive, Faulty, Failed 결과 존재 시 비정상"
+    id: 0047
+
+  - cmd_name: "acidiag"
+    cmd_command: 'acidiag fnvread'
+    value: "notstr"
+    com_value: "active"
+    message: |
+      Switch 조회
+    raw: "acidiag fnvread"
+    arr_num: 0
+    grep: "FD"
+    time: 2
+    criteria: "Switch List State active가 아닐때 비정상"
+    id: 0048
+
+  - cmd_name: "acimoquery"
+    cmd_command: 'moquery -c ethpmPhysIf'
+    value: "str"
+    com_value: "sfp-missing"
+    message: |
+      Interface 조회
+    raw: "moquery -c ethpmPhysIf | grep -E '(#|operSt|operStQual)'"
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "operSt Down, operStQual sfp-missing 상태 일 시 비정상"
+    id: 0049
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c rmonEtherStats'
+    value: "notstr"
+    com_value: "0"
+    message: |
+      CRC 조회
+    raw: |
+      moquery -c rmonEtherStats | awk 'BEGIN{ RS="# rmon.EtherStats" } NR>1{ arr[NR]=$0 } END{ for(i=NR-10; i<=NR; i++) print "# rmon.EtherStats" arr[i] }'
+    arr_num: 0
+    grep: "cRCAlignErrors"
+    time: 3
+    criteria: "Leaf Switch 별 CRC 조회"
+    id: 0050
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMCurrentStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Current details
+    raw: "moquery -c ethpmDOMCurrentStats"
+    arr_num: 49
+    unit: 2
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0051
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMRxPwrStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Rx Power details
+    raw: "moquery -c ethpmDOMRxPwrStats"
+    arr_num: 50
+    unit: 2
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0052
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Transceiver details
+    raw: "moquery -c ethpmDOMStats"
+    arr_num: 14
+    unit: 2
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0053
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMTempStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Temperature details
+    raw: "moquery -c ethpmDOMTempStats"
+    arr_num: 11
+    unit: 2
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0054
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMTxPwrStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Tx Power details
+    raw: "moquery -c ethpmDOMTxPwrStats"
+    arr_num: 50
+    unit: 2
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0055
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMVoltStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Voltage details
+    raw: "moquery -c ethpmDOMVoltStats"
+    arr_num: 14
+    unit: 2
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0056
+
+Sdn_controller:
+  - cmd_name: "vrf"
+    cmd_command: 'show vrf'
+    value: "check"
+    com_value: ""
+    message: |
+      VRF 현황 조회
+    raw: "show vrf"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "SDN 현황 조회 내역 (VRF)"
+    id: 0057
+
+  - cmd_name: "epg"
+    cmd_command: 'show epg'
+    value: "check"
+    com_value: ""
+    message: |
+      EPG 현황 조회
+    raw: "show epg"
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "SDN 현황 조회 내역 (EPG)"
+    id: 0058
+
+  - cmd_name: "tenant"
+    cmd_command: 'moquery'
+    value: "check"
+    com_value: ""
+    message: |
+      TENANT 현황 조회
+    raw: "moquery -c fvTenant -x"
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "SDN 현황 조회 내역 (TENANT)"
+    id: 0059
+
+  - cmd_name: "acidiag"
+    cmd_command: 'acidiag fnvread'
+    value: "notstr"
+    com_value: "active"
+    message: |
+      Switch 조회
+    raw: "acidiag fnvread"
+    arr_num: 0
+    grep: "FD"
+    time: 2
+    criteria: "Switch List State active가 아닐때 비정상"
+    id: 0060
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmPhysIf'
+    value: "str"
+    com_value: "sfp-missing"
+    message: |
+      Interface 조회
+    raw: |
+      moquery -c ethpmPhysIf | awk 'BEGIN{ RS="# ethpm.PhysIf" } NR>1{ arr[NR]=$0 } END{ for(i=NR-5; i<=NR; i++) print "# ethpm.PhysIf" arr[i] }'
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "operSt Down, operStQual sfp-missing 상태 일 시 비정상"
+    id: 0061
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c rmonEtherStats'
+    value: "notstr"
+    com_value: "0"
+    message: |
+      CRC 조회
+    raw: |
+      moquery -c rmonEtherStats | awk 'BEGIN{ RS="# rmon.EtherStats" } NR>1{ arr[NR]=$0 } END{ for(i=NR-10; i<=NR; i++) print "# rmon.EtherStats" arr[i] }'
+    arr_num: 0
+    grep: "cRCAlignErrors"
+    time: 2
+    criteria: "Leaf Switch 별 CRC 조회"
+    id: 0062
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMCurrentStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Current details
+    raw: |
+      moquery -c ethpmDOMCurrentStats | awk 'BEGIN{ RS="# ethpm.DOMCurrentStats" } NR>1{ arr[NR]=$0 } END{ for(i=NR-10; i<=NR; i++) print "# ethpm.DOMCurrentStats" arr[i] }'
+    arr_num: 50
+    grep: ""
+    time: 3
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0063
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMRxPwrStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Rx Power details
+    raw: |
+      moquery -c ethpmDOMRxPwrStats | awk 'BEGIN{ RS="# ethpm.DOMRxPwrStats" } NR>1{ arr[NR]=$0 } END{ for(i=NR-10; i<=NR; i++) print "# ethpm.DOMRxPwrStats" arr[i] }'
+    arr_num: 51
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0064
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Transceiver details
+    raw: |
+      moquery -c ethpmDOMStats | awk 'BEGIN{ RS="# ethpm.DOMStats" } NR>1{ arr[NR]=$0 } END{ for(i=NR-10; i<=NR; i++) print "# ethpm.DOMStats" arr[i] }'
+    arr_num: 15
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0065
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMTempStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Temperature details
+    raw: |
+      moquery -c ethpmDOMTempStats | awk 'BEGIN{ RS="# ethpm.DOMTempStats" } NR>1{ arr[NR]=$0 } END{ for(i=NR-10; i<=NR; i++) print "# ethpm.DOMTempStats" arr[i] }'
+    arr_num: 12
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0066
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMTxPwrStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Tx Power details
+    raw: |
+      moquery -c ethpmDOMTxPwrStats | awk 'BEGIN{ RS="# ethpm.DOMTxPwrStats" } NR>1{ arr[NR]=$0 } END{ for(i=NR-10; i<=NR; i++) print "# ethpm.DOMTxPwrStats" arr[i] }'
+    arr_num: 51
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0067
+
+  - cmd_name: "moquery"
+    cmd_command: 'moquery -c ethpmDOMVoltStats'
+    value: "str"
+    com_value: |
+      critical
+      major
+      minor
+      warning
+    message: |
+      광 레벨 리포팅 Voltage details
+    raw: |
+      moquery -c ethpmDOMVoltStats | awk 'BEGIN{ RS="# ethpm.DOMVoltStats" } NR>1{ arr[NR]=$0 } END{ for(i=NR-10; i<=NR; i++) print "# ethpm.DOMVoltStats" arr[i] }'
+    arr_num: 15
+    grep: ""
+    time: 2
+    criteria: |
+      Switch 광 레벨 정보 조회
+      Critical,Warning 등 경고문구 조회 시 불량
+    id: 0068
+
+Veritas:
+  - cmd_name: "ipmitool"
+    cmd_command: "ipmitool sensor"
+    value: "str"
+    com_value: |
+      warning
+      critical
+    message: |
+        Power, FAN, LED 상태
+    raw: "ipmitool sensor"
+    arr_num: 0
+    time: 1
+    criteria: "Power 및 FAN 상태, LED 정상상태(초록불) 확인"
+    id: 0069
+
+  - cmd_name: "lspci"
+    cmd_command: "lspci | grep -i fibre"
+    value: "check"
+    com_value: ""
+    message: |
+        FC Adapter
+    raw: "lspci | grep -i fibre"
+    arr_num: 0
+    time: 1
+    criteria: "FC Adapter 연결상태 및 정상상태 확인"
+    id: 0070
+
+  - cmd_name: "ip addr show"
+    cmd_command: "ip addr show"
+    value: "check"
+    com_value: ""
+    message: |
+        Network Adapter
+    raw: "ip addr show"
+    arr_num: 0
+    time: 1
+    criteria: "Network Adapter 연결상태 및 정상 확인"
+    id: 0071
+
+  - cmd_name: "mdstat"
+    cmd_command: "mdstat"
+    value: "pass"
+    com_value: ""
+    message: |
+        Array Controller 및 RAID 구성
+    raw: "cat /proc/mdstat"
+    arr_num: 0
+    time: 1
+    criteria: "Array Controller 및 RAID 구성상태 및 Status 확인"
+    id: 0072
+
+  - cmd_name: "df"
+    cmd_command: "df -h"
+    value: "list_int"
+    com_value: "80"
+    message: |
+        DISK 상태
+    raw: "df -h"
+    arr_num: 4
+    unit: "%"
+    time: 1
+    criteria: "디스크 연결상태 및 사용량 확인"
+    id: 0073
+
+  - cmd_name: "lsblk"
+    cmd_command: "lsblk"
+    value: "check"
+    com_value: ""
+    message: |
+        DISK Pool 상태
+    raw: "lsblk"
+    arr_num: 0
+    time: 1
+    criteria: "Disk Pool 연결상태 및 정상 확인"
+    id: 0074
+
+  - cmd_name: "messages"
+    cmd_command: "messages"
+    value: "str"
+    com_value: "error"
+    message: |
+        Event Log
+    raw: "cat /var/log/messages | tail -100 | grep {{ month.stdout }}"
+    arr_num: 0
+    time: 1
+    criteria: "시스템 Log 상태를 확인하여 오류여부 판별"
+    id: 0075
+  
+Hitachi:
+  - cmd_name: "lspci"
+    cmd_command: "lspci"
+    com_value: ""
+    value: "check"
+    message: |
+        H/W 상태점검
+    raw: "lspci"
+    arr_num: 0
+    time: 1
+    criteria: "H/W 상태점검 Controller"
+    id: 0076
+
+  - cmd_name: "lsblk"
+    cmd_command: "lsblk"
+    com_value: ""
+    value: "check"
+    message: |
+        H/W 상태점검
+    raw: "lsblk"
+    arr_num: 0
+    time: 1
+    criteria: "H/W 상태점검 Drive Box"
+    id: 0077
+
+  - cmd_name: "df"
+    cmd_command: "df -h"
+    com_value: "80"
+    value: "list_int"
+    message: |
+        H/W 상태점검
+    raw: "df -h"
+    arr_num: 4
+    unit: "%"
+    time: 1
+    criteria: "H/W 상태점검 Drive Disk"
+    id: 0078
+
+  - cmd_name: "journalctl"
+    cmd_command: "journalctl"
+    com_value: ""
+    value: "check"
+    message: |
+        SIM log 점검
+    raw: "journalctl | tail -100"
+    arr_num: 0
+    time: 2
+    criteria: "Message 점검"
+    id: 0079
+
+  - cmd_name: "microcode"
+    cmd_command: "cat /proc/cpuinfo"
+    com_value: ""
+    value: "check"
+    message: |
+        Microcode 점검
+    raw: "cat /proc/cpuinfo | grep -i 'microcode'"
+    arr_num: 0
+    time: 1
+    criteria: "Microcode(Firmware) 정보 확인"
+    id: 0080
+
+  - cmd_name: "Power Supply"
+    cmd_command: "cat /proc/cpuinfo"
+    com_value: ""
+    value: "check"
+    message: |
+        H/W 상태점검
+    raw: "cat /proc/acpi/wakeup"
+    arr_num: 0
+    time: 1
+    criteria: "H/W 상태점검 Power Supply"
+    id: 0081
