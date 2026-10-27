@@ -3,7 +3,7 @@
 req_type: "{{ fap['host_vars']['req_type'] | default('uninstall') }}"
 avamar_name:  "{{ fap['host_vars']['avamar_name'] | default('') }}" ## 설치시에만 필수
 ## req_type: install, uninstall, start, stop, restart
-## avamar_name: shbddava01 / shbddava02 / shbddava03 / shbddava04
+## avamar_name: custava01 / custava02 / custava03 / custava04
 
 # SAVE VARS
 system: Linux
@@ -31,21 +31,21 @@ lineinfile:
   avamar_hosts_entries:
     - value: "### Avamar ###"
     - line_keyword: "192.0.2.10"
-      value: "192.0.2.10   shbddava01.COMPANY.com  shbddava01"
+      value: "192.0.2.10   custava01.COMPANY.com  custava01"
     - line_keyword: "192.0.2.10"
-      value: "192.0.2.10   shbddava02.COMPANY.com  shbddava02"
+      value: "192.0.2.10   custava02.COMPANY.com  custava02"
     - line_keyword: "192.0.2.10"
-      value: "192.0.2.10   shbddava03.COMPANY.com  shbddava03"
+      value: "192.0.2.10   custava03.COMPANY.com  custava03"
     - line_keyword: "192.0.2.10"
-      value: "192.0.2.10   shbddava04.COMPANY.com  shbddava04"
+      value: "192.0.2.10   custava04.COMPANY.com  custava04"
     - line_keyword: "192.0.2.10"
-      value: "192.0.2.10   shbdd01.localdomain     shbdd01"
+      value: "192.0.2.10   custdd01.localdomain     custdd01"
     - line_keyword: "192.0.2.10"
-      value: "192.0.2.10   shbdd02.localdomain     shbdd02"
+      value: "192.0.2.10   custdd02.localdomain     custdd02"
     - line_keyword: "192.0.2.10"
-      value: "192.0.2.10   shbdd03.localdomain     shbdd03"
+      value: "192.0.2.10   custdd03.localdomain     custdd03"
     - line_keyword: "192.0.2.10"
-      value: "192.0.2.10   shbdd04.localdomain     shbdd04"
+      value: "192.0.2.10   custdd04.localdomain     custdd04"
   target_file: "/etc/hosts"
 
 # 대화형 명령어 처리 관리 변수

@@ -1,5 +1,5 @@
 ---
-script_name: "Total_Linux_Vulnerability_Check.sh"
+script_name: "스크립트명입력"
 script_path: "../vars/{{ script_name }}"
 output_path: "/tmp/{{ script_name }}"
 #save_path: "/fap/report/{{ today }}/{{ inventory_hostname }}"

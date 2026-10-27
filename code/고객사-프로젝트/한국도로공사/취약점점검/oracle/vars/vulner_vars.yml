@@ -1,6 +1,6 @@
 ---
-script_name: "DB_Oracle_Linux_1.0.sql"
-file_list: ../templates/DB_Oracle_Linux_1.0.sql ../templates/make_result_ver1.0.sh ../templates/oracle_main.sh
+script_name: "스크립트명입력"
+file_list: ../templates/스크립트명입력
 #script_path: "../vars/{{ script_name }}"
 output_path: "/tmp/Oracle_vulnerability"
 save_path: "/fap/report/{{ report_name }}/{{ today }}/{{ fap.job_id }}/{{ inventory_hostname }}"

@@ -51,7 +51,7 @@ del_origin_repo_cmd: |
 
 # copy_repo - 신규 레포지토리 설정정보 생성 변수 (job_repo.yml 활용)
 
-repo_ip: '98.33.2.170' ## 추후 변경 필요, 기존 9_3 에서 9_4를 테스트 하는 과정
+repo_ip: '1.1.1.1' ## 추후 변경 필요, 기존 9_3 에서 9_4를 테스트 하는 과정
 copy_repo:
   dest: "/etc/yum.repos.d/FAP_auto_update.repo"
   content: |-

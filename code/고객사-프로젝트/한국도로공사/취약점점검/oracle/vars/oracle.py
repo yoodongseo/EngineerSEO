@@ -104,7 +104,7 @@ def change_password(hostip, port, username, password, become_password, path):
         time.sleep(2)
 
         # 패스워드 재입력
-        ssh.send(f"@DB_Oracle_Linux_1.0.sql\n".encode('utf-8'))
+        ssh.send(f"@스크립트명입력\n".encode('utf-8'))
 
         # "#" 프롬프트 대기
         value, prompt = wait_for_prompt(ssh, "completed")
