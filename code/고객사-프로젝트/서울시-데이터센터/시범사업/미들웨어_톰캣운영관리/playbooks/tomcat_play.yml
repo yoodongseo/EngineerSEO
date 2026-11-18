@@ -1,0 +1,25 @@
+---
+- name: Linux Agent Tomcat
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  tasks:
+  - block:
+      - name: 변수 호출
+        include_vars: ../vars/tomcat_vars.yml
+
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_lnx_con_tasks.yml
+
+      - name: 2. 사전 검증 작업(JDK 설치 및 톰캣 설치확인)
+        include_tasks: ../tasks/02_pre_tasks.yml
+
+      - name: 3. 톰캣 관리 작업 실행
+        include_tasks: ../tasks/03_tomcat_tasks.yml
+        when: tomcat_result.stat.exists == true
+      
+    always:
+      - name: 데이터 저장
+        include_tasks: ../tasks/save_data.yml

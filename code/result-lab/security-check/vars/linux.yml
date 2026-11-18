@@ -1,0 +1,95 @@
+---
+system: "{{ vendor }}_security_server"
+
+inspection_commands:
+- rule_key: "sec_srv_account_separation"
+  cmd_id: "0001"
+  name: "01.계정 및 권한 분리"
+  command: "cat /etc/passwd"
+  os: "{{ vendor }}"
+  inspection_criteria: "관리자 계정과 유지보수 계정 분리 / 유지보수 계정에 관리자 권한 부여 금지"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    계정 및 비밀번호 관리_계정 및 권한 분리
+
+- rule_key: "sec_srv_default_account"
+  cmd_id: "0002"
+  name: "02.디폴트 계정 삭제"
+  command: "echo ===PASSWD===; cat /etc/passwd; echo ===SHADOW===; cat /etc/shadow 2>/dev/null"
+  os: "{{ vendor }}"
+  inspection_criteria: "OS/DB/WAS/기타 디폴트 계정이 삭제, 잠금 또는 비활성화 상태일 것"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    계정 및 비밀번호 관리_디폴트 계정 삭제
+    (잠금, 비활성화)
+
+- rule_key: "sec_srv_password_policy"
+  cmd_id: "0003"
+  name: "03.비밀번호 설정"
+  command: "echo ===LOGIN_DEFS===; cat /etc/login.defs 2>/dev/null; echo ===PAM_POLICY===; grep -R \"pam_pwquality\\|pam_cracklib\\|minlen\\|remember\\|password.*requisite\\|password.*required\" /etc/pam.d /etc/security 2>/dev/null"
+  os: "{{ vendor }}"
+  inspection_criteria: "최대사용 기간 90일 이하, 9자리 이상 및 복잡도 정책이 설정되어 있을 것"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    계정 및 비밀번호 관리_비밀번호 설정
+
+- rule_key: "sec_srv_log_retention"
+  cmd_id: "0004"
+  name: "04.시스템 로그보관"
+  command: "echo ===LOGROTATE===; cat /etc/logrotate.conf 2>/dev/null; echo ===LOGROTATE_RULES===; grep -R \"rotate\\|daily\\|weekly\\|monthly\" /etc/logrotate.conf /etc/logrotate.d 2>/dev/null"
+  os: "{{ vendor }}"
+  inspection_criteria: "접근기록, 정책변경 로그 보관기간이 180일 이상일 것"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    시스템 로그보관
+
+- rule_key: "sec_srv_plain_port"
+  cmd_id: "0005"
+  name: "05.평문 서비스 포트 제거"
+  command: "(ss -tulnp 2>/dev/null || netstat -tulnp 2>/dev/null) | awk '$1=$1'"
+  os: "{{ vendor }}"
+  inspection_criteria: "FTP(20,21), Telnet(23), Rlogin(513), Rshell/Rcp(514), Rexec(512) 등 제거"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    서비스 포트 관리_평문 서비스 포트 제거
+
+- rule_key: "sec_srv_default_port"
+  cmd_id: "0006"
+  name: "06.DB, 원격접속 기본포트 변경 및 접속제한"
+  command: "(ss -tulnp 2>/dev/null || netstat -tulnp 2>/dev/null) | awk '$1=$1'"
+  os: "{{ vendor }}"
+  inspection_criteria: "DB 기본포트, SSH/RDP/X11 등 원격접속 기본포트 변경 및 관리자 IP 접근제한 설정"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    서비스 포트 관리_DB, 원격접속 기본포트 변경 및 접속제한
+
+- rule_key: "sec_srv_etc_port"
+  cmd_id: "0007"
+  name: "07.기타 제거"
+  command: "(ss -tulnp 2>/dev/null || netstat -tulnp 2>/dev/null) | awk '$1=$1'"
+  os: "{{ vendor }}"
+  inspection_criteria: "랜섬웨어 포트 137, 138, 139, 445 등 제거"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    서비스 포트 관리_기타 제거

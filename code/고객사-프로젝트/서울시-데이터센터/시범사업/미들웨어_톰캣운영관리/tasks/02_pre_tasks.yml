@@ -1,0 +1,18 @@
+---
+- name: Tomcat 설치여부 확인
+  stat:
+    path: "{{ fap.host_vars.tomcat_home }}"
+  ignore_errors: true
+  register: tomcat_result
+
+- name: 톰캣 설치 확인
+  debug:
+    msg:
+      - "톰캣 경로 존재여부 : {{ tomcat_result.stat.exists }}"
+
+- name: 톰캣 미 설치 --- 실패처리
+  fail:
+    msg: 
+      - "Tomcat 미 설치 상태 입니다."
+      - "설치 확인이 필요합니다."
+  when: tomcat_result.stat.exists == false

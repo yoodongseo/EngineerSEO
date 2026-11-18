@@ -1,0 +1,31 @@
+---
+### header ---> 생성될 보고서의 컬럼명
+### cli ---> 점검할 명령어
+cmd:
+#- header: Oracle 버전
+  #cli: |
+    #su - oracle -c "sqlplus / as sysdba  << EOF | head -n 10 | tail -2
+    #SELECT * FROM v\\\$version;
+    #EOF"
+############################
+#- header: OPATCH
+  #cli: su - oracle -c "opatch lsinventory | head -30"
+#- header: DBA USER
+  #cli: |
+   # su - oracle -c "sqlplus / as sysdba  << EOF
+#    col USERNAME for a30
+ #   col PROFILE for a30
+  #  select username, profile from dba_users;
+   # EOF"
+#############################
+- header: DB 프로세스 확인
+  cli: ps -ef | grep tns | grep -v grep | grep -v netns | grep -v ASMNET | grep -v SCAN
+#- header: 디스크 용량 확인
+#  cli: df -h
+#- header: 메모리 확인
+#  cli: free -m
+
+
+local_dir_path: /fap/report/{{ data_key }}/{{ date }}/{{ fap.job_id }} ## 자동화서버 디렉토리 경로
+tmp_file: "tmp.csv"
+output_file: "device_report_{{ date }}.csv"

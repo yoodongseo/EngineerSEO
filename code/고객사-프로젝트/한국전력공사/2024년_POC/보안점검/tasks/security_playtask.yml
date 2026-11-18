@@ -1,0 +1,51 @@
+---
+- block:
+  - name: 월 추출
+    raw: |
+      /usr/bin/python << EOF
+      from datetime import datetime
+      print(datetime.now().strftime('%b'))
+      EOF
+    register: month
+    delegate_to: localhost
+
+  - name: 보안점검 vars 호출
+    include_vars: "{{ sub_projects }}/vars/security_vars.yml"
+
+  - name: 작업
+    include_tasks: "{{ sub_projects }}/tasks/security_task.yml"
+    loop: >-
+      {{ Linux if vendor == 'Linux'
+      else L3 if vendor == 'L3' 
+      else Veritas if vendor == 'Veritas'
+      else Ibm if vendor == 'ibm'
+      else Hitachi if vendor == 'Hitachi'
+      else Netapp if vendor == 'Netapp' 
+      else Sdn_controller if vendor == 'Sdn_controller'
+      else Sdn_switch if vendor == 'Sdn_switch' }}
+    no_log: true
+
+### 추후 Veritas 접속문제 해결 시 else Veritas if vendor == 'Veritas' 추가
+
+  always:
+  - name: Make content value
+    set_fact:
+      content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+    delegate_to: localhost
+    when: merged_value is defined
+  
+  - name: Save to DB
+    fap.common.save_data:
+      content: "{{ content_value }}"
+      protocol: http
+      hostname: "{{ inventory_hostname }}"
+      data_type: report
+      data_key: prevention
+      template_id: "{{ fap.template_id | default(omit) }}"
+      job_id: "{{ fap.job_id | default(omit) }}"
+    delegate_to: localhost
+    when: content_value is defined
+
+  - set_fact: # 변수 초기화
+      merged_value: []
+      content_value: {}

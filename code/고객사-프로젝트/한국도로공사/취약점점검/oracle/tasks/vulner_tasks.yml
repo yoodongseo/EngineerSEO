@@ -1,0 +1,131 @@
+---
+- name: 일시 생성
+  set_fact:
+    today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+  delegate_to: localhost
+
+- name: sid debug
+  debug:
+    var: item.sid
+
+- name: hostname 수집
+  raw: hostname | tr -d '\n'
+  register: hostname_check
+
+- name: hostname 디버그
+  debug:
+    var: hostname_check.stdout_lines[1]
+
+- name: 배포 폴더 생성
+  raw: mkdir -p "{{ output_path }}"
+
+- name: 배포 폴더 권한 변경
+  raw: chown -R example_user "{{ output_path }}"
+
+- name: 파일 배포
+  command: /usr/bin/python3 ../vars/scp.py
+  environment:
+    script_path: "{{ file_list }}"
+    output_path: "{{ output_path }}"
+    host_ip: "{{ fap.host_ip }}"
+    user: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    port: "{{ ansible_port }}"
+  register: python_scp
+  delegate_to: localhost
+
+- name: 파일 배포 debug
+  debug:
+    var: python_scp.stdout
+
+- name: 파일 권한 변경
+  raw: "chown -R {{ item.sid }}:dba {{ output_path }}"
+
+- name: 파일 실행 권한 추가   
+  raw: "chmod -R +x {{ output_path }}"
+
+- name: 파일 확인 변수 생성
+  raw: "ls -al {{ output_path }}"
+  register: file_check
+        
+- name: 파일 확인
+  debug:
+    var: file_check.stdout_lines
+
+- name: Oracle 쿼리 실행 --- python 파일 호출
+  command: /usr/bin/python3 ../vars/oracle.py
+  environment:
+    hostip: "{{ fap.host_ip }}"
+    port: "{{ ansible_port }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    root_passwd: "{{ ansible_become_password }}"
+    hostname: "{{ hostname_check.stdout }}"
+    path: "{{ output_path }}"
+    oracleuser: "{{ item.sid }}"
+  register: oracle_vulner_check
+  delegate_to: localhost
+
+- name: 스크립트 실행 결과 출력
+  debug:
+    var: oracle_vulner_check.stdout
+
+- name: 정상 실행 시에만 작업 수행
+  assert:
+    that:
+      - "'완료' in oracle_vulner_check.stdout"
+
+- name: 스크립트 결과 파일 읽기
+  raw: "cat {{ output_path }}/{{ file_name }}.txt"
+  register: file_read
+
+- name: 스크립트 폴더 삭제
+  raw: "rm -rf {{ output_path }}"
+
+- name: 저장 폴더 생성
+  file:
+    path: "{{ save_path }}/{{ item.sid }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+
+- name: 결과 파일 저장
+  copy:
+    content: "{{ file_read.stdout }}"
+    dest: "{{ save_path }}/{{ item.sid }}/{{ file_name }}_{{ item.sid }}_{{ today }}.txt"
+    force: yes
+  delegate_to: localhost
+
+- name: 결과 파일 DB화 작업
+  set_fact:
+    result_value: "{{ result_value | default([]) + [{
+      'host': inventory_hostname,
+      'host_name': fap.host_ip,
+      'is_success': true,
+      'file_path': save_path + '/' + item.sid,
+      'report_type': report_name,
+      'system': 'oracle',
+      'data1': 'ORACLE'
+      }] }}"
+    delegate_to: localhost
+
+- name: Make content value
+  set_fact:
+    content_value: "{{ content_value | default({}) | combine({'data_list': result_value}) }}"
+  delegate_to: localhost
+
+- name: Save DB
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: report
+    data_key: vulnerability
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  delegate_to: localhost
+
+- name: 저장 완료 변수 초기화
+  set_fact: # 변수 초기화
+    merged_value: []
+    content_value: {}

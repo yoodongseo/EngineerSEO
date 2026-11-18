@@ -1,0 +1,14 @@
+---
+# JOB VARS
+reboot_flag: "{{ fap['host_vars']['reboot_flag'] | default('Y') }}"
+
+# SAVE VARS
+system: Linux
+report_type: "Windows 보안 업데이트"
+data_key: WIN_UPDATE
+
+# PLAY VARS
+update_pkg:
+  src_2016: ../templates/win2016.zip
+  src_2019: ../templates/win2019.zip
+  dest: C:\temp\auto_update\

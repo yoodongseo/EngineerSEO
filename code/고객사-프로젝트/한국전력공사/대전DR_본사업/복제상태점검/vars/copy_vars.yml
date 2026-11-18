@@ -1,0 +1,48 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: "replicationstatus"
+inspection_group: "복제상태점검"
+
+### merged_value --- List 선언
+merged_value: []
+
+### criteria 컬럼 --- 점검기준
+
+### 점검항목 --- 장비 별 분류
+Netapp:
+  - cmd_name: "NetAPP FAS8300 복제 상태 점검" # 대분류 / FAP 상세내역 작업 명
+    cmd_command: 'snapmirror show' # 점검 명령어 (점검 명령어 보고서 표출 X 임의 작성 가능)
+    value: "nas" # python filter 분류 --- 비교 기준 함수 타입(int,str,etc...)
+    com_value: "Broken-off Idle" # python filter 기준값 --- 비교 기준 데이터 값
+    raw: "snapmirror show" # 점검시 실제 사용할 명령어
+    criteria: "Netapp FAS8300 복제 상태 점검 Broken-off Idle 상태 시 복제 상태 점검 필요"
+    tmp_file_path: ../vars/{{ inventory_hostname }}_nas_copy.txt
+
+Veritas:
+  - cmd_name: "Veritas NBA5340 복제 상태 점검" # 대분류 / FAP 상세내역 작업 명
+    cmd_command: 'bpdbjobs' # 점검 명령어 (점검 명령어 보고서 표출 X 임의 작성 가능)
+    value: "Veritas" # python filter 분류 --- 비교 기준 함수 타입(int,str,etc...)
+    com_value: 0 # python filter 기준값 --- 비교 기준 데이터 값
+    raw: "bpdbjobs" # 점검시 실제 사용할 명령어
+    criteria: "Veritas NBA5340 복제 상태 점검 Status 0,1 외 점검 필요"
+    tmp_file_path: ../vars/{{ inventory_hostname }}_Veritas_copy.txt
+
+Ibm:
+  - cmd_name: "IBM FS5200 복제 상태 점검"
+    cmd_command: 'lsrcconsistgrp' # 점검 명령어 (점검 명령어 보고서 표출 X 임의 작성 가능)
+    value: "Ibm" # python filter 분류 --- 비교 기준 함수 타입(int,str,etc...)
+    com_value: 0 # python filter 기준값 --- 비교 기준 데이터 값
+    raw: "lsrcconsistgrp attache_DR | grep state" # 점검시 실제 사용할 명령어
+    criteria: |
+      1. consistent_copying – 일치 복제 중
+      2. inconsistent_stopped – 불일치 중지 상태
+      3. inconsistent_copying – 불일치 복제 중
+      4. consistent_stopped – 일치 중지 상태
+      5. consistent_synchronized – 일치 복제 완료
+      6. idling – 유휴 상태
+      7. idling_disconnected – 유휴 복제 끊김 상태(비정상 상태)
+      8. inconsistent_disconnected – 불일치 복제 끊김 상태(비정상 상태)
+      9. consistent_disconnected – 일치 복제 끊김 상태(비정상 상태)
+      10. empty – 복제 관계가 비어있는 상태 
+    tmp_file_path: ../vars/{{ inventory_hostname }}_Ibm_copy.txt

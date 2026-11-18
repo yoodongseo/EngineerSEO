@@ -1,0 +1,38 @@
+---
+AIX_sysinfo:
+- { id: '0001', name: '1_hostname', command: 'AIX_hostname.sh', os: 'os', compare: true }
+- { id: '0002', name: '2_HW info', command: 'AIX_hwinfo.sh', os: 'os', compare: true } 
+- { id: '0003', name: '3_oslevel', command: 'AIX_oslevel.sh', os: 'os', compare: true }
+- { id: '0004', name: '4_cluster status', command: 'AIX_cluster.sh', os: 'os', compare: true }
+- { id: '0005', name: '5_network info', command: 'AIX_nw_info.sh', os: 'os', compare: true }
+- { id: '0006', name: '6_disk info', command: 'AIX_diskinfo.sh', os: 'os', compare: true }
+- { id: '0007', name: '7_running process', command: 'AIX_running_process.sh', os: '', compare: true }
+- { id: '0008', name: '8_ntp', command: 'AIX_ntp.sh', os: 'os', compare: true } 
+
+Linux_sysinfo:
+- { id: '0001', name: '1_hostname', command: 'linux_hostname.sh', os: 'os', compare: true }
+- { id: '0002', name: '2_HW info', command: 'linux_hwinfo.sh', os: 'os', compare: true } 
+# - { id: '0003', name: '3_oslevel', command: 'linux_oslevel.sh', os: 'os', compare: true }
+# - { id: '0004', name: '4_cluster status', command: 'linux_cluster.sh', os: 'os', compare: true }
+# - { id: '0005', name: '5_network info', command: 'linux_nwinfo.sh', os: 'os', compare: true }
+# - { id: '0006', name: '6_disk info', command: 'linux_diskinfo.sh', os: 'os', compare: true }
+# - { id: '0007', name: '7_running process', command: 'linux_running_process.sh', os: '', compare: true }
+# - { id: '0008', name: '8_ntp', command: 'linux_ntp.sh', os: 'os', compare: true } 
+
+Solaris_sysinfo:
+- { id: '0001', name: '1_hostname', command: 'sun_hostname.sh', os: 'os', compare: true }
+- { id: '0002', name: '2_HW info', command: 'sun_hwinfo.sh', os: 'os', compare: true } 
+- { id: '0003', name: '3_oslevel', command: 'sun_oslevel.sh', os: 'os', compare: true }
+- { id: '0004', name: '4_cluster status', command: 'sun_cluster.sh', os: 'os', compare: true }
+- { id: '0005', name: '5_network info', command: 'sun_nwinfo.sh', os: 'os', compare: true }
+- { id: '0006', name: '6_disk info', command: 'sun_diskinfo.sh', os: 'os', compare: true }
+- { id: '0007', name: '7_running process', command: 'sun_running_process.sh', os: '', compare: true }
+- { id: '0008', name: '8_ntp', command: 'sun_ntp.sh', os: 'os', compare: true } 
+
+#4월 26일 기존 코드
+# ---
+# script_path: "{{ ansible_env.HOME }}" # home directory
+# script_file: sysinfo.sh # 일일점검 스크립트 파일명
+
+# date: "{{ ansible_facts.date_time.date|replace('-','') }}"
+# hostname: "{{ ansible_facts.nodename }}"

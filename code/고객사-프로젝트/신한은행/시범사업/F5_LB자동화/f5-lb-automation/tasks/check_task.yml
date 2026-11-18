@@ -1,0 +1,66 @@
+---
+- name: 도메인형식 요청인지 확인 (WIDEIPs)
+  set_fact:
+    data: "{{wideips_name}}"
+    err_msg: "{{ '요청하신 도메인이 FQDN 형식이 아닙니다. [' ~ wideips_name ~ ']' }}"
+    err_flag: True
+    workable_wideips: false
+  when: not (wideips_name | regex_search('^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$'))
+
+- when: err_flag == false
+  block:
+    - name: 도메인 정보 조회 (WIDEIPs)
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/wideip/{{pool_type|lower}}"
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: GET
+        validate_certs: "{{ validate_certs }}"
+      register: WIDEIPSList
+      delegate_to: localhost
+
+    # - debug: var=WIDEIPSList
+
+    - name: 도메인 중복 검증 -> {{wideips_name}}
+      set_fact:
+        data: "{{ WIDEIPSList['json']['items']|default([]) }}"
+        err_msg: "{{'요청하신 [' ~ wideips_name ~ '] 도메인이 이미 존재합니다.' if wideips_name in WIDEIPSList['json']['items'] | map(attribute='name') | list  else ''}}"
+
+    # - debug: var=err_msg
+
+    - name: 에러 플래그 설정
+      set_fact:
+        err_flag: True
+        workable_wideips: false
+      when: err_msg|default('')|length > 0
+
+- when: err_flag == false
+  block:
+    - name: Pool 정보 조회
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/pool/{{pool_type | lower }}"
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: GET
+        validate_certs: "{{ validate_certs }}"
+      register: PoolList
+      delegate_to: localhost
+
+    - name: Pool 중복 검증 -> {{pool_name}}
+      set_fact:
+        data: "{{ PoolList.json|default([]) }}"
+        err_msg: "{{'요청하신 [' ~ pool_name ~ '] Pool이 이미 존재 합니다.' if pool_name in PoolList['json']['items'] | map(attribute='name') | list  else ''}}"
+
+    - name: 에러 플래그 설정
+      set_fact:
+        err_flag: True
+        workable_pool: false
+      when: err_msg|default('')|length > 0
+
+# - debug: var=err_flag
+
+- name: 에러 시, 작업 중단
+  fail:
+    msg: "검증 실패: {{err_msg}}"
+  when: err_flag
+  ignore_errors: false

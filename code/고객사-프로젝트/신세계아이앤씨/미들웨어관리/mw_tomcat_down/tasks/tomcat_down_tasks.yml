@@ -1,0 +1,72 @@
+---
+- name: WAS 경로 확인
+  stat:
+    path: "{{ item.was_path }}"
+  register: was_path_stat
+  loop: "{{ was_instance }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: 경로 출력
+  debug:
+    msg: |
+      Path: {{ item.item.was_path }} 
+      exists: {{ item.stat.exists }}
+  loop: "{{ was_path_stat.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: EDB 사용하는 WAS 다운
+  shell: "su - wasadmin -c {{ item.item.was_path }}"
+  register: tomcat_shutdown
+  when: item.stat.exists
+  loop: "{{ was_path_stat.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: 로그 저장 폴더 생성
+  file:
+    path: "{{ file_dir }}"
+    state: directory
+  delegate_to: localhost
+
+- name: 명령어 실행 결과 로그 저장 - down
+  copy:
+    content: "{{ item.stdout }}"
+    dest: "{{ file_dir }}/tomcat_down_{{ item.item.item.name }}_{{ today.stdout }}.txt"
+  # when: (item.rc | default(None)) == 0
+  when: item.item.stat.exists
+  delegate_to: localhost
+  loop: "{{ tomcat_shutdown.results }}"
+
+- name: WAS Down 확인 대기 - 3초씩 10번
+  # shell: "ps -ef | grep {{ item.item.name }} | grep -v grep | wc -l"
+  shell: "/DATA/wasadmin/instance/{{ item.item.name }}/bin/status.sh"
+  register: result
+  until: "'Stopped' in result.stdout"
+  retries: 10
+  delay: 3
+  when: item.stat.exists
+  loop: "{{ was_path_stat.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: WAS DOWN 확인
+  debug:
+    msg: "WAS 다운 확인 프로세스 종료"
+
+- name: result_value set_fact
+  set_fact:
+    result_value: "{{ result_value | default({}) | combine({
+    'host': inventory_hostname,
+    'host_name': fap.host_ip,
+    'is_success': true,
+    'is_pass': true,
+    'file_path': file_dir,
+    'report_type': report_type,
+    'system': 'Linux'
+    }) }}"
+  delegate_to: localhost
+
+- set_fact:
+    merged_value: "{{ merged_value | default([]) + [result_value] }}"

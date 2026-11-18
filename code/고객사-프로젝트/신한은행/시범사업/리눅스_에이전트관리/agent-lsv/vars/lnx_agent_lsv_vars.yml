@@ -1,0 +1,103 @@
+﻿---
+# JOB_VARS
+## install, uninstall, start, stop, restart
+req_type: "{{ fap['host_vars']['req_type'] }}"
+
+# SAVE VARS
+system: Linux
+report_type: "Linux LSV {{ '설치' if req_type == 'install' 
+                                else '삭제' if req_type == 'uninstall' 
+                                else '기동' if req_type == 'start' 
+                                else '중지' if req_type == 'stop' 
+                                else '재기동' if req_type == 'restart' }}"
+data_key: LNX_AGENT_MGMT_LSV
+
+# PLAY JOB VARS
+pkg_name:
+  os_type_7: 
+    - name: 'logsaver.531h.linux.3.10.0-514.lib.2.17.tar'
+    - name: 'tior.131d2.inst.linux.3.10.0-514.lib.2.17.tar'
+  os_type_8:
+    - name: 'logsaver.531o.linux.4.18.lib.2.28.tar'
+    - name: 'tior.131d2.inst.linux.4.18.lib.2.28.tar'
+
+# PKG 파일에서 커널 버전 추출
+extracted_kernel_7: "{{ pkg_name['os_type_7'][0] | regex_search('(?<=linux\\.)\\d+\\.\\d+') }}"
+extracted_kernel_8: "{{ pkg_name['os_type_8'][0] | regex_search('(?<=linux\\.)\\d+\\.\\d+') }}"
+
+# 설치되는 경로
+stat_path: '/usr/local/logsaver'
+
+# 패키지 경로
+copy_src: ../templates
+copy_dest: /tmp/LSV
+
+expect_cli_list:
+  install:
+    - name: 3. logsaver 설치
+      cmd:
+        - cli: find /tmp/LSV -name '*.tar' -exec tar -xf {} -C /tmp/LSV \;
+          found_list:
+            - found: ''
+              answer: ''
+        - cli: cd /tmp/LSV/logsaver && ./install.sh
+          found_list:
+            - found: 'selections?'
+              answer: 'y'
+        - cli: echo "/var/log/secure" >> /usr/local/logsaver/loglist
+          found_list:
+            - found: ''
+              answer: ''
+
+    - name: 4. tior 설치 
+      cmd:
+        - cli: cd /tmp/LSV/tior_inst && ./install*sh
+          found_list:
+            - found: 'settings?'
+              answer: 'y'
+            - found: 'selections?'
+              answer: 'y'
+
+  start:
+    - name: 3. logsaver 기동
+      cmd:
+        - cli: '/usr/local/logsaver/logsaver.sh startp'
+          found_list:
+            - found: 'assword'
+              answer: 'CHANGE_ME_INPUT'
+            - found: 'etype'
+              answer: 'CHANGE_ME_INPUT'
+
+  stop:
+    - name: 3. logsaver 중지
+      cmd:
+        - cli: '/usr/local/logsaver/logsaver.sh stop'
+          found_list:
+            - found: ''
+              answer: ''
+
+  restart:
+    - name: 3. logsaver 재기동
+      cmd:
+        - cli: '/usr/local/logsaver/logsaver.sh stop'
+          found_list:
+            - found: ''
+              answer: ''
+        - cli: '/usr/local/logsaver/logsaver.sh startp'
+          found_list:
+            - found: 'assword'
+              answer: 'CHANGE_ME_INPUT'
+            - found: 'etype'
+              answer: 'CHANGE_ME_INPUT'
+
+  uninstall:
+    - name: 3. logsaver 삭제
+      cmd:
+        - cli: '/usr/local/logsaver/logsaver.sh stop'
+          found_list:
+            - found: ''
+              answer: ''
+        - cli: 'rm -rf /usr/local/logsaver && rm -rf /usr/local/tior'
+          found_list:
+            - found: ''
+              answer: ''

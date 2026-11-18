@@ -1,0 +1,83 @@
+---
+- block:
+  - name: JDK, tomcat 배포 경로 확인
+    win_file:
+      path: "{{ download_path }}"
+      state: directory
+
+  - name: JDK, Tomcat 다운로드
+    win_copy:
+      src: "../templates/{{ item.name }}"
+      dest: "{{ download_path }}"
+    loop: "{{ files }}"
+    loop_control:
+      label: "{{ item.name }}"
+
+  - name: Java 설치
+    win_shell: '{{ download_path }}\{{ jdk }} /s'
+    
+  - name: Tomcat 압축 해제
+    win_unzip:
+      src: '{{ download_path }}\{{ tomcat }}'
+      dest: "{{ download_path }}"
+      creates: "{{ tomcat_install_path }}"
+
+  - name: Set JAVA_HOME environment variable
+    win_environment:
+      name: "JAVA_HOME"
+      level: machine
+      value: "{{ java_install_path }}"
+      state: present
+
+  - name: Add Java to system PATH
+    win_environment:
+      name: "JAVA_BIN"
+      level: machine
+      value: "{{ java_bin }}"
+      state: present
+
+  - name: JAVA 설치 확인
+    win_shell: java -version
+    register: java_result
+
+  - name: JAVA Debug
+    debug:
+      msg: "{{ java_result }}"
+
+  - name: Tomcat 설치
+    win_shell: '{{ tomcat_bin }}\service.bat install'
+    args:
+      chdir: "{{ tomcat_bin }}"
+    register: tomcat_install_result
+
+  - name: Start Tomcat service
+    win_service:
+      name: "Tomcat9"
+      start_mode: auto
+      state: started
+
+  - name: 방화벽 정책 허용
+    win_firewall_rule:
+      name: "Tomcat 8080 allow"
+      state: present
+      direction: in
+      action: allow
+      enabled: yes
+      localport: 8080
+      protocol: TCP
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '3. 톰캣 설치 결과',
+          'command': 'Windows_Tomcat_Install',
+          'result': '설치 오류' if tomcat_install_result['failed'] else tomcat_install_result.stdout,
+          'is_success': True,
+          'is_pass': False if tomcat_install_result['failed'] else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"
+

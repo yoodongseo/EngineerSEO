@@ -1,0 +1,134 @@
+﻿---
+system: "{{ vendor }}_security_network"
+
+inspection_commands:
+- rule_key: "sec_account_separation"
+  cmd_id: "0001"
+  name: "01.계정 및 권한 분리"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "관리자 계정과 유지보수 계정 분리 / 유지보수 계정에 관리자 권한 부여 금지"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    계정 및 비밀번호 관리_계정 및 권한 분리
+
+- rule_key: "sec_default_account"
+  cmd_id: "0002"
+  name: "02.디폴트 계정 삭제"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "디폴트 계정 삭제 / 잠금 / 비활성화"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    계정 및 비밀번호 관리_디폴트 계정 삭제
+    (잠금, 비활성화)
+
+- rule_key: "sec_password_setting"
+  cmd_id: "0003"
+  name: "03.비밀번호 설정"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "디폴트계정 삭제 불가시 비밀번호 변경 사용"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    계정 및 비밀번호 관리_비밀번호 설정
+
+- rule_key: "sec_plain_service"
+  cmd_id: "0004"
+  name: "04.평문 서비스 포트 제거"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "FTP(20,21), Telnet(23), Rlogin(513), Rshell/Rcp(514), Rexec(512) 등 제거"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    서비스 포트 관리_평문 서비스 포트 제거
+
+- rule_key: "sec_remote_access"
+  cmd_id: "0005"
+  name: "05.원격접속 포트 변경 및 접속제한"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "SSH(22), 원격데스크탑(3389), X11(6000) 등 기본포트 변경 / 관리자 IP만 접속되도록 제한 설정"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    서비스 포트 관리_원격접속 포트 변경 및 접속제한
+
+- rule_key: "sec_ransomware_port"
+  cmd_id: "0006"
+  name: "06.기타 제거"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "랜섬웨어 포트 137, 138, 139, 445 등 제거"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    서비스 포트 관리_기타 제거
+
+- rule_key: "sec_directed_broadcast"
+  cmd_id: "0007"
+  name: "07.Directed-broadcast"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "Directed-broadcast 차단 여부"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    네트워크 시스템_보안설정
+
+- rule_key: "sec_mask_reply"
+  cmd_id: "0008"
+  name: "08.Mask-reply"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "Mask-reply 차단 여부 확인"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    네트워크 시스템_보안설정
+
+- rule_key: "sec_source_routing"
+  cmd_id: "0009"
+  name: "09.IP Source Routing"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "IP Source Routing 제한 설정 여부 확인"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    네트워크 시스템_보안설정
+
+- rule_key: "sec_unused_interface"
+  cmd_id: "0010"
+  name: "10.미사용 인터페이스 Shutdown"
+  command: "show running-config"
+  os: "{{ vendor }}"
+  inspection_criteria: "사용하지 않는 인터페이스의 Shutdown 설정"
+  is_compare: true
+  is_save: true
+  timeout: 5
+  sleep: 1
+  message: |
+    네트워크 시스템_보안설정

@@ -1,0 +1,97 @@
+---
+- name: is_success, is_pass, is_connect 설정
+  set_fact:
+    is_success: "{{ false if result_active.failed == true \
+      else true if is_active|int == 0 \
+      else job_result.is_success|default(false) \
+      }}"
+    is_pass: "{{ false if result_active.failed == true \
+      else true if is_active|int == 0 \
+      else job_result.is_pass|default(false) \
+      }}"
+    is_connect: "{{ true if result_active.json is defined else false }}"
+
+- name: DB 저장을 위한 변수 생성
+  set_fact:
+    result:
+      "{{ job_result_not_connected|default([]) if is_connect == false else job_result.data \
+      if job_result.data|default(None) != None else [] }}"
+    is_active: "{{ is_active|int if is_connect == true else None }}"
+
+- name: is_active 업데이트(when -> null)
+  set_fact:
+    is_active: null
+  when: is_connect|default(false) == false
+
+# 예외사항 때문에 조치
+# is_success true가 아니면 보고서 다운로드 안되는 이슈
+# is_connect true가 아니면 data가 안생기는 이슈
+# is_active null 처리
+- name: 계정 접속 실패시 is_success,is_connect,is_active 설정
+  set_fact:
+    is_success: "{{ true if result_active.status == 401 else is_success }}"
+    is_connect: "{{ true if result_active.status == 401 else is_connect }}"
+# - debug: var=is_connect
+
+- name: DB 저장을 위한 변수 생성2
+  set_fact:
+    content_value_iac: "{{ {'data_list': [{ \
+      'host': inventory_hostname, \
+      'host_name': inventory_hostname, \
+      'is_success': is_success, \
+      'is_pass': is_pass, \
+      'file_path': (file_path|split('/'))[:-1]|join('/')+'/', \
+      'report_type': report_type[0], \
+      'message': job_result.err_msg|default(None) if is_connect else '접속실패', \
+      'system': system, \
+      'is_active': omit if is_active == None else is_active|int \
+      }]} }}"
+    content_value_portal: "{{ {'data_list': [{ \
+      'host': inventory_hostname, \
+      'host_name': inventory_hostname, \
+      'is_success': is_success, \
+      'is_pass': is_pass, \
+      'name': content_name, \
+      'command': content_command, \
+      'result': result|to_json(ensure_ascii=false),\
+      'report_type': report_type[1], \
+      'message': job_result.err_msg|default(None) if is_connect else '접속실패', \
+      'system': system, \
+      'is_active': omit if is_active == None else is_active|int \
+      }]} }}"
+
+# - debug: var=job_result
+
+- name: 보고서 경로 DB 저장(IaC)
+  fap.common.save_data:
+    content: "{{ content_value_iac }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: "{{ data_type }}"
+    data_key: "{{ data_key }}_reports"
+    template_id: "{{ fap.template_id }}"
+    job_id: "{{ fap.job_id }}"
+  delegate_to: localhost
+  when: content_value_iac is defined
+
+- debug: var=content_value_iac
+
+- name: 보고서 경로 DB 저장(포탈)
+  fap.common.save_data:
+    content: "{{ content_value_portal }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: "{{ data_type }}"
+    data_key: "{{ data_key }}"
+    template_id: "{{ fap.template_id }}"
+    job_id: "{{ fap.job_id }}"
+  delegate_to: localhost
+  when: content_value_portal is defined and portal_flag
+
+# - debug: var=content_value_portal
+
+- name: 작업 결과 판단
+  fail:
+    msg: "실패"
+  ignore_errors: False
+  when: is_pass|default(0)|int != 1

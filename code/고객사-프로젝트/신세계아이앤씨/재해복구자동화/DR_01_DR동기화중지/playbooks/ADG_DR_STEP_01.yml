@@ -1,0 +1,27 @@
+---
+- name: "DR_1node_01_DR동기화중지"
+  hosts: all
+  tasks:
+  - name: 일시 생성
+    set_fact:
+      today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+    delegate_to: localhost
+    run_once: true
+
+  - name: 변수 파일 호출
+    COMPANYlude_vars: ../vars/server_ordering_01.yml
+
+  - name: Standy DB의 호스트 정보
+    debug: 
+      msg:
+      - "IP: {{ STANDBY_DB_IP }}"
+      - "HOSTNAME: {{ ansible_facts.fqdn }}"
+    when: fap.host_ip == STANDBY_DB_IP | default('none')
+
+  - name: "Step 1 - Standby DB 동기화 중지"
+    COMPANYlude_tasks: ../tasks/Step_1.yml
+
+  - debug:
+      msg:
+      - "[Step 1] 완료 - DR_1node_01_DR동기화 중지"
+

@@ -1,0 +1,52 @@
+---
+# 네이밍룰 센터코드_계열사코드_Server
+- name: Define Server
+  set_fact:
+    server_name: "{{ item.datacentercode ~ '_' ~ company_code ~ '_Server' }}"
+
+# 네이밍룰 V서버 Index
+- name: Define Virtual Server Idx
+  set_fact:
+    vserver_idx: "{{ vserver_idx|int + 1 }}"
+
+# 네이밍룰 vir_센터코드_Idx_계열사코드_도메인명
+- name: Define Virtual Server
+  set_fact:
+    vserver_name: "{{ 'vir' ~ '_' ~ item.datacentercode ~ '_' ~  vserver_idx ~ '_' ~ company_code ~ '_' ~ wideips_name  }}"
+
+- name: Define Pool Member
+  set_fact:
+    member_name: "{{server_name ~ ':' ~ vserver_name}}"
+# - debug: var=member_name
+
+- name: Pool Member 추가 ->  "{{member_name}}"
+  ansible.builtin.uri:
+    url: "{{ host }}/{{ rest_api_info.default_api }}/pool/{{pool_type | lower }}/{{pool_name}}/members"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: POST
+    body_format: json
+    body:
+      name: "{{ member_name }}"
+      ratio: "{{ item.distributionratio }}"
+      enabled: true
+      # monitor: "default"
+      memberOrder: "{{ vserver_idx }}"
+    validate_certs: false
+  register: AddPoolMember
+  delegate_to: localhost
+
+# - debug: var=AddPoolMember
+
+- name: Pool Member 추가 결과 추출
+  set_fact:
+    data: "{{ AddPoolMember.json|default([]) }}"
+    err_msg: "{{ AddPoolMember.json|default({}) if AddPoolMember.status|int != 200 else {} }}"
+    err_flag: "{{ false if AddPoolMember.status|default(0)|int == 200 else true }}"
+    workdone_poolmember: "{{ false if AddPoolMember.status|default(0)|int != 200 else true }}"
+
+- name: 에러 시, 작업 중단
+  fail:
+    msg: "작업 실패: {{err_msg}}"
+  when: err_flag
+  ignore_errors: false

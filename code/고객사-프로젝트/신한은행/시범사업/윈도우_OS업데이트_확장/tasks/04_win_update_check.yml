@@ -1,0 +1,4 @@
+---
+- name: 04_win_update_check
+  hosts: all
+  tasks: []

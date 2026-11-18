@@ -1,0 +1,31 @@
+---
+- name: 시스템점검현황 (보안, 예방 점검 병합)
+  gather_facts: false
+  ignore_errors: true
+  ignore_unreachable: true
+  # strategy: free
+  hosts: all
+  tasks:
+  - name: 공통 변수 생성
+    include_vars: ../vars/current_vars.yml
+
+  - set_fact: # 예방점검 경로 변수 생성
+      sub_projects: "/fap/ansible/projects/COMPANY_예방점검"  
+
+  - name: 예방점검 수행
+    include_tasks: "{{ sub_projects }}/tasks/pre_playtask.yml"
+    when: fap.group_info | selectattr('예방점검', 'defined') | list | length > 0 # 그룹명이 예방점검인 경우 수행"
+
+  - set_fact: # 보안점검 경로 변수 생성
+      sub_projects: "/fap/ansible/projects/COMPANY_보안점검" 
+
+  - name: 보안점검 수행
+    include_tasks: "{{ sub_projects }}/tasks/security_playtask.yml"
+    when: fap.group_info | selectattr('보안점검', 'defined') | list | length > 0 # 그룹명이 보안점검인 경우 수행
+
+  - set_fact: # 복제점검 경로 변수 생성
+      sub_projects: "/fap/ansible/projects/COMPANY_복제상태점검" 
+
+  - name: 복제상태점검 수행
+    include_tasks: "{{ sub_projects }}/tasks/copy_playtask.yml"
+    when: fap.group_info | selectattr('복제상태점검', 'defined') | list | length > 0 # 그룹명이 복제상태점검인 경우 수행

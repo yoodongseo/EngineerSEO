@@ -1,0 +1,199 @@
+---
+- name: 01. SunOS - OS 정보 수집
+  raw: |
+    echo "os_name=`uname -s`"
+    echo "os_version=`head -n 1 /etc/release | awk '{print $1, $2, $3, $4}'`"
+    echo "kernel=SunOS `uname -r` `uname -v`"
+    echo "os_type=Unix"
+  register: os_info
+
+- name: 01. SunOS - OS 정보 (로케일 경고 제거)
+  set_fact:
+    os_lines_clean: "{{ os_info.stdout_lines | remove_locale_warnings }}"
+
+- name: 01. SunOS - OS 정보 --> merged_value
+  set_fact:
+    merged_value: >-
+      {{
+        merged_value | default({}) | combine({
+          'os_name': os_lines_clean[0].split('=')[1] | default(''),
+          'os_version': os_lines_clean[1].split('=')[1] | default(''),
+          'kernel': os_lines_clean[2].split('=')[1] | default(''),
+          'os_type': os_lines_clean[3].split('=')[1] | default('')
+        })
+      }}
+
+- name: 02. SunOS - Disk 정보
+  raw: |
+    df -k | awk 'NR==1 {print; next}
+    NF<6 { getline nextline; $0=$0" "nextline }
+    { print }'
+  register: disk_info
+
+- name: 02. SunOS - df_list 생성 (필터 방식)
+  set_fact:
+    df_list: "{{ disk_info.stdout_lines | remove_locale_warnings | parse_df_lines('KB') }}"
+
+- name: 02. SunOS - Disk 정보 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_list': df_list}) }}"
+
+# - name: 02. SunOS - df_list 생성
+#   set_fact:
+#     df_list: "{{ df_list | default([]) + [{
+#       'filesystem': item.split()[0],
+#       'size': (item.split()[1] | int / 1024) | int,
+#       'used': (item.split()[2] | int / 1024) | int,
+#       'avail': (item.split()[3] | int / 1024) | int,
+#       'mounted': item.split()[5]
+#     }] }}"
+#   loop: "{{ disk_info.stdout_lines[1:] | remove_locale_warnings }}"
+
+- name: 02. SunOS - 디스크 사이즈 계산 (GB, 실제 장치만)
+  raw: "df -k | awk '$1 ~ /^\\/dev\\// {s+=$2} END {print int(s/1024/1024)}'"
+  register: disk_size
+
+- name: 02. SunOS - Disk 사이즈 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_size': disk_size.stdout_lines[-1]}) }}"
+- name: 디버깅
+  debug:
+    var: disk_size
+- name: 03. SunOS - Uptime
+  raw: "uptime"
+  register: uptime_info
+
+- name: 03. SunOS - Uptime (로케일 제거)
+  set_fact:
+    uptime_line: "{{ uptime_info.stdout_lines | remove_locale_warnings | first | default('') }}"
+
+- name: SunOS - Uptime 정제
+  set_fact:
+    uptime_trimmed: "{{ uptime_line | regex_search('^.*?up\\s+[^,]+,') | regex_replace(',$', '')| trim }}"
+
+- name: 03. SunOS - Uptime --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | default({}) | combine({'uptime': uptime_trimmed}) }}"
+
+- name: 04. SunOS - CPU 사용량
+  raw: "mpstat 1 2 | tail -1 | awk '{print 100 - $NF}'"
+  register: cpu_info
+
+- name: 04. SunOS - CPU 사용량 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu': cpu_info.stdout_lines | remove_locale_warnings | last }) }}"
+
+- name: 04. SunOS - CPU 코어
+  raw: "psrinfo | wc -l"
+  register: raw_core_count
+
+- name: 04. SunOS - CPU 코어 (로케일 제거 + 공백 제거)
+  set_fact:
+    core_count: "{{ raw_core_count.stdout_lines | remove_locale_warnings | first | default('') | trim }}"
+
+- name: 04. SunOS - CPU 코어 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu_cores': core_count | default('') }) }}"
+
+- name: 05. SunOS - Memory 사용률
+  raw: "vmstat 1 2 | tail -1 | awk '{print ($5/($4+$5))*100}'"
+  register: raw_memory_usage
+
+- name: 05. SunOS - Memory 사용률 (로케일 제거)
+  set_fact:
+    memory_usage: "{{ raw_memory_usage.stdout_lines | remove_locale_warnings | first | default('') }}"
+
+- name: 05. SunOS - Memory 사용률 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory': memory_usage | default('') }) }}"
+
+- name: 05. SunOS - Memory 총량 (MB)
+  raw: "prtconf | grep 'Memory size' | awk '{print $3}'"
+  register: raw_memory_size
+
+- name: 05. SunOS - Memory 총량 (로케일 제거)
+  set_fact:
+    memory_size: "{{ raw_memory_size.stdout_lines | remove_locale_warnings | first | default('') }}"
+
+- name: 05. SunOS - Memory 총량 (MB) --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory_size': memory_size | default('') }) }}"
+
+- name: 06. SunOS - User List 수집
+  raw: "awk -F: '$7 ~ /(sh|bash|ksh|pfksh)$/ {print $1}' /etc/passwd"
+  register: user_list
+
+- name: 06. SunOS - User List --> merged
+  set_fact:
+    merged_value: "{{ merged_value | combine({'user_list': user_list.stdout_lines | remove_locale_warnings }) }}"
+
+- name: 07. SunOS - Service List (svcs 존재 여부 확인)
+  raw: "command -v svcs"
+  register: svcs_check
+  ignore_errors: true
+
+- name: 07. SunOS - Service List 수집 (SMF 기반)
+  raw: |
+    svcs -a | awk 'NR > 1 { print $3 }' | while read svc; do
+      state=`svcs -o state -H "$svc" 2>/dev/null`
+      enabled=`svcs -l "$svc" 2>/dev/null | awk '/^enabled/ {print $NF}'`
+      printf '{"name": "%s", "source": "smf", "state": "%s", "status": "%s"}\n' "$svc" "$state" "$enabled"
+    done
+  register: smf_result
+  when: svcs_check.rc == 0
+
+- name: 07. SunOS - Service List 수집 (init.d 기반)
+  raw: |
+    ls /etc/init.d | while read svc; do
+      printf '{"name": "%s", "source": "initd", "state": "unknown"}\n' "$svc"
+    done
+  register: initd_result
+  when: svcs_check.rc != 0
+
+- name: 07. SunOS - Service List 수집 (변수 설정)
+  set_fact:
+    raw_service_list: "{{ smf_result if svcs_check.rc == 0 else initd_result }}"
+
+- name: 07. SunOS - Service List (리스트 필터 적용)
+  set_fact:
+    merged_value: >-
+      {{
+        merged_value | default({}) | combine({
+          'service_list': raw_service_list.stdout_lines | extract_json_lines
+        })
+      }}
+
+- name: 08. SunOS - Package List 수집
+  raw: |
+    pkginfo | awk '{ print $2 }' | while read pkg; do 
+      info=`pkginfo -l $pkg`
+      version=`echo "$info" | grep 'VERSION' | cut -d':' -f2 | cut -d',' -f1 | sed 's/^ *//'`
+      release=`echo "$info" | grep 'VERSION' | cut -d',' -f2 | cut -d'=' -f2`
+      arch=`echo "$info" | grep 'ARCH' | cut -d':' -f2 | sed 's/^ *//'`
+      echo "{\"name\": \"$pkg\", \"version\": \"$version\", \"release\": \"$release\", \"epoch\": null, \"arch\": \"$arch\", \"source\": \"pkginfo\"}"
+    done
+  register: raw_package_list
+
+- name: 08. SunOS - Package List 파싱
+  set_fact:
+    parsed_package_list: "{{ raw_package_list.stdout_lines | extract_json_lines }}"
+
+- name: 08. SunOS - Package List --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'package_list': parsed_package_list }) }}"
+
+
+# - name: 07. SunOS - Service List 수집 (버전별 분기)
+#   raw: |
+#     {% if svcs_check.rc == 0 %}
+#     svcs -a | awk 'NR > 1 { print $3 }' | while read svc; do
+#       state=`svcs -o state -H "$svc" 2>/dev/null`
+#       enabled=`svcs -l "$svc" 2>/dev/null | awk '/^enabled/ {print $NF}'`
+#       printf '{"name": "%s", "source": "smf", "state": "%s", "status": "%s"}\n' "$svc" "$state" "$enabled"
+#     done
+#     {% else %}
+#     ls /etc/init.d | while read svc; do
+#       printf '{"name": "%s", "source": "initd", "state": "unknown"}\n' "$svc"
+#     done
+#     {% endif %}
+#   register: raw_service_list

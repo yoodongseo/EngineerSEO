@@ -1,0 +1,15 @@
+---
+### raw 데이터 경로
+mdsics_file_path: /home/example_user/copy_chk/log
+
+### 엑셀 저장 경로
+mdsics_save_path: "/fap/report/{{ mdsics_report_name }}/{{ today.stdout }}/{{ fap.job_id }}/{{ inventory_hostname }}"
+
+### 엑셀명
+mdsics_name: "mdsics_backup_{{ today.stdout }}.xlsx"
+
+### 파이썬 엑셀 output 경로
+mdsics_output_path: "{{ mdsics_save_path }}/{{ mdsics_name }}"
+
+### 보고서 info
+mdsics_report_name: "unstoppable_private_internalreplication_daily"

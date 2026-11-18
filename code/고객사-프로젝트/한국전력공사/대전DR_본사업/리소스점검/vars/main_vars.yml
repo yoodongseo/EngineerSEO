@@ -1,0 +1,29 @@
+## 경로 관련 ##
+fap_lib: "/fap/ansible/projects/faplib/tasks"
+
+## 보고서 관련 ##
+data_type: "SERVER_INFO"
+data_key: "SERVER_INFO"
+save_type: "report"
+system: "Linux" ## 방식 수정 필요
+report_type: ""
+
+## OS별 vars ##
+cmd_vars_map: 
+  Linux: "../vars/cmd/linux.yml"
+  AIX: "../vars/cmd/aix.yml"
+  SunOS: "../vars/cmd/sunos.yml"
+  HP-UX: "../vars/cmd/hpux.yml"
+  Windows: "../vars/cmd/windows.yml"
+  # HPUX: "../vars/cmd/hpux.yml"
+  # Solaris: "../vars/cmd/solaris.yml"
+
+## OS별 tasks ##
+os_task_map: 
+  Linux: "../tasks/updated/chk_rsc_linux.yml"
+  AIX: "../tasks/updated/chk_rsc_aix.yml"
+  SunOS: "../tasks/updated/chk_rsc_sunos.yml"
+  HP-UX: "../tasks/updated/chk_rsc_hpux.yml"
+  Windows: "../tasks/updated/chk_rsc_windows.yml"
+  # HPUX: "../tasks/updated/chk_rsc_hpux.yml"
+  # Solaris: "../tasks/updated/chk_rsc_solaris.yml"

@@ -1,0 +1,43 @@
+---
+report_type: "preventive"
+data_key: company
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_id }}/{{ fap.host_ip }}"
+src_path: "{{ 호스트 소스 경로 | deafult(none) }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "network"
+model: "cisco"
+
+commands:
+############## Veritas ##############
+  - {
+      cmd_id: "0002",
+      filter_name: "VeritasRedundancyFilter",
+      name: "2. Path 이중화 상태 점검",
+      command: "bpdbjobs | more",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+
+############## IBM ##############
+  - {
+      cmd_id: "0002",
+      filter_name: "IBMRedundancyFilter",
+      name: "2. Path 이중화 상태 점검",
+      command: "lsrcconsistgrp attache_DR",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }

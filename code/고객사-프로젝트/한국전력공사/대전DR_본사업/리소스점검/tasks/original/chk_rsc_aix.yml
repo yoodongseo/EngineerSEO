@@ -1,0 +1,144 @@
+---
+- name: 01. AIX - OS 정보 수집 (백틱 버전)
+  raw: |
+    echo "os_name=`uname -s`"
+    echo "os_version=`oslevel -s`"
+    echo "kernel=`uname -s` `uname -r` `uname -v`"
+    echo "os_type=Unix"
+  register: os_info
+
+- name: 01. AIX - OS 정보 (로케일 경고 제거)
+  set_fact:
+    os_lines_clean: "{{ os_info.stdout_lines | remove_locale_warnings }}"
+
+- name: 01. AIX - OS 정보 --> merged_value
+  set_fact:
+    merged_value: >-
+      {{
+        merged_value | default({}) | combine({
+          'os_name': os_lines_clean[0].split('=')[1] | default(''),
+          'os_version': os_lines_clean[1].split('=')[1] | default(''),
+          'kernel': os_lines_clean[2].split('=')[1] | default(''),
+          'os_type': os_lines_clean[3].split('=')[1] | default('')
+        })
+      }}
+
+- name: 02. AIX - Disk 정보 수집
+  raw: "df -k"
+  register: disk_info
+
+- name: 02. AIX - df_list 생성 (필터 방식)
+  set_fact:
+    df_list: "{{ disk_info.stdout_lines | remove_locale_warnings | parse_df_lines('KB') }}"
+
+# - name: 02. AIX - df_list 생성
+#   set_fact:
+#     df_list: "{{ df_list | default([]) + [{
+#       'filesystem': item.split()[0],
+#       'size': (item.split()[1] | int / 1024) | int,
+#       'used': (item.split()[2] | int / 1024) | int,
+#       'avail': (item.split()[3] | int / 1024) | int,
+#       'mounted': item.split()[5]
+#     }] }}"
+#   loop: "{{ disk_info.stdout_lines[1:] }}"
+
+- name: 02. AIX - Disk 정보 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_list': df_list}) }}"
+
+- name: 02. AIX - Disk 사이즈 계산(GB)
+  raw: "df -kP | awk 'NR>1 {s+=$2} END {print int(s/1024/1024)}'"
+  register: disk_size
+
+- name: 02. AIX - Disk 사이즈 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_size': disk_size.stdout_lines[-1]}) }}"
+
+- name: 03. AIX - Uptime
+  raw: "who -b | awk '{print $4, $5, $6}'"
+  register: uptime_info
+
+- name: 03. AIX - Uptime --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'uptime': uptime_info.stdout_lines | remove_locale_warnings | first | default('') }) }}"
+
+- name: 04. AIX - CPU 사용률
+  raw: "vmstat | tail -1 | awk '{print 100 - $16}'"
+  register: cpu_info
+
+- name: 04. AIX - CPU 사용률 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu': cpu_info.stdout_lines | remove_locale_warnings | last }) }}"
+
+- name: 04. AIX - CPU 코어 수
+  raw: "lsdev -Cc processor | wc -l"
+  register: core_info
+
+- name: 04. AIX - CPU 코어 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu_cores': core_info.stdout_lines | remove_locale_warnings | first | trim | default('') }) }}"
+
+- name: 05. AIX - Memory 사용률
+  raw: "lsps -s | awk 'NR==2 {gsub(\"%\",\"\", $2); print $2}'"
+  register: mem_usage
+
+- name: 05. AIX - Memory 사용률 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory': mem_usage.stdout_lines | remove_locale_warnings | first | default('') }) }}"
+
+- name: 05. AIX - Memory 총량 (MB)
+  raw: "lsattr -El sys0 -a realmem | awk '{print int($2/1024)}'"
+  register: mem_total
+
+- name: 05. AIX - Memory 총량 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory_size': mem_total.stdout_lines | remove_locale_warnings | first | default('') }) }}"
+
+- name: 06. AIX - 사용자 리스트 수집
+  # raw: "cat /etc/passwd | awk -F: '$7 ~ /sh/ && length($1) >= 3 && length($1) <= 16 {print $1}'"
+  raw: "awk -F: '($7 ~ /(sh|bash|ksh|csh)$/ && length($1) >= 3 && length($1) <= 16) {print $1}' /etc/passwd"
+  register: user_list
+
+- name: 06. AIX - User List --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'user_list': user_list.stdout_lines | remove_locale_warnings }) }}"
+
+- name: 07. AIX - 서비스 목록 (init 기반)
+  raw: |
+    lssrc -a | awk 'NR>1 {printf("{\"name\": \"%s\", \"state\": \"%s\", \"source\": \"SRC\"}\n", $1, $NF)}'
+  register: raw_service_list
+
+- name: 07. AIX - Service List --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'service_list': raw_service_list.stdout_lines | extract_json_lines }) }}"
+
+# - name: 08. AIX - 패키지 목록
+#   # raw: |
+#   #  lslpp -Lcq | awk -F: '{print "{\"name\": \"" $1 "\", \"version\": \"" $2 "\", \"release\": \"" $3 "\", \"source\": \"lslpp\"}"}'
+#   raw: |
+#     lslpp -L | awk 'NR>2 {print "{\"name\": \"" $1 "\", \"version\": \"" $2 "\", \"release\": \"" $3 "\", \"source\": \"lslpp\"}"}'
+#   register: raw_package_list
+
+- name: 08. AIX - 패키지 목록 수집 (시스템 아키텍처 정보)
+  raw: uname -p
+  register: arch_info
+
+- name: 08. AIX - 패키지 목록 수집 (lslpp -L 기반)
+  raw: |
+    lslpp -L | awk 'NR > 2 && NF >= 2 {
+      name = $1
+      version = $2
+      release = "-"
+      epoch = "-"
+      source = "lslpp"
+      printf "{\"name\": \"%s\", \"version\": \"%s\", \"release\": \"%s\", \"epoch\": \"%s\", \"arch\": \"%s\", \"source\": \"%s\"}\n", name, version, release, epoch, "{{ arch_info.stdout.strip() }}", "lslpp"
+    }'
+  register: raw_package_list
+
+- name: 08. AIX - Package List 파싱
+  set_fact:
+    parsed_package_list: "{{ raw_package_list.stdout_lines | extract_json_lines }}"
+
+- name: 08. AIX - Package List --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'package_list': parsed_package_list }) }}"

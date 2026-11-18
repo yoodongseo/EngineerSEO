@@ -1,0 +1,163 @@
+---
+- name: 01. HP-UX - OS 정보 수집
+  raw: |
+    echo "os_name=$(uname -s)"
+    echo "os_version=$(uname -r)"
+    echo "kernel=$(dmesg | grep vmunix | awk '{print $3}')"
+    echo "os_type=$(uname -m)"
+  register: os_info
+
+- name: 01. HP-UX - OS 정보 (로케일 경고 제거)
+  set_fact:
+    os_lines_clean: "{{ os_info.stdout_lines | remove_locale_warnings }}"
+
+- name: 01. HP-UX - OS 정보 --> merged_value
+  set_fact:
+    merged_value: >-
+      {{
+        merged_value | default({}) | combine({
+          'os_name': os_lines_clean[0].split('=')[1] | default(''),
+          'os_version': os_lines_clean[1].split('=')[1] | default(''),
+          'kernel': os_lines_clean[2].split('=')[1] | default(''),
+          'os_type': os_lines_clean[3].split('=')[1] | default('')
+        })
+      }}
+
+- name: 02. HP-UX - Disk 정보
+  raw: "bdf"
+  register: disk_info
+
+- name: 02. HP-UX - Disk 정보 (필터 방식)
+  set_fact:
+    df_list: "{{ disk_info.stdout_lines | remove_locale_warnings | parse_df_lines('KB') }}"
+
+# - name: 02. HP-UX - df_list 생성
+#   set_fact:
+#     df_list: "{{ df_list | default([]) + [{
+#       'filesystem': item.split()[0],
+#       'size': item.split()[1],
+#       'used': item.split()[2],
+#       'avail': item.split()[3],
+#       'mounted': item.split()[-1]
+#     }] }}"
+#   loop: "{{ disk_info.stdout_lines[1:] }}"
+
+- name: 02. HP-UX - Disk 정보 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_list': df_list}) }}"
+
+- name: 02. HP-UX - Disk 사이즈 계산(GB)
+  raw: "bdf | awk 'NR>1 {s+=$2} END {print int(s/1024/1024)}'"
+  register: disk_size
+
+- name: 02. HP-UX - Disk 사이즈 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_size': disk_size.stdout_lines[-1]}) }}"
+
+- name: 03. HP-UX - Uptime
+  # raw: "who -b | awk '{print $3, $4}'"
+  raw: "uptime | awk '{print $1, $2, $3, $4}'"
+  register: uptime_info
+
+- name: 03. HP-UX - Uptime --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'uptime': uptime_info.stdout_lines | remove_locale_warnings | first | default('') }) }}"
+
+# - name: 04. HP-UX - CPU 사용률
+#   raw: "sar 1 2 | tail -1 | awk '{print 100 - $NF}'"
+#   register: cpu_info
+
+- name: 04. HP-UX - CPU 사용률 (sar → vmstat 대체)
+  raw: "vmstat 1 5 | tail -n 5 | awk '{us+=$16; sy+=$17; count++} END {print (us+sy)/count}'"
+  register: cpu_info
+
+- name: 04. HP-UX - CPU 사용률 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu': cpu_info.stdout_lines | remove_locale_warnings | last }) }}"
+
+- name: 04. HP-UX - CPU 코어 수
+  # raw: "ioscan -k -C processor | grep processor | wc -l"
+  raw: "ioscan -fnC processor | grep processor | wc -l"
+  register: core_info
+
+- name: 04. HP-UX - CPU 코어 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu_cores': core_info.stdout_lines | remove_locale_warnings | first | trim | default('') }) }}"
+
+- name: 05. HP-UX - Memory 사용률 (%)
+  raw: "swapinfo -tm | awk 'END {print 100 - $5}'"
+  register: mem_usage
+
+- name: 05. HP-UX - Memory 사용률 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory': mem_usage.stdout_lines | remove_locale_warnings | first | default('') }) }}"
+
+- name: 05. HP-UX - Memory 총량 (MB)
+  raw: "swapinfo -tm | awk 'END {print $2}'"
+  register: mem_total
+
+- name: 05. HP-UX - Memory 총량 --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory_size': mem_total.stdout_lines | remove_locale_warnings | first | default('') }) }}"
+
+- name: 06. HP-UX - 사용자 목록 수집
+  # raw: "cat /etc/passwd | awk -F: '$7 ~ /sh/ && length($1) >= 3 && length($1) <= 16 {print $1}'"
+  raw: "awk -F: '($7 ~ /(sh|bash|ksh|csh)$/ && length($1) >= 3 && length($1) <= 16) {print $1}' /etc/passwd"
+  register: user_list
+
+- name: 06. HP-UX - User List --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'user_list': user_list.stdout_lines | remove_locale_warnings }) }}"
+
+# - name: 07. HP-UX - 서비스 목록 수집 (rc script 기반)
+#   raw: |
+#     ls /sbin/init.d | while read svc; do
+#       echo "{\"name\": \"$svc\", \"source\": \"initd\", \"state\": \"unknown\"}"
+#     done
+#   register: raw_service_list
+
+- name: 07. HP-UX - 서비스 목록 수집 (init.d 기반)
+  raw: |
+    for dir in /sbin/init.d /etc/init.d; do
+      if [ -d "$dir" ]; then
+        for svc in "$dir"/*; do
+          svc_name=$(basename "$svc")
+          if ps -ef | grep -v grep | grep -w "$svc_name" > /dev/null; then
+            state="running"
+            running="true"
+          else
+            state="stopped"
+            running="false"
+          fi
+          echo "{\"name\": \"$svc_name\", \"running\": \"$running\", \"state\": \"$state\", \"source\": \"initd\"}"
+        done
+      fi
+    done
+  register: raw_service_list
+
+- name: 07. HP-UX - Service List --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'service_list': raw_service_list.stdout_lines | extract_json_lines }) }}"
+
+- name: 08. HP-UX - 패키지 목록 수집 (시스템 아키텍처 정보)
+  raw: uname -m
+  register: arch_info
+  
+- name: 08. HP-UX - 패키지 목록 수집 (JSON 출력)
+  raw: |
+    swlist -l product -a revision | awk 'NR > 4 && NF >= 2 {
+      name = $1
+      version = $2
+      release = "-"
+      epoch = "-"
+      printf "{\"name\": \"%s\", \"version\": \"%s\", \"release\": \"%s\", \"epoch\": \"%s\", \"arch\": \"%s\", \"source\": \"%s\"}\n", name, version, release, epoch, "{{ arch_info.stdout.strip() }}", "swlist"
+    }'
+  register: raw_package_list
+
+- name: 08. HP-UX - Package List 파싱
+  set_fact:
+    parsed_package_list: "{{ raw_package_list.stdout_lines | extract_json_lines }}"
+
+- name: 08. HP-UX - Package List --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'package_list': parsed_package_list }) }}"

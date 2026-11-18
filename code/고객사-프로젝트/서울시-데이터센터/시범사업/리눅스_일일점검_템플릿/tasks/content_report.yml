@@ -1,0 +1,15 @@
+---
+- name: content_value 변수 생성
+  set_fact:
+    content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+
+- name: 데이터 저장 - 작업 보고서
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: report
+    data_key: "{{ data_key }}"
+    template_id: "{{ fap['template_id'] }}"
+    job_id: "{{ fap['job_id'] }}"
+  delegate_to: localhost

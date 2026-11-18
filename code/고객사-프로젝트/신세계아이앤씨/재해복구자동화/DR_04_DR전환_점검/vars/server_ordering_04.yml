@@ -1,0 +1,26 @@
+---
+STANDBY_DB_IP: "{{ fap.host_vars.standby_db_ip }}"
+# STANDBY_DB_HOSTNAME: "{{ fap.host_vars.standby_db_hostname }}"    # 사용하지 않음
+# STANDBY_DB_IP: "192.0.2.10"
+# STANDBY_DB_HOSTNAME: "scsic-idctest3"
+
+# #################### 위 변수는 연계변수 사용으로 인해 주석처리 하였습니다.
+
+#### 백업 디렉토리
+BACKUP_DIR: "/fap/report/dr_log/{{ today }}/step4"
+
+#### Step4. DR DB 점검
+DR_DB_CHECK_FILE: "step4_{{ fap.host_name }}_dr_db_check.log"
+
+DR_DB_CEHCK_CMD:
+- ps -ef | grep pmon | grep -v grep | cat 
+- ps -ef | grep tns | grep -v grep | cat 
+- lsnrctl status
+
+ps_status_sh: |
+    sqlplus / as sysdba << EOF
+    select to_char(sysdate, 'YYYY/MM/DD HH24:MI:SS') from dual;
+    exit
+
+    EOF
+

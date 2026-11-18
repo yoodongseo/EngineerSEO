@@ -1,0 +1,16 @@
+---
+- name: 03. UNIX - Disk Size
+  command: "iostat -En"
+  register: disk_size
+
+- name: 03. Unix - Disk Size
+  set_fact:
+    disk_sizes: "{{ disk_size.stdout_lines | regex_findall('Size: ([0-9.]+)GB') }}"
+
+- name: Calculate Total Disk Size in MB
+  set_fact:
+    total_disk_size: "{{ disk_sizes | map('regex_replace', '[^0-9.]', '') | map('float') | sum * 1024 | int }}"
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_size': total_disk_size}) }}"

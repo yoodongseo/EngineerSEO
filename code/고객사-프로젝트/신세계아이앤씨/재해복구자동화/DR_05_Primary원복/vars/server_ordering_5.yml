@@ -1,0 +1,61 @@
+---
+# #### Standby DB 정보 입력
+# STANDBY_DB_IP: 192.0.2.10
+# STANDBY_DB_HOSTNAME: scsic-idctest3
+######시스템 연계변수 선언으로 인한 주석처리
+STANDBY_DB_IP: "{{ fap.host_vars.standby_db_ip }}"
+# STANDBY_DB_HOSTNAME: "{{ fap.host_vars.standby_db_hostname }}"  # 사용하지 않음
+
+### oracle sid loop 변수 ###
+ORACLE:
+- oracle_user: "{{ fap.host_vars.oracle_user_1 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_1 | default(none) }}"
+- oracle_user: "{{ fap.host_vars.oracle_user_2 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_2 | default(none) }}"
+- oracle_user: "{{ fap.host_vars.oracle_user_3 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_3 | default(none) }}"
+
+LISTENER_ORA: listener.ora
+LISTENER_ORA_ORG: listener.ora_org
+LISTENER_ORA_DR: listener.ora_dr
+
+#### 백업 디렉토리
+BACKUP_DIR: "/fap/report/dr_log/{{ today }}/step5"
+
+#### Step5. DR DB 복원
+DR_DB_RECOVERY_FILE: "step5_{{ fap.host_name }}_db_db_recovery.log"
+
+DR_DB_IP_RECOVERY_LIST:
+- eth: "{{ fap.host_vars.eth0 | default(none) }}"
+  ip: "{{ fap.host_vars.ip0 | default(none) }}"
+- eth: "{{ fap.host_vars.eth1 | default(none) }}"
+  ip: "{{ fap.host_vars.ip1 | default(none) }}"
+- eth: "{{ fap.host_vars.eth2 | default(none) }}"
+  ip: "{{ fap.host_vars.ip2 | default(none) }}"
+- eth: "{{ fap.host_vars.eth3 | default(none) }}"
+  ip: "{{ fap.host_vars.ip3 | default(none) }}"
+- eth: "{{ fap.host_vars.eth4 | default(none) }}"
+  ip: "{{ fap.host_vars.ip4 | default(none) }}"
+- eth: "{{ fap.host_vars.eth5 | default(none) }}"
+  ip: "{{ fap.host_vars.ip5 | default(none) }}"
+
+read_only_sh: |
+    lsnrctl status
+    export ORACLE_SID="{{ item.oracle_sid }}"
+    sqlplus / as sysdba << EOF
+    show parameter local_listener;
+    alter system set local_listener = '(ADDRESS=(PROTOCOL=TCP)(HOST={{ fap.host_ip }})(PORT=1521))';
+    show parameter local_listener;
+    shutdown immediate;
+    startup mount;
+    alter database convert to physical standby;
+    shutdown immediate;
+    exit
+
+    EOF
+
+tnslsnr_kill: |
+  ps -ef | grep 'tnslsnr LISTENER' | grep -v 'grep' | awk '{ print $2 }' | while read pid; do
+    echo "Killing process $pid"
+    kill -9 $pid
+  done

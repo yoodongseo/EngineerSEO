@@ -1,0 +1,26 @@
+---
+- name: ex splex report
+  hosts: all
+  strategy: free
+  gather_facts: false
+  
+  tasks:
+    - name: vars include
+      include_vars: ../vars/splex_report_vars.yml
+
+    - name: 일시 생성
+      command: "date +'%Y%m%d'"
+      register: today
+      delegate_to: localhost
+
+    - name: Report file get(SPLEX)
+      raw: cat "{{ splex_file_path }}/SPLEX_Status_{{ today.stdout }}_0505.log"
+      register: splex_report_data
+      when: splex_file_path | regex_replace('(?i)splex')
+
+    - name: splex tasks
+      include_tasks: ../tasks/ex_splex_report.yml
+      when: splex_file_path | regex_replace('(?i)splex')
+
+
+    

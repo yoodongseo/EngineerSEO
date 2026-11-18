@@ -1,0 +1,23 @@
+---
+- name: 날짜 정보 수집
+  shell: date +%Y%m%d
+  register: result_today
+
+- name: "merged value 초기화"
+  set_fact:
+    merged_value: []
+  delegate_to: localhost
+
+- name: CHECK 디렉토리 생성
+  file: 
+    path: /check
+    state: directory
+
+- name: 스크립트 배포 및 실행 작업 호출
+  include_tasks: ../tasks/sysinfo_aix_tasks.yml
+  loop: "{{ AIX_sysinfo }}"
+
+- name: CHECK 디렉토리 삭제
+  file: 
+    path: /check
+    state: absent

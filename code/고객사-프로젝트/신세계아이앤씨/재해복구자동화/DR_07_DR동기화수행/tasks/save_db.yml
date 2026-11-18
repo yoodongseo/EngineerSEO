@@ -1,0 +1,29 @@
+---
+- name: Make merged value --- true
+  set_fact: 
+    merged_value: "{{ [{ \
+    'host': inventory_hostname, \
+    'host_name': inventory_hostname, \
+    'is_success': true, \
+    'file_path': '/fap/report/dr_log/{{ today }}', \
+    'system': system, \
+    'report_type': report_type \
+    }] }}"
+  delegate_to: localhost 
+
+- name: Make content value
+  set_fact:
+    content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+  delegate_to: localhost
+
+- name: Save to DB
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: report
+    data_key: "{{ data_key }}"
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  delegate_to: localhost
+  when: content_value is defined

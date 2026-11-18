@@ -1,0 +1,13 @@
+---
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: 'Window'
+report_type: 'Window 파일 배포'
+data_key: WIN_COPY_FILE
+
+# 수행의뢰 변수
+file_name: "{{ fap['host_vars']['file_name'] }}"
+file_dest: "{{ fap['host_vars']['file_dest'] }}"
+#file_owner: "{{ fap['host_vars']['file_owner'] }}"
+#file_group: "{{ fap['host_vars']['file_group'] }}"
+#file_mode: "{{ fap['host_vars']['file_mode'] }}"
+

@@ -1,0 +1,29 @@
+---
+### 연계변수
+STANDBY_DB_IP: "{{ fap.host_vars.standby_db_ip }}"
+# STANDBY_DB_HOSTNAME: "{{ fap.host_vars.standby_db_hostname }}" # 사용하지 않음
+
+#### 백업 디렉토리
+BACKUP_DIR: "/fap/report/dr_log/{{ today }}/step1"
+
+#### Step1. Standby DB 동기화 중지 백업 파일 정보
+SHOW_PARAMETER_NAME_FILE: "step1_{{ fap.host_name }}_sync_stop.log"
+
+### oracle sid loop 변수 ###
+ORACLE:
+- oracle_user: "{{ fap.host_vars.oracle_user_1 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_1 | default(none) }}"
+- oracle_user: "{{ fap.host_vars.oracle_user_2 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_2 | default(none) }}"
+- oracle_user: "{{ fap.host_vars.oracle_user_3 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_3 | default(none) }}"
+
+### 동기화 중지 스크립트
+sync_stop_sh: |
+    export ORACLE_SID="{{ item.oracle_sid }}"
+    sqlplus / as sysdba << EOF
+    show parameter name
+    ALTER DATABASE RECOVER MANAGED STANDBY DATABASE CANCEL;
+    exit
+
+    EOF

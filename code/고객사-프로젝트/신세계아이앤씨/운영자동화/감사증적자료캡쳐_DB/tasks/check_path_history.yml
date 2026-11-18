@@ -1,0 +1,88 @@
+---
+- name: set_fact ---> DB_cli(; 문자가 없는 라인은 set 명령어, 있는 라인은 조회 명령어)
+  set_fact: 
+    DB_cli: |
+      col ACTION_TIME for a30
+      col ACTION for a10
+      col VERSION for a20
+      col COMMENTS for a40
+      col BUNDLE_SERIES for a10
+      set lines 500
+      !hostname
+      select * from sys.registry\$history;
+      select sysdate from dual;
+
+- name: 패치 이력 확인
+  shell: |
+    sqlplus / as sysdba << EOF
+    {{ DB_cli }}
+    exit
+    EOF
+  become: yes
+  become_method: su
+  become_flags: "--login"
+  become_user: oracle
+  register: register_check_account
+  
+- fail:
+    msg: "패치 이력 확인 조회 실패"
+  when: register_check_account.failed|default(true) == true
+  ignore_errors: false
+# - debug: var=register_check_account.stdout_lines[8:]
+
+- name: 불필요한 결과 데이터의 제거를 위한 변수 설정
+  set_fact:
+    sql_line_num: "{{ lookup('ansible.utils.index_of', register_check_account.stdout_lines, 'regex', '^SQL>') | first   }}"
+    check_account_result: []
+    DB_cli: "{{ DB_cli.split('\n') }}"
+
+- name: DB set 명령어 라인의 인덱스 값 추출
+  set_fact:
+    set_line_num: "{{ lookup('ansible.utils.index_of', DB_cli, 'regex', '[^;]$') }}"
+
+- name: set_fact ---> check_account_result
+  set_fact:
+    check_account_result: "{{ check_account_result|default([]) + [ 'SQL> ' + item ] }}"
+  loop: "{{ DB_cli[:set_line_num|length] }}"
+
+# - debug: var=check_account_result
+
+- name: set_fact ---> new_data 
+  set_fact:
+    new_data: "{{ (check_account_result + register_check_account.stdout_lines[sql_line_num|int:-3]) | join('\n') | replace('SQL> '*set_line_num|length, '') }}"
+    
+- name: string value를 리스트로 변경
+  set_fact:
+    new_data: "{{ new_data.split('\n') }}"
+
+- name: SQL>, ; 문자를 포함하는 인덱스값 추출
+  set_fact:
+    sql_line_num: "{{ lookup('ansible.utils.index_of', new_data, 'regex', '^SQL>\\s{0,}$') }}"
+    db_cli_line_num: "{{ lookup('ansible.utils.index_of', DB_cli, 'regex', ';$') }}"
+
+- name: SQL> 라인에 ; 문자를 포함하는 문자열 데이터 추가
+  set_fact:
+    new_data: "{{ new_data[:item.0|int] + [ 'SQL> ' + DB_cli[item.1|int] ] + new_data[item.0|int+1:] }}"
+  loop: "{{ sql_line_num | zip(db_cli_line_num) | list }}"
+
+- name: 추출한 new_data를 string value으로 변환
+  set_fact:
+    new_data: "{{ new_data | join('\n')}}"
+    # new_data: "{{ new_data | join('\n') | replace('\t', ' '*14 )}}"
+# - debug: var=new_data
+
+- copy:
+    content: "{{ new_data }}"
+    dest: "/tmp/{{ inventory_hostname }}.log"
+  delegate_to: localhost 
+
+- name: make result value
+  set_fact:
+    result_value: "{{ result_value|default({})|combine({'file': 'check_path_history', 'cli': 'check_path_history', 'output': new_data|default('False') }) }}"
+  
+- name: make merged_cmd value
+  set_fact:
+    merged_cmd: "{{ merged_cmd|default([]) + [result_value] }}"
+  when: result_value is defined
+
+# - debug: var=merged_cmd 

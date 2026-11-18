@@ -1,0 +1,35 @@
+---
+# - name: Windows 명령어 실행(루프 방식)
+#   win_shell: "{{ item.value.command }}"
+#   register: result
+#   loop: "{{ windows_commands | dict2items }}"
+#   loop_control:
+#     label: "{{ item.key }}"
+
+# - name: merged_value 생성
+#   set_fact:
+#     merged_value: >-
+#       {{
+#         (merged_value | default({}))
+#         | combine(item.stdout | parse_result(os_type, item.item.key))
+#       }}
+#   loop: "{{ result.results }}"
+#   loop_control:
+#     label: "{{ item.item.key }}"
+
+- name: Windows 명령어 실행(스크립트 방식)
+  win_shell: "{{ windows_combined_command }}"
+  register: combined_result
+
+# - name: 디버깅
+#   debug:
+#     var: combined_result
+
+- name: merged_value 
+  set_fact:
+    merged_value: >-
+      {{
+        (combined_result.stdout_lines
+        | parse_sectioned_output
+        | parse_combined_result('windows'))
+      }}

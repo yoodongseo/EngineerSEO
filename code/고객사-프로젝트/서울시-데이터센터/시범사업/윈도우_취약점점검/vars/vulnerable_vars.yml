@@ -1,0 +1,94 @@
+---
+### vars 파일
+report: "securityvulnerability"
+### merged_value --- List 선언
+merged_value: []
+system: windows
+file_path: "/fap/report/mcst_vulnercheck/{{ today }}/{{ fap.job_id }}"
+
+Windows:
+  - cmd_name: "GUEST 계정 상태"
+    cmd_command: 'GUEST'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. GUEST 계정 상태
+    raw: "net user guest"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "활성 여부 확인"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_windows.txt"
+    cmd_id: 1
+    id: 0001
+
+  - cmd_name: "불필요한 계정 제거"
+    cmd_command: 'net user'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 불필요한 계정 제거
+    raw: "net user"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "불필요한 계정이 존재하는 경우"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_windows.txt"
+    cmd_id: 2
+    id: 0002
+
+  - cmd_name: "계정 잠금 임계값 설정"
+    cmd_command: "net accounts"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. 계정 잠금 임계값 설정
+    raw: "net accounts"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "계정 잠금 임계값 5 이하 확인"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_windows.txt"
+    cmd_id: 3
+    id: 0003
+
+  - cmd_name: "패스워드 최대 사용 기간 설정"
+    cmd_command: "net accounts"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. 패스워드 최대 사용 기간 설정
+    raw: "net accounts | findstr 'Maximum password'"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "90일 주기인지 확인"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_windows.txt"
+    cmd_id: 4
+    id: 0004
+
+  - cmd_name: "관리자 그룹에 최소한의 사용자 포함"
+    cmd_command: "net localgroup administrators"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. 관리자 그룹에 최소한의 사용자 포함
+    raw: "net localgroup administrators"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "그룹의 구성원에 불필요한 관리자 계정이 존재하는 경우"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_windows.txt"
+    cmd_id: 5
+    id: 0005
+

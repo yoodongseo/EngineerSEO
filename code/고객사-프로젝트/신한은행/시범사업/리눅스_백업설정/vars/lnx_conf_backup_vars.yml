@@ -1,0 +1,54 @@
+system: Linux
+backup_cli:
+  - id: '0001'
+    name: '1. ip addr'
+    command: 'ip addr'
+    compare: true
+  - id: '0002'
+    name: '2. df -Th'
+    command: 'df -Th'
+    compare: true
+  - id: '0003'
+    name: '3. /etc/passwd'
+    command: 'cat /etc/passwd'
+    compare: true
+  - id: '0004'
+    name: '4. /etc/group'
+    command: 'cat /etc/group'
+    compare: true
+  - id: '0005'
+    name: '5. /etc/shadow'
+    command: 'cat /etc/shadow'
+    compare: true
+  - id: '0006'
+    name: '6. /etc/gshadow'
+    command: 'cat /etc/gshadow'
+    compare: true
+  - id: '0007'
+    name: '7. /etc/fstab'
+    command: 'cat /etc/fstab'
+    compare: true
+  - id: '0008'
+    name: '8. /etc/hostname'
+    command: 'cat /etc/hostname'
+    compare: true
+  - id: '0009'
+    name: '9. /etc/hosts'
+    command: 'cat /etc/hosts'
+    compare: true
+  - id: '0010'
+    name: '10. /etc/resolv.conf'
+    command: 'cat /etc/resolv.conf'
+    compare: true
+  - id: '0011'
+    name: '11. /etc/sysctl.conf'
+    command: 'cat /etc/sysctl.conf'
+    compare: true
+  - id: '0012'
+    name: '12. /etc/ssh/sshd_config'
+    command: 'cat /etc/ssh/sshd_config'
+    compare: true
+  - id: '0013'
+    name: '13. system uptime'
+    command: 'uptime'
+    compare: true

@@ -1,0 +1,20 @@
+---
+- name: set_fact --- result_value 변수에 작업 성공 정보 저장
+  set_fact:
+    result_value: "{{ result_value | default({}) | combine({'host': inventory_hostname, \
+    'id': '0001', \
+    'name': '1_sysinfo', \
+    'command': 'sysinfo', \
+    'result': result|default(''), \
+    'message': None, \
+    'is_success': True, \
+    'os': os|default(None), \
+    'compare': compare|default(None) \
+    }) }}"
+  delegate_to: localhost
+
+- name: set_fact --- merged_value 변수에 작업 실패 정보 저장
+  set_fact:
+    merged_value: "{{ merged_value | default([]) + [result_value] }}"
+    fail_flag: False
+  delegate_to: localhost

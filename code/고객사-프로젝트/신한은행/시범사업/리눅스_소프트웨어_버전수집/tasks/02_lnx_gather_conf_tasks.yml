@@ -1,0 +1,20 @@
+---
+- block:
+  - name: 백업 명령어 수행 - {{ item['name'] }}
+    shell: "{{ item['command'] }}"
+    register: result_shell
+    ignore_errors: True
+
+  - name: Save DATA Merged 생성
+    set_fact:
+      merged_value: "{{ merged_value | default([]) + [{
+        'host': fap['host_ip'],
+        'host_name': fap['host_ip'],
+        'name': item['name'],
+        'command': 'command',
+        'result': result_shell['stdout'] | default(none),
+        'is_success': True,
+        'is_pass': True,
+        'system': system,
+        'report_type': report_type
+          }] }}"

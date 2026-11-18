@@ -1,0 +1,27 @@
+report_type: "server"
+system: "linux"
+
+backup_commands:
+  - cmd_id: SYS001
+    name: Root Hostname Check
+    command: "*hostname"
+    inspection_criteria: "hostname exists"
+    timeout: 10
+
+  - cmd_id: SYS002
+    name: Root PWD Check
+    command: "*pwd"
+    inspection_criteria: "pwd collected"
+    timeout: 10
+
+  - cmd_id: ORA000
+    name: Switch Oracle User
+    command: "su - oracle"
+    is_save: true
+    timeout: 10
+
+  - cmd_id: ORA001
+    name: List Oracle User Home
+    command: "*ls -al"
+    inspection_criteria: "oracle ls output collected"
+    timeout: 10

@@ -1,0 +1,35 @@
+---
+- name: 결과 파일 DB화 작업
+  set_fact:
+    result_value: "{{ result_value | default([]) + [{
+      'host': inventory_hostname,
+      'host_name': fap.host_name,
+      'is_success': true,
+      'file_path': output_path,
+      'report_type': report_name,
+      'system':
+        - archive_file_path | search('archive') != -1 | ternary(archive_report_name, '')
+        - switch_file_path | search('switch') != -1 | ternary(switch_report_name, '')
+      }] }}"
+    delegate_to: localhost
+
+- name: Debug DB화
+  debug:
+    var: result_value
+
+- name: Make content value
+  set_fact:
+    content_value: "{{ content_value | default({}) | combine({'data_list': result_value}) }}"
+  delegate_to: localhost
+- debug: var=content_value
+
+- name: Save DB
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: report
+    data_key: ex_report
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  delegate_to: localhost

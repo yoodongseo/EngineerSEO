@@ -1,0 +1,35 @@
+---
+- name: Virtual Server 추가 > "{{vserver_name}}"
+  ansible.builtin.uri:
+    url: "{{ host }}/{{ rest_api_info.default_api }}/virtual"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: POST
+    body_format: json
+    body:
+      name: "{{ vserver_name }}"      
+      description: "{{reqgslbinfo.desc}}"
+      source: "{{reqgslbinfo.source}}"
+      destination: "/Common/{{node_name}}"
+      enabled: "true"
+      ipProtocol: "{{reqgslbinfo.ipProtocol}}"
+      pool: "/Common/{{pool_name}}"
+      profilesReference:
+        items:
+          - name: "{{reqgslbinfo.profile}}"                  
+      vlansEnabled: "true"
+      sourceAddressTranslation:
+        type: "automap"
+      translateAddress: "enabled"
+      translatePort: "enabled"
+    validate_certs: false
+  register: AddVServer
+  delegate_to: localhost
+
+- name: Virtual Server 추가 결과 추출
+  set_fact:
+    data: "{{ AddVServer.json|default([]) }}"
+    err_msg: "{{ AddVServer.json|default({}) if AddVServer.status|int != 200 else {} }}"
+    err_flag: "{{ false if AddVServer.status|default(0)|int == 200 else true }}"
+    workdone_vserver: "{{ false if AddVServer.status|default(0)|int != 200 else true }}"
+    workdone_server: "{{ false if AddVServer.status|default(0)|int != 200 else true }}"

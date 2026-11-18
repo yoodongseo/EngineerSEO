@@ -1,0 +1,30 @@
+---
+merged_value: []
+report_type: "dr_report"
+file_dir: "/fap/report/dr_live/step1/{{ fap.job_id }}/{{ fap.host_name }}_{{ inventory_hostname }}"
+file_path: "{{ file_dir }}/jeus_down_{{ today }}.txt"
+system: "Linux"
+
+Linux:
+  - cmd_name: "wsboot 검증"
+    cmd_command: 'wsboot'
+    value: "str"
+    com_value: "yes"
+    message: |
+        1. "wsboot 명령어 검증"
+    raw: ""
+    multi_raw:
+      - 'cat /etc/redhat-release'
+      - 'su - webadmin'
+      - 'wsboot'
+    #   - 'which wsboot' ## 실작업시 수정
+      - 'ps -ef | grep webtob | grep -v grep | wc -l'
+    arr_num: 0
+    grep: ""
+    time: 10
+    criteria: "yes 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_wsboot_Linux.txt"
+    cmd_id: 1
+    id: 0001
+    path: "{{ file_path }}/wsboot_Linux{{ today }}.txt"
+    prompt: "$,#,webadmin]"

@@ -1,0 +1,13 @@
+---
+# SAVE VARS
+system: Linux
+report_type: "Linux 커널 패치 롤백"
+data_key: "LNX_KERNEL_PATCH_ROLLBACK"
+
+reboot_flag: "{{ fap['host_vars']['reboot_flag'] | default('Y') }}"
+
+# Play Jobs
+rollback_timeout: 900
+rollback_reboot:
+  reboot_timeout: 600
+  boot_time_command: uptime

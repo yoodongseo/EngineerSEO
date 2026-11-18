@@ -1,0 +1,29 @@
+---
+- name: "명령어 수행_python {{ item.message }}" ### Linux
+  command: /usr/bin/python3 ../vars/multi_raw.py
+  environment:
+    hostname: "{{ fap.host_ip }}"
+    port: "{{ ansible_port }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    root_passwd: "{{ ansible_become_password | default('') }}"
+    raw: "{{ item.raw }}"
+    multi_raw: "{{ item.multi_raw | to_json }}"
+    vendor: "{{ vendor }}"
+    time: "{{ item.time }}"
+  register: total_item
+  delegate_to: localhost
+  ignore_errors: True
+
+- name: 저장 경로 생성
+  file:
+    path: "{{ local_dir }}"
+    state: directory
+  delegate_to: localhost
+
+- name: 파일 생성
+  copy:
+    content: "{{ total_item['stdout'] }}"
+    dest: "{{ local_dir }}/{{ item['fap_report_file'] }}"
+  delegate_to: localhost
+

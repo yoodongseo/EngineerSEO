@@ -1,0 +1,39 @@
+---
+- name: Pool 추가 -> {{pool_name}}
+  ansible.builtin.uri:
+    url: "{{ host }}/{{ rest_api_info.default_api }}/pool"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: POST
+    body_format: json
+    body:
+      name: "{{ pool_name }}"
+      allowNat: "yes"
+      allowSnat: "yes"
+      description: "{{reqgslbinfo.desc}}"
+      loadBalancingMode: "{{reqgslbinfo.loadBalancingMode}}"
+      membersReference":         
+        isSubcollection: true
+        items: 
+          - {
+            address: "{{reqgslbinfo.ip}}",
+            monitor": "default",
+            name": "{{reqgslbinfo.ip}}",
+            ratio": "{{reqgslbinfo.member_ratio}}"
+          }
+      ttl: "{{reqgslbinfo.ttl}}"
+      monitor: "{{reqgslbinfo.monitor}}"
+      serviceDownAction:  "{{reqgslbinfo.serviceDownAction}}"
+      profile: "{{reqgslbinfo.profile}}"
+    validate_certs: false
+  register: AddPool
+  delegate_to: localhost
+  
+- debug: var=AddPool
+
+- name: Pool 추가 결과 추출
+  set_fact:
+    data: "{{ AddPool.json|default([]) }}"
+    err_msg: "{{ AddPool.json|default({}) if AddPool.status|int != 200 else {} }}"
+    err_flag: "{{ false if AddPool.status|default(0)|int == 200 else true }}"
+    workdone_pool: "{{ false if AddPool.status|default(0)|int != 200 else true }}"

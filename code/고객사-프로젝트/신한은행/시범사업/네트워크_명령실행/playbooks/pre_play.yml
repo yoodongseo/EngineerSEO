@@ -1,0 +1,55 @@
+---
+- name: 예방점검
+  hosts: all
+  strategy: free
+  gather_facts: false 
+  ignore_errors: true
+  ignore_unreachable: true
+  tasks:
+    - block:
+      - name: 월 추출
+        raw: |
+          /usr/bin/python << EOF
+          from datetime import datetime
+          print(datetime.now().strftime('%b'))
+          EOF
+        register: month
+        delegate_to: localhost
+      
+    ### vars 파일 호출(점검 명령어 및 python filter 기입 변수 수집)
+      - name: vars 호출
+        include_vars: ../vars/pre_vars.yml
+
+    ### 점검 보고서 데이터 생성 / python filter을 통한 항목 별 merged_value 생성
+    ### 대상 장비 별 List형 변수 호출 및 반복(인벤토리 변수에 vendor 추가)
+      - name: 작업
+        include_tasks: ../tasks/pre_task.yml
+        loop: >-
+          {{ axgate if vendor == 'axgate'
+          else cisco if vendor == 'cisco' 
+          else nexg if vendor == 'nexg'
+          else juniper if vendor == 'juniper'
+          else nxos if vendor == 'nxos' }}
+        no_log: true
+        
+      always:
+        ### 생성된 merged_value 데이터를 content_value로 취합
+        - name: Make content value
+          set_fact:
+            content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+          delegate_to: localhost
+          when: merged_value is defined
+        
+        ### fap모듈 --- content_value -> DB 삽입
+        - name: Save to DB
+          fap.common.save_data:
+            content: "{{ content_value }}"
+            protocol: http
+            hostname: "{{ inventory_hostname }}"
+            # data_type: cli_data
+            data_type: backup
+            data_key: network
+            template_id: "{{ fap.template_id | default(omit) }}"
+            job_id: "{{ fap.job_id | default(omit) }}"
+          delegate_to: localhost
+          when: content_value is defined

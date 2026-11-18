@@ -1,0 +1,33 @@
+---
+- block:
+    - name: 이미 설치된 경로 존재여부 확인
+      stat:
+        path: "{{ stat_path }}"
+      register: result_stat_path
+
+  always:
+    - name: Save DATA Merged 생성 -- lnx_con_tasks
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+            'host': fap['host_ip'],
+            'host_name': fap['host_ip'],
+            'name': '2. 사전 설치 여부 확인',
+            'command': 'hostname',
+            'result': '설치되어 있음' if result_stat_path['stat']['exists'] | default(False) else '설치되어 있지 않음',
+            'is_success': (
+              (req_type == 'install') or
+              (req_type == 'uninstall') or
+              (req_type == 'start' and result_stat_path['stat']['exists']) or
+              (req_type == 'stop') or
+              (req_type == 'restart' and result_stat_path['stat']['exists'])
+            ) | default(False),
+            'is_pass': (
+              (req_type == 'install') or
+              (req_type == 'uninstall') or
+              (req_type == 'start' and result_stat_path['stat']['exists']) or
+              (req_type == 'stop') or
+              (req_type == 'restart' and result_stat_path['stat']['exists'])
+            ) | default(False),
+            'system': system,
+            'report_type': report_type
+          }] }}"

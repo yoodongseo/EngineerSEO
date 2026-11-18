@@ -1,0 +1,41 @@
+---
+# report_type: 'replicationstatus'
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "storage"
+model: "netapp"
+data5: "에방점검_HPE"
+
+commands:
+  - cmd_id: "0001"
+    filter_key: "HpeCopystatFilter"
+    name: "01. 리모트 복제 상태 점검"
+    command: "showrcopy"
+    os: "{{ model }}"
+    inspection_criteria:
+      link_status: "up"
+      sync_status: "synced"
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+  - {
+      cmd_id: "0002",
+      filter_key: "LogFilter",
+      name: "02. 로그 점검",
+      command: "showeventlog -min 10",
+      os: "{{ model }}",
+      inspection_criteria: "fatal, fatal",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}",
+    }

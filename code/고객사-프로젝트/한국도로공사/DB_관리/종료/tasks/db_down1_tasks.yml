@@ -1,0 +1,136 @@
+---
+- name: HA 전환
+  shell: "mcgroup -move {{ item.name }}_RG -n ACLEDB2"
+  register: mccs_failover
+  loop: "{{ oracle_sid }}"
+  loop_control:
+    label: "{{ item.name }}"
+    pause: 3
+
+- name: HA 전환 결과
+  debug:
+    msg: "{{ item.stdout }}"
+  loop: "{{ mccs_failover.results}}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: "HA 전환 결과 로그 저장"
+  blockinfile:
+    path: "{{ file_path }}"
+    block: |
+      {{ item.stdout }} 
+    create: true
+    marker: "--- HA 전환 결과 --- {mark}"
+    marker_begin: "{{ item.item.name }}"
+    marker_end: "{{ item.item.name }} \n"
+  delegate_to: localhost
+  loop: "{{ mccs_failover.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: mcgroup ONLINE 확인
+  shell: "mcgroup -list | grep {{ item.name }}_RG | grep 'ACLEDB2 ONLINE'"
+  register: mcgroup_online
+  until: "'ACLEDB2 ONLINE' in mcgroup_online.stdout"
+  retries: 5
+  delay: 3
+  loop: "{{ oracle_sid }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: mcgroup ONLINE 결과 확인
+  debug:
+    msg: "{{ item.stdout }}"
+  loop: "{{ mcgroup_online.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: "mcgroup ONLINE 결과 확인 로그 저장"
+  blockinfile:
+    path: "{{ file_path }}"
+    block: |
+      {{ item.stdout }} 
+    create: true
+    marker: "--- mcgroup ONLINE 결과 --- {mark}"
+    marker_begin: "{{ item.item.name }}"
+    marker_end: "{{ item.item.name }} \n"
+  delegate_to: localhost
+  loop: "{{ mcgroup_online.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Repli-X Status 확인
+  shell: bsradm status | egrep -w "{{ item.bsradm }}" -B 1 -A 4 | grep "ACLEDB2 role"
+  register: bsradm_result
+  until: "'Secondary' not in bsradm_result.stdout"
+  retries: 5
+  delay: 3
+  loop: "{{ oracle_sid }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Repli-X Status 결과 확인
+  debug:
+    msg: "{{ item.stdout }}"
+  loop: "{{ bsradm_result.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: "Repli-X Status 결과 확인 로그 저장"
+  blockinfile:
+    path: "{{ file_path }}"
+    block: |
+      {{ item.stdout }} 
+    create: true
+    marker: "--- Repli-X Status 결과 --- {mark}"
+    marker_begin: "{{ item.item.name }}"
+    marker_end: "{{ item.item.name }} \n"
+  delegate_to: localhost
+  loop: "{{ bsradm_result.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: 볼륨 확인
+  shell: "df -h | grep -i {{ item.name }} | wc -l"
+  register: df_result
+  until: df_result.stdout.strip() == '0'
+  retries: 5          # 최대 시도 횟수
+  delay: 3           # 각 시도 사이의 대기 시간 (초)
+  loop: "{{ oracle_sid }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: 전체 볼륨 확인
+  shell: "df -h"
+  register: total_df
+
+- name: 전체 볼륨 확인 Debug
+  debug:
+    var: total_df.stdout
+
+- name: "전체 볼륨 확인 Debug 로그 저장"
+  blockinfile:
+    path: "{{ file_path }}"
+    block: |
+      {{ total_df.stdout }}
+    create: true
+    marker: "--- 전체 볼륨 확인 --- {mark}"
+    # marker_begin: "{{ item.name }}"
+    # marker_end: "{{ item.name }} \n"
+  delegate_to: localhost
+
+- name: result_value set_fact
+  set_fact:
+    result_value: "{{ result_value | default({}) | combine({
+    'host': inventory_hostname,
+    'host_name': fap.host_ip,
+    'is_success': true,
+    'is_pass': true,
+    'file_path': file_dir,
+    'report_type': report_type,
+    'system': 'Linux'
+    }) }}"
+  delegate_to: localhost
+
+- set_fact:
+    merged_value: "{{ merged_value | default([]) + [result_value] }}"

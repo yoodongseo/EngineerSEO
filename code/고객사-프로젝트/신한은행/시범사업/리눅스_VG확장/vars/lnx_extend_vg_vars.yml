@@ -1,0 +1,54 @@
+---
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: 'Linux'
+report_type: 'Linux VG 여유공간확장'
+data_key: LNX_EXTENT_VG
+
+# JOB_VARS
+vg_name: "{{ fap['host_vars']['vg_name'] }}"
+
+# JOB SHELL
+vg_extent_job_cmd: |
+  # 변수 설정
+  vg_name="{{ vg_name }}"
+  
+  # target_device_name 추출
+  all_disk=$(lsblk -dn -o NAME,TYPE | awk '$2 == "disk" {print $1}')
+  pv_disks=$(pvs --noheadings -o pv_name | awk '{print $1}' | sed 's/\/dev\///')
+  for disk in $all_disk; do
+    has_partitions=$(lsblk /dev/$disk -no TYPE | grep part)
+    if ! echo "$pv_disks" | grep -q "$disk" && [ -z "$has_partitions" ]; then
+      target_device_name=$disk
+      break
+    fi
+  done
+
+  # STEP 0 추출된 장치 이름이 비어있는지 확인
+  if [ -z "$target_device_name" ]; then
+    echo "Error: No target device found."
+    exit 1
+  fi
+
+  # STEP 1 확장하고자 하는 VG 존재 여부 점검
+  if ! vgs | grep -q "$vg_name"; then
+    echo "Error: Volume Group '$vg_name' does not exist."
+    exit 1
+  fi
+
+  # # STEP 2 추출한 Device 사용 여부 점검
+  # if pvs | grep -q "$target_device_name"; then
+  #   echo "Error: /dev/$target_device_name PV already exists."
+  #   exit 1
+  # fi
+
+  # STEP 3 PV 생성 및 실패 여부 점검
+  if ! pvcreate "/dev/$target_device_name"; then
+    echo "Error: Failed to create PV /dev/$target_device_name"
+    exit 1
+  fi
+
+  # STEP 4 VG 확장 및 실패 여부 점검
+  if ! vgextend "$vg_name" "/dev/$target_device_name"; then
+    echo "Error: Failed to extend VG '$vg_name' with /dev/$target_device_name"
+    exit 1
+  fi

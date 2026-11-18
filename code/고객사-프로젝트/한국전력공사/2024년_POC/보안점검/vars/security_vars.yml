@@ -1,0 +1,338 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: "security"
+inspection_group: "보안점검"
+
+### merged_value --- List 선언
+merged_value: []
+
+### criteria 컬럼 --- 점검기준
+
+### 점검항목 --- 장비 별 분류
+# Linux:
+  # - cmd_name: "비밀번호 설정" # 대분류 / FAP 상세내역 작업 명
+  #   cmd_command: 'cat /etc/login.defs' # 점검 명령어 (점검 명령어 보고서 표출 X 임의 작성 가능)
+  #   value: "percent" # python filter 분류 --- 비교 기준 함수 타입(int,str,etc...)
+  #   com_value: "90" # python filter 기준값 --- 비교 기준 데이터 값
+  #   message: | # 대분류_소분류 행 바꿈 필요 시 \n 또는 아래와 같이 줄 바꿈
+  #       비밀번호 설정_최대사용 기간 90일 설정 및 주기적 변경
+  #   raw: "cat /etc/login.defs | grep PASS_MAX_DAYS" # 점검시 실제 사용할 명령어
+  #   arr_num: "1" ### total_item 에서 비교할 배열 번호
+  #   grep: ""
+  #   criteria: "비밀번호 최대 설정 값이 90일 이상일 경우 취약"
+
+  # - cmd_name: "계정 및 비밀번호 관리"
+  #   cmd_command: 'cat /etc/passwd'
+  #   value: "list_str"
+  #   com_value: ["lp", "sync", "shutdown", "halt", "news", "uucp", "nfs", "nobody", "guest"]
+  #   arr_num: '0'
+  #   message: |
+  #       계정 및 권한 분리_디폴트 계정 삭제
+  #       (잠금, 비활성화)
+  #   raw: "cat /etc/passwd"
+  #   grep: ""
+  #   criteria: "디폴트 계정 생성 시 취약"
+
+L3:
+  - cmd_name: "서비스 포트 관리"
+    cmd_command: 'show running-config'
+    value: "str"
+    com_value: |
+        20
+        21
+        23
+        513
+        514
+        512
+    message: |
+        서비스 포트 관리_평문 서비스 포트 제거
+    raw: "show running-config | include \"port [0-9]\""
+    arr_num: '0'
+    grep: ""
+    time: 1
+    criteria: "FTP(20,21), Telnet(23), Rlogin(513), Rshell,Rcp(514), Rexec(512) 등 제거"
+
+  - cmd_name: "서비스 포트 관리"
+    cmd_command: 'show running-config'
+    value: "str"
+    com_value: |
+        22
+        3389
+        6000
+    message: |
+        서비스 포트 관리_원격접속 포트 변경 및 접속제한
+        (기본포트 변경)
+    raw: "show running-config security | in port"
+    arr_num: '0'
+    grep: ""
+    time: 1
+    criteria: "SSH(22), 원격데스크탑(3389), X11(6000) 등 기본포트 변경 (VNC는 사용금지)"
+
+  - cmd_name: "서비스 포트 관리"
+    cmd_command: 'show running-config'
+    value: "str"
+    com_value: "VNC"
+    message: |
+        서비스 포트 관리_원격접속 포트 변경 및 접속제한
+        (VNC 사용금지)
+    raw: "show running-config aclmgr | in access-class"
+    arr_num: '0'
+    grep: ""
+    time: 1
+    criteria: "SSH(22), 원격데스크탑(3389), X11(6000) 등 기본포트 변경 (VNC는 사용금지)"
+
+  - cmd_name: "서비스 포트 관리"
+    cmd_command: 'show running-config'
+    value: "str"
+    com_value: |
+        137
+        138
+        139
+        445
+    message: |
+        서비스 포트 관리_기타 제거
+    raw: "show running-config | include \"port [0-9]\""
+    arr_num: '0'
+    grep: ""
+    time: 1
+    criteria: "랜섬웨어 포트 : 137, 138, 139, 445 등 제거"
+
+### 첫번째 줄 제거 또는 root,admin 제외 후 비교 필요
+  - cmd_name: "계정 및 권한 분리"
+    cmd_command: 'show user-account'
+    value: "list_int"
+    com_value: "network-admin"
+    message: |
+        계정 및 비밀번호 관리_계정 및 권한 분리
+    raw: "show user-account"
+    arr_num: "1"
+    grep: ""
+    unit: "3"
+    time: 1
+    criteria: 관리자 계정과 유지보수 계정 분리_(유지보수 계정에 관리자 권한 부여 금지)
+
+  - cmd_name: "디폴트 계정 삭제"
+    cmd_command: 'show user-account'
+    value: "str"
+    com_value: |
+      admin
+      root
+      ftp
+      1
+    message: |
+        계정 및 비밀번호 관리_디폴트 계정 삭제
+        (잠금, 비활성화)
+    raw: "show user-account"
+    arr_num: "0"
+    grep: ""
+    time: 1
+    criteria: "default 계정(ftp, 1, 장비명 등) 존재 시 취약"
+
+  - cmd_name: "비밀번호 설정"
+    cmd_command: 'show username admin passphrase timevalues'
+    value: "day"
+    com_value: ""
+    message: |
+        계정 및 비밀번호 관리_비밀번호 설정
+        (디폴트계정)
+    raw: "show username admin passphrase timevalues"
+    arr_num: "-1"
+    grep: "Last passphrase change(Y-M-D"
+    time: 1
+    unit: 30
+    criteria: "디폴트계정 삭제 불가시 비밀번호 변경 사용"
+
+  - cmd_name: "비밀번호 설정"
+    cmd_command: 'show running-config'
+    value: "confirme"
+    com_value: ""
+    message: |
+        계정 및 비밀번호 관리_비밀번호 설정
+        (9자리 이상)
+    raw: "show running-config | in password"
+    arr_num: ""
+    grep: ""
+    time: 1
+    unit: 30
+    criteria: "9자리 이상 (영문+숫자+특수문자 혼합)"
+
+  - cmd_name: "비밀번호 설정"
+    cmd_command: 'show userpassphrase default-lifetime'
+    value: "list_int"
+    com_value: "90"
+    message: |
+        계정 및 비밀번호 관리_비밀번호 설정
+        (최대사용 기간)
+    raw: "show userpassphrase default-lifetime"
+    arr_num: "5"
+    grep: ""
+    time: 1
+    unit: ""
+    criteria: "최대사용 기간 90일 설정 및 주기적 변경"
+
+  - cmd_name: "interface"
+    cmd_command: 'show ip interface brief'
+    value: "str"
+    com_value: "down    Link not connected"
+    message: |
+      네트워크 시스템_보안설정
+      (사용하지 않는 인터페이스의 Shutdown 설정)
+    raw: "show ip interface brief"
+    arr_num: "0"
+    grep: ""
+    time: 1
+    criteria: "사용하지 않는 인터페이스의 Shutdown 설정"
+
+  - cmd_name: "Directed-broadcast"
+    cmd_command: 'show ip interface'
+    value: "str"
+    com_value: "enabled"
+    message: |
+      네트워크 시스템_보안설정
+      (Directed-broadcast 차단 여부 확인)
+    raw: "show ip interface | include directed-broadcast"
+    arr_num: "0"
+    grep: ""
+    time: 1
+    criteria: "Directed-broadcast 차단 여부 확인"
+
+  - cmd_name: "Mask-reply"
+    cmd_command: 'show ip interface'
+    value: "confirme"
+    com_value: "enabled"
+    message: |
+      네트워크 시스템_보안설정
+      (Mask-reply 차단 여부 확인)
+    raw: "show ip interface | include mask-reply"
+    arr_num: "0"
+    grep: ""
+    time: 1
+    criteria: "Mask-reply 차단 여부 확인"
+
+  - cmd_name: "IP Source Routing"
+    cmd_command: 'show running-config'
+    value: "str"
+    com_value: "명령어 수행 결과가 없습니다."
+    message: |
+      네트워크 시스템_보안설정
+      (IP Source Routing 제한 설정 여부 확인)
+    raw: "show running-config | include source-route"
+    arr_num: "0"
+    grep: ""
+    time: 1
+    criteria: "IP Source Routing 제한 설정 여부 확인"
+
+Sdn_controller:
+  - cmd_name: "username"
+    cmd_command: 'show username'
+    value: "check"
+    com_value: ""
+    message: |
+      관리자 계정_보안 설정 점검
+    raw: "show username"
+    arr_num: 0
+    grep: ""
+    time: 4
+    criteria: |
+      - 유효비밀번호 여부 확인(3개월내 갱신 여부)
+      - 관리자 계정 별 접근권한 설정 현황 목록
+      - 운영모드 변경용 비밀번호 설정 여부 확인
+
+  - cmd_name: "version"
+    cmd_command: 'show version'
+    value: "version"
+    com_value: "5.2"
+    message: |
+      Firmware_무결성 점검
+    raw: "show version"
+    arr_num: 3
+    grep: ""
+    time: 6
+    unit: 4
+    criteria: |
+      - 현 운영 Firmware Version 조회
+      - 최신 Firmware Version Update 현황 조회
+
+  - cmd_name: "접속 제한"
+    cmd_command: 'netstat -atn'
+    value: "list_sameint"
+    com_value: |
+      1521
+      1522
+      1523
+      1433
+      1434
+      3306
+      22
+      3389
+      6000
+      21155
+    arr_num: '4'
+    message: |
+        서비스 포트 관리_DB, 원격접속 기본포트 변경 및 접속제한
+    raw: "netstat -atn | grep LISTEN | grep -v tcp6"
+    grep: ""
+    time: 1
+    criteria: |
+      DB : Oracle(1521,1522,1523), MS-SQL(1433,1434), MySQL(3306) 등
+      원격접속 : SSH(22), 원격데스크탑(3389), X11(6000) 등 기본포트 변경
+
+  - cmd_name: "accounting"
+    cmd_command: 'show accounting log'
+    value: "check"
+    com_value: ""
+    message: |
+      자체 시험관리 점검_감사데이터 기록 관리 점검
+    raw: "show accounting log"
+    arr_num: 0
+    grep: ""
+    time: 7
+    criteria: |
+      - 감사기록 데이터(관리) : 감사 기능 시작 및 종료, 관리접속 로그 관리, 관리자 식별 인증
+      - 감사기록 데이터(장비) : ACL 차단 이력기록, 세션관리 기록, 자체검사 시험항목 수행결과 기록
+      - 감사데이터 보호 : 계정관리(감사데이터 인가 계정)
+
+Sdn_switch:
+  - cmd_name: "diagnostic"
+    cmd_command: 'show diagnostic result module all'
+    value: "check"
+    com_value: ""
+    message: |
+      Log 관리_H/W Event Log 점검
+    raw: "show diagnostic result module all"
+    arr_num: 0
+    grep: ""
+    time: 5
+    criteria: "H/W 발생 이벤트 목록"
+
+  - cmd_name: "version"
+    cmd_command: 'show version'
+    value: "version"
+    com_value: "15.2"
+    message: |
+      Firmware_무결성 점검
+    raw: "show version | include version"
+    arr_num: 4
+    grep: ""
+    time: 3
+    unit: 2
+    criteria: |
+      - 현 운영 Firmware Version 조회
+      - 최신 Firmware Version Update 현황 조회
+
+  - cmd_name: "CRC"
+    cmd_command: 'show interface counters errors'
+    value: "notstr"
+    com_value: "--"
+    message: |
+      Log 관리_CRC Log 점검
+    raw: "show interface counters errors"
+    arr_num: 3
+    grep: "Eth"
+    time: 10
+    unit: 4
+    criteria: "CRC 정보 통합 리포트"
+
+
+

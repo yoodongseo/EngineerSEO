@@ -1,0 +1,38 @@
+---
+- name: '{{ item.name }} 스크립트 파일 배포'
+  ansible.builtin.copy:
+    src: "../vars/{{ item.command }}.sh"
+    dest: "/check/{{ item.command }}.sh"
+
+- name: '{{ item.name }} 스크립트 실행'
+  shell: "sh {{ item.command }}.sh"
+  args:
+    chdir: '/check/'
+
+- name: '{{ item.name }} 스크립트 실행 결과 읽기'
+  shell: 'cat /check/{{ item.command }}-{{ result_today.stdout }}-{{ result_hostname.stdout }}.log'
+  register: result_script
+
+- name: "스크립트 실행 완료"
+  run_once: true
+  delegate_to: localhost
+  command: echo " "
+  changed_when: false
+  check_mode: no
+  no_log: true
+
+- name: set_fact - result_value
+  set_fact:
+    result_value: "{{ result_value | default({}) | combine({\
+    'host': inventory_hostname, \
+    'id': item.id, \
+    'name': item.name, \
+    'result': result_script.stdout_lines|default(None), \
+    'is_success': True, \
+    'compare': True }) }}"
+  delegate_to: localhost
+
+- name: set_fact - merged_value
+  set_fact:
+    merged_value: "{{ merged_value + [result_value] }}"
+  delegate_to: localhost

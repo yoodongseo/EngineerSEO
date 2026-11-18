@@ -1,0 +1,7 @@
+---
+java_files: "OpenJDK8U-jdk_x64_linux_8u342b07.tar.gz"
+tomcat_files: "apache-tomcat-9.0.96.tar.gz"
+
+system: 'Linux'
+report_type: 'Tomcat_Management'
+data_key: 'Tomcat_Management'

@@ -1,0 +1,63 @@
+---
+- name: 서버 점검 플레이북
+  hosts: all
+  strategy: free
+  gather_facts: false
+  ignore_errors: false
+  ignore_unreachable: true
+
+  vars_files:
+    - ./vars.yml
+
+  pre_tasks:
+    - name: 공통 사전 준비 작업
+      include_tasks: /fap/ansible/projects/faplib/tasks/pre_check.yml
+
+  module_defaults:
+    fap.custom.prompt:
+      fap_vars: "{{ fap }}"
+      protocol: ssh
+      ip: "{{ inventory_hostname }}"
+      ssh_port: "{{ ansible_port | default(22) }}"
+      result_type: cli_data
+      target_type: "{{ target_type | default('server') | lower }}"
+      user_id: "{{ ansible_user }}"
+      user_password: "{{ ansible_password | default('') }}"
+      become_method: "{{ ansible_become_method | default('') }}"
+      become_user: "{{ ansible_become_user | default('') }}"
+      become_password: "{{ ansible_become_password | default('') }}"
+
+  tasks:
+    - block:
+        - name: 명령어 실행
+          fap.custom.prompt:
+            command: "{{ inspection_commands }}"
+            # ssh_params는 선택값입니다. 미설정 시 로그인 관련 timeout 기본값은 60초입니다.
+            # session_timeout은 기존 connect/banner/auth/login_prompt timeout과 함께 쓰지 않습니다.
+            # ssh_params:
+            #   session_timeout: "{{ prompt_session_timeout | default(60) }}"
+          register: prompt_result
+          delegate_to: localhost
+
+        - name: 명령어 실행 결과 debug
+          debug:
+            msg: "{{ prompt_result.result.data_list }}"
+
+        - name: 명령어 결과 필터 처리
+          filter_exec_module:
+            stdout_lines: "{{ prompt_result.result.data_list | map(attribute='output') | list }}"
+            inspection_items: "{{ backup_commands }}"
+            host: "{{ inventory_hostname }}"
+            host_name: "{{ inventory_hostname }}"
+            report_type: "{{ report_type }}"
+            system: "{{ system }}"
+          register: result_value
+          delegate_to: localhost
+
+        - name: 최종 결과 출력
+          debug:
+            var: result_value.result
+
+      always:
+        - name: DB 저장 Tasks 호출
+          include_tasks: /fap/ansible/projects/faplib/tasks/content_savedb.yml

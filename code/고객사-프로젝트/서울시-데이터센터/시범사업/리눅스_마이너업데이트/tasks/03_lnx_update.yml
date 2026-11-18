@@ -1,0 +1,37 @@
+---
+- block:
+  # STEP 1 - yum update
+  - name: 업데이트 작업 수행
+    yum:
+      name: "*"
+      state: latest
+    timeout: "{{ update_reboot['update_timeout'] }}"
+    register: result_yum_register
+
+  # STEP 2 - reboot
+  - name: 재기동
+    reboot:
+      reboot_timeout: "{{ update_reboot['reboot_timeout'] }}"
+      boot_time_command: "{{ update_reboot['boot_time_command']}}"
+    register: result_reboot
+
+  # STEP 3 - 버전정보 수집, 재기동 이후 수행
+  - name: 업데이트 결과 정보 수집
+    shell: "{{ chk_lnx_cmd }}"
+    timeout: "{{ command_timeout }}"
+    register: result_after_chk_cmd
+    
+  always:
+  - name: Save DATA Merged 생성
+    set_fact:
+      merged_value: "{{ merged_value + [{
+        'host': fap['host_ip'],
+        'host_name': fap['host_ip'],
+        'name': '03. 업데이트 결과',
+        'command': 'chk_lnx_cmd',
+        'result': result_after_chk_cmd['stdout'] | default('알수없음'),
+        'is_success': True,
+        'is_pass': False if result_after_chk_cmd['failed'] else True,
+        'system': system,
+        'report_type': report_type
+          }] }}"    

@@ -1,0 +1,76 @@
+---
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: 'Linux'
+report_type: 'Linux LV 생성'
+data_key: LNX_CREATE_LV
+
+# JOB_VARS
+vg_name: "{{ fap['host_vars']['vg_name'] }}"
+lv_name: "{{ fap['host_vars']['lv_name'] }}"
+lv_size: "{{ fap['host_vars']['lv_size'] | regex_replace('([0-9]+).*', '\\1%') }}"
+## [0-9] 정규표현식에서 매칭된 첫번째 숫자 뒤에 'G'를 붙이며 나머지 값은 모두 제거시키는 필터
+mount_path: "{{ fap['host_vars']['mount_path'] }}"
+fs_type: "{{ fap['host_vars']['fs_type'] }}"
+
+# JOB SHELL
+lv_create_job_cmd: |
+  vg_name="{{ vg_name }}"
+  lv_name="{{ lv_name }}"
+  lv_size="{{ lv_size }}" ## ex. %
+  mount_path="{{ mount_path }}"
+  fs_type="{{ fs_type }}"
+    
+  # STEP 0: LV 존재 여부 확인, LV 생성작업이므로 이미 생성되어 있으면 작업 불가
+  lv_exists=$(lvs --noheadings -o lv_name | grep -w "$lv_name")
+  if [ -n "$lv_exists" ]; then
+    echo "Error: Logical Volume '$lv_name' already exists."
+    exit 1
+  fi
+
+  # STEP 1: VG 존재 여부 확인
+  vg_exists=$(vgs --noheadings -o vg_name | grep -w "$vg_name")
+  if [ -z "$vg_exists" ]; then
+    echo "Error: Volume Group '$vg_name' does not exist."
+    exit 1
+  fi
+
+  # # STEP 2: VG 여유공간 확인
+  # vg_free_space=$(vgs --noheadings -o vg_free --units g "$vg_name" | awk '{print int($1)}')
+  # requested_size=$(echo "$lv_size" | sed 's/G//')
+  # if [ "$vg_free_space" -lt "$requested_size" ]; then
+  #   echo "ERROR: VG Avail: ${vg_free_space}G, LV Create REQ SIZE: ${requested_size}G."
+  #   exit 1
+  # fi
+
+  # STEP 2: LV 생성
+  lvcreate -y -n "$lv_name" -l +"$lv_size"free "$vg_name"
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to create $lv_name Logical Volume."
+    exit 1
+  fi
+
+  # STEP 3: FS 생성 (ext4 또는 xfs)
+  echo "Creating $fs_type filesystem on /dev/$vg_name/$lv_name..."
+  if [ "$fs_type" = "ext4" ]; then
+    mkfs.ext4 "/dev/$vg_name/$lv_name"
+  elif [ "$fs_type" = "xfs" ]; then
+    mkfs.xfs "/dev/$vg_name/$lv_name"
+  fi
+
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to create $fs_type filesystem."
+    exit 1
+  fi
+
+  # STEP 4: 마운트 디렉터리 생성 및 마운트
+  mkdir -p "$mount_path" && mount "/dev/$vg_name/$lv_name" "$mount_path"
+
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to mount Logical Volume."
+    exit 1
+  fi
+
+  # STEP 5: /etc/fstab에 추가 (중복 방지)
+  if ! grep -q "/dev/$vg_name/$lv_name" /etc/fstab; then
+    echo "/dev/$vg_name/$lv_name $mount_path $fs_type defaults 0 0" >> /etc/fstab
+  fi

@@ -1,0 +1,20 @@
+---
+- block:
+  - name: LV 확장 작업 수행
+    shell: "{{ lv_extend_job_cmd }}"
+    register: result_lv_extend_job_cmd
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. LV 확장',
+          'command': 'LV Extend CMD',
+          'result': result_lv_extend_job_cmd['stdout'] | default('unknown'),
+          'is_success': True,
+          'is_pass': False if result_lv_extend_job_cmd['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

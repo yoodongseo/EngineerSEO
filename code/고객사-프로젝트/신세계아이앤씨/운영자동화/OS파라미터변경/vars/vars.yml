@@ -1,0 +1,31 @@
+---
+### sysctl 관련 변수
+sysctl_file: /etc/sysctl.conf ### 커널 파라미터 파일 경로 --- sysctl
+
+sysctl_flag: true
+sysctl_state: present # present(추가, 수정), absent(삭제)
+sysctl:
+- name: vm.swappiness
+  value: 5
+- name: net.ipv4.ip_forward
+  value: 1
+
+### limits 관련 변수
+### limit_item -> core, data, fsize, memlock, nofile, rss, stack, cpu, nporc, as, maxlogins, maxsyslogins, priority, locks, sigpending, msgqueue, nice, rtpro, chroot
+### limi_type -> hard, soft, -
+### 추가, 수정 지원가능
+limits_file: /etc/security/limits.conf ### 커널 파라미터 파일 경로 --- limits
+
+limits_flag: true
+limits:
+- domain: fap
+  limit_item: nofile
+  limit_type: soft
+  value: 4096
+  comment: falcon
+
+- domain: fap
+  limit_item: nofile
+  limit_type: hard
+  value: 4096
+  comment: falcon

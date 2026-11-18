@@ -1,0 +1,26 @@
+---
+- name: Linux Agent MGMT(CTM)
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/lnx_agent_ctm_vars.yml
+  tasks:
+  - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_lnx_con_tasks.yml
+
+      - name: 2. 사전 설치 여부 확인
+        include_tasks: ../tasks/02_lnx_agent_stat_tasks.yml
+
+      ## req_type: ['install', 'uninstall', 'start', 'stop', 'restart']
+      - name: "3. Agent {{ req_type }} 작업 수행" 
+        include_tasks: ../tasks/03_lnx_agent_ctm_{{ req_type }}_tasks.yml
+        when: 
+        - (req_type == 'install' and not result_stat_path.stat.exists) or
+          (req_type in ['uninstall', 'start', 'stop', 'restart'] and result_stat_path.stat.exists)        
+    always:
+      - name: 데이터 저장 
+        include_tasks: ../tasks/save_data.yml

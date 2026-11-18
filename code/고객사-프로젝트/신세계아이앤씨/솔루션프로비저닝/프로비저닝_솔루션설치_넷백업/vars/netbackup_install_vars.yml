@@ -1,0 +1,15 @@
+---
+report_type: "netbackup_install"
+
+conf_file: /usr/openv/netbackup/bp.conf
+
+
+file_dir: "/fap/report/netbackup_install/{{ fap.job_id }}/{{ fap.host_name }}_{{ inventory_hostname }}"
+
+nbcertcmd:
+  - name: CA 인증1
+    cmd: "echo y | /usr/openv/netbackup/bin/nbcertcmd -getCAcertificate -server scsic-inbumedia"
+  - name: CA 인증2
+    cmd: "/usr/openv/netbackup/bin/nbcertcmd -getcertificate"
+  - name: CA 인증서 확인
+    cmd: "/usr/openv/netbackup/bin/nbcertcmd -listcertdetails"

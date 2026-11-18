@@ -1,0 +1,26 @@
+---
+- name: WIDE IPS 롤백(삭제)
+  include_tasks: "./del_wideips.yml"
+  when:
+    workdone_wideips|default(false) == true
+    # and rollback_err_flag|default(false) == false
+
+# 풀만 삭제 하면 됨
+# - name: POOL 멤버 롤백(삭제)
+#   include_tasks: "./del_poolmember.yml"
+#   when:
+#     workdone_poolmember|default(false) == true
+# and rollback_err_flag|default(false) == false
+
+- name: POOL 롤백(삭제)
+  include_tasks: "./del_pool.yml"
+  when:
+    workdone_pool|default(false) == true
+    # and rollback_err_flag|default(false) == false
+
+- name: Virtual Server 롤백(삭제)
+  include_tasks: "./del_vserver.yml"
+  when:
+    workdone_server|default(false) == true
+    and workdone_vserver|default(false) == true
+    # and rollback_err_flag|default(false) == false

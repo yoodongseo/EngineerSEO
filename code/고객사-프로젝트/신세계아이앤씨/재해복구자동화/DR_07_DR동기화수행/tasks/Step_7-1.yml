@@ -1,0 +1,22 @@
+---
+- name: alter system switch logfile 확인 --- sleep 추가
+  shell: su - oracle -c "{{ switch_logfile_sh }}"
+  register: alter_result
+
+- name: alter system switch logfile 확인 + log
+  set_fact:
+    alter_system_switch: "{{ alter_system_switch|default([]) + [ '='*30 + 'Alter 로그 확인' + '='*30 + '\n' + alter_result.stdout ] }}"
+
+- name: DR DB 복제 상태 점검 로그 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ ALTER_SYSTEM_CHECK_FILE }}"
+    create: true
+    block: |
+      {{ alter_system_switch|join('\n') }}
+    marker: "# {mark} DR DB 복제 상태 점검 로그 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+- name: DR DB 복제 상태 점검 로그 백업 경로 출력
+  debug:
+    msg: "{{ blockinfile_result.diff[0].after_header }}"

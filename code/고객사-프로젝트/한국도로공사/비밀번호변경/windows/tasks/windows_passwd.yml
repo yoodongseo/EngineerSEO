@@ -1,0 +1,49 @@
+---
+- name: win_shell Password change
+  # 변경 계정과 실행 계정이 같으면 async 옵션으로 fail 발생함, 패스워드 변경됐는지 확인 필요
+  win_user:
+    name: "{{ month_user }}"
+    password: "{{ month_pass }}"
+    state: present
+  async: 60 # async 하는 이유, winrm 접속하여 패스워드 변경 시 약 10~20초 소요되며, 호스트 유저 정보와 변경 계정 유저가 같으면 패스워드가 변경됐기에 세션이 풀리면서 error 발생함
+  # poll 1을 같이 줌으로 모니터링 진행, error 발생해도 정상적으로 변경
+  poll: 1
+  ignore_errors: true
+  register: result
+  when: 
+    - month_user == 'sysmng'
+
+- name: 성공 여부 변수 선언
+  set_fact:
+    password_value: |
+      {{ result.stdout }}
+      패스워드 변경 성공하였습니다.
+  when: result is success
+
+- name: 실패 여부 변수 선언
+  set_fact:
+    password_value: |
+      {{ result.msg }}
+      패스워드 변경 확인 필요합니다.
+  when: result is failed
+
+- name: 작업 여부 출력
+  debug:
+    var: password_value
+
+# - name: Windows 작업 중지
+#   fail:
+#     msg: "패스워드 변경 실패로 작업 중지"
+#   when: result is failed
+
+# - name: Windows 스크립트 복사
+#   win_copy:
+#     src: ../vars/win_passwd.ps1
+#     dest: C:\Users\Public\win_passwd.ps1
+
+# - name: Windows 패스워드 변경
+#   win_shell: |
+#     powershell.exe -ExecutionPolicy Bypass -File C:\Users\Public\win_passwd.ps1 -username "{{ month_user }}" -newPassword "{{ month_pass }}"
+#   args:
+#     executable: powershell.exe
+#   register: password_value

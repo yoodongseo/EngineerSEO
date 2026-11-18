@@ -1,0 +1,57 @@
+---
+- block:
+  - name: 00.연결상태 체크
+    ansible.windows.win_command: hostname
+    register: prompt_result_win
+    ignore_errors: true
+    
+  - name: 실패 데이터 확인
+    set_fact: 
+      fail_result: >-
+        {%- if prompt_result_win.unreachable | default(false) -%}
+          {%- if 'access is denied' in prompt_result_win.msg
+            or 'unauthorized' in prompt_result_win.msg
+            or 'authentication failed' in prompt_result_win.msg
+            or 'logon failure' in prompt_result_win.msg -%}
+            계정정보 불일치
+    
+          {%- elif 'connection refused' in prompt_result_win.msg
+              or 'actively refused' in prompt_result_win.msg
+              or 'no connection could be made' in prompt_result_win.msg -%}
+            접속포트 불일치
+    
+          {%- elif 'timed out' in prompt_result_win.msg
+              or 'timeout' in prompt_result_win.msg
+              or 'unreachable' in prompt_result_win.msg
+              or 'failed to connect' in prompt_result_win.msg -%}
+            대상설비 통신불가
+    
+          {%- else -%}
+            기타
+          {%- endif -%}
+        {%- else -%}
+          정상
+        {%- endif -%}
+    
+  - name: 연결 상태 실패 처리
+    fail:
+      msg: "점검실패: {{ fail_result }}"
+    when: fail_result != '정상'
+    
+  always:
+    - name: Save Data merged 생성 -- con_task
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '00.연결상태',
+          'command': 'hostname',
+          'result': '비정상' if prompt_result_win['failed'] | default(True) else '정상',
+          'is_success': False if prompt_result_win['failed'] | default(True) else True,
+          'is_pass': -1 if prompt_result_win['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type,
+          'data5': report_target,
+          'fail_reason': fail_result
+            }] }}"
+      when: save_type == 'report'

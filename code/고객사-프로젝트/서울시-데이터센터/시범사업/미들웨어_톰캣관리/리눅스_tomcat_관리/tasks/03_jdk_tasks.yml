@@ -1,0 +1,63 @@
+---
+- block:
+  - name: Java 설치진행_설치경로 확인(미 존재 시 생성)
+    file:
+      path: /usr/lib/java
+      state: directory
+      mode: '0755'
+
+  - name: 설치파일 배포
+    copy:
+      src: "../templates/{{ java_files }}"
+      dest: /usr/lib/java
+
+  - name: 설치파일 압축해제
+    unarchive:
+      src: "/usr/lib/java/{{ java_files }}"
+      dest: /usr/lib/java
+      remote_src: yes
+
+  # - name: 설치파일 압축해제
+  #   shell: "tar -zxvf /usr/lib/java/{{ java_files }}"
+
+  - name: 환경변수 설정(설치 경로 표준화 및 라이브러리 위치 지정)
+    lineinfile:
+      path: /etc/profile
+      state: present
+      line: "export JAVA_HOME=/usr/lib/java/openjdk-8u342-b07"
+      create: yes
+
+  - name: 환경변수 설정(실행 명령어 지정)
+    lineinfile:
+      path: /etc/profile
+      state: present
+      line: 'export PATH=$JAVA_HOME/bin:$PATH'
+
+  - name: 환경변수 설정(라이브러리 경로 지정)
+    lineinfile:
+      path: /etc/profile
+      state: present
+      line: 'export CLASSPATH=$CLASSPATH:$JAVA_HOME/jre/lib/ext:$JAVA_HOME/lib/tools.jar'
+
+  - name: 설정 적용
+    shell: source /etc/profile
+    args:
+      executable: /bin/bash
+
+  - name: 자바 설치 확인
+    shell: "source /etc/profile && java -version"
+    register: java_result
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': 'Java 설치확인',
+          'command': 'Java check',
+          'result': java_result['stderr'] | default('알수없음'),
+          'is_success': True,
+          'is_pass': False if java_result['failed'] else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

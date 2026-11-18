@@ -1,0 +1,50 @@
+---
+merged_value: []
+Windows:
+  - cmd_name: 1. /etc/hosts
+    raw: cat C:\Windows\System32\drivers\etc\hosts
+    tmp_file_path: "../vars/{{ fap['host_ip'] }}_hosts.txt" 
+    id: 0001
+    message: etc hosts log
+
+  - cmd_name: 2. Update Log
+    raw: cat C:\Windows\WindowsUpdate.log
+    tmp_file_path: "../vars/{{ fap['host_ip'] }}_WindowsUpdate.txt"
+    id: 0002
+    message: windows update log
+
+  - cmd_name: 3. ipconfig
+    raw: ipconfig /all
+    tmp_file_path: "../vars/{{ fap['host_ip'] }}_ipconfig.txt"
+    id: 0003
+    message: windows ipconfig log
+
+  - cmd_name: 3. ipconfig
+    raw: ipconfig /all
+    tmp_file_path: "../vars/{{ fap['host_ip'] }}_ipconfig.txt"
+    id: 0003
+    message: windows ipconfig log
+
+  - cmd_name: 4. Disk
+    raw: wmic logicaldisk get name,freespace,size
+    tmp_file_path: "../vars/{{ fap['host_ip'] }}_disk.txt"
+    id: 0004
+    message: windows disk log
+  
+  - cmd_name: 5. Systeminfo
+    raw: systeminfo
+    tmp_file_path: "../vars/{{ fap['host_ip'] }}_systeminfo.txt"
+    id: 0005
+    message: windows systeminfo log
+
+  - cmd_name: 6. netstat
+    raw: netstat -an
+    tmp_file_path: "../vars/{{ fap['host_ip'] }}_netstat.txt"
+    id: 0006
+    message: windows netstat log
+
+  - cmd_name: 7. LastBootUpTime
+    raw: (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+    tmp_file_path: "../vars/{{ fap['host_ip'] }}_uptime.txt"
+    id: 0007
+    message: windows bootuptime log

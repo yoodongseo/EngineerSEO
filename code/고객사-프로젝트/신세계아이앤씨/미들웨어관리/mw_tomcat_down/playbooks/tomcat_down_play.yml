@@ -1,0 +1,29 @@
+﻿---
+- name: 데이터센터 Tomcat Down
+  hosts: all
+  gather_facts: false
+  tasks:
+    - block:
+      - name: 날짜 연+월
+        raw: date +'%Y%m%d%H%M'
+        register: today
+
+      - name: 변수 호출
+        COMPANYlude_vars: ../vars/tomcat_down_vars.yml
+
+      - name: 작업 호출
+        COMPANYlude_tasks: ../tasks/tomcat_down_tasks.yml
+
+      always:
+        - set_fact:
+            content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+          
+        - fap.common.save_data:
+            content: "{{ content_value }}"
+            protocol: http
+            hostname: "{{ inventory_hostname }}"
+            data_type: "report"
+            data_key: "dr_live"
+            template_id: "{{ fap.template_id }}"
+            job_id: "{{ fap.job_id }}"
+          delegate_to: localhost

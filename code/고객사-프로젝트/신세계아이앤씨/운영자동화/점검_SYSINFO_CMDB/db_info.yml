@@ -1,0 +1,6 @@
+---
+host: 192.0.2.10
+port: 5432
+database: sample_database
+username: '{{ vault_db_username }}'
+password: '{{ vault_db_password }}'

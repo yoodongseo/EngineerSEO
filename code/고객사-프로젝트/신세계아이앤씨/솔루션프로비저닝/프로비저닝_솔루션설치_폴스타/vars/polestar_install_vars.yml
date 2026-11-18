@@ -1,0 +1,15 @@
+---
+AGENT:
+  - name: SMSAGENT7
+  - name: MAGENT7
+
+#Agent 설치 zip 파일이 존재하는 경로 
+install_file_path: /CHECK/nkia
+#Agent 설치 경로
+install_dir: /CHECK/nkia/POLESTAR7
+#Agent 설치 zip 파일 이름
+install_zip: 20230403_polestar_unix.zip
+#Agent 설치 gz 파일 이름
+install_gz: NNPAgent_SMS_Linux64_3.4_8.4.7_5.tar.gz
+#Agent 설치 shell script
+install_script: AgentInstall.sh

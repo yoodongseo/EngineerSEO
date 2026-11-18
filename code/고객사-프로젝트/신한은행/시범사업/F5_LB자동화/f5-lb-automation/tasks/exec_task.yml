@@ -1,0 +1,98 @@
+---
+- block:
+    - name: POOL 추가 호출
+      include_tasks: "./add_pool.yml"
+      when: err_flag|default(true) == false
+
+    - name: VIndex 초기화
+      set_fact:
+        vserver_idx: 0
+
+    - name: Virtual Server 추가 호출
+      include_tasks: "./add_vserver.yml"
+      loop: "{{ vinfo }}"
+      when: err_flag|default(true) == false
+
+    
+    
+
+    - name: VIndex 초기화
+      set_fact:
+        vserver_idx: 0
+
+    # - name: POOL 멤버 추가 호출
+    #   include_tasks: "./add_poolmember.yml"
+    #   loop: "{{ vinfo }}"
+    #   when: err_flag|default(true) == false
+
+    # - name: WIDEIPS 추가 호출
+    #   include_tasks: "./add_wideips.yml"
+    #   when: err_flag|default(true) == false
+
+    # - name: GSLB WIDEIPS 추가 실패 시 롤백 TEST
+    #   include_tasks: "./rollback.yml"
+
+  always:
+    - name: GSLB 등록 실패 시 롤백 실행
+      include_tasks: "./rollback.yml"
+      loop: "{{ vinfo }}"
+      when: err_flag|default(true) == true
+
+    # - name: GSLB 정상 등록일 경우 Potal 전달 데이터 초기화
+    #   set_fact:
+    #     data: []
+    #   when: err_flag|default(true) == false
+
+    # - name: GSLB 정상 등록일 경우 Potal 전달 데이터 작성 1
+    #   set_fact:
+    #     data:
+    #       domainname: "{{wideips_name}}"
+    #       poolname: "{{pool_name}}"
+    #   when: err_flag|default(true) == false
+
+    # - name: Define Virtual Server
+    #   set_fact:
+    #     vserver_idx: "{{ vserver_idx|int + 1 }}"
+
+    # - name: GSLB 정상 등록인 경우 포탈용 데이터 작성 (VServer Data)
+    #   include_tasks: "./set_vserverinfo.yml"
+    #   loop: "{{ vinfo }}"
+    #   when: err_flag|default(true) == false
+
+    # - name: GSLB 정상 등록일 경우 Potal 전달 데이터 작성
+    #   set_fact:
+    #     vir_data: "{{ vir_data|default([]) +  \
+    #       [{
+    #       'server_name': item.servername,
+    #       'vserver_name': 'gvsr_' ~ center_code ~ '_' ~ vserver_idx ~ '_' ~ wideips_name
+    #       }]
+    #       }}"
+    #   loop: "{{ vinfo }}"
+    #   loop_control:
+    #     vars: vserver_idx
+    #   when: err_flag|default(true) == false
+
+    - name: GSLB 등록 결과 정보 추출
+      set_fact:
+        job_result: "{{ job_result|default([]) + [{
+          'reqGslbInfo':{
+          'domainName': wideips_name,
+          'gslbMetric': pool_lbmode,
+          'ttl': pool_ttl,
+          'reqGslbTargetList': vir_data
+          },
+          'resActive': true,
+          'data': data,
+          'err_msg': err_msg,
+          'err_flag': err_flag,
+          'rollback_err_msg': rollback_err_msg,
+          'rollback_err_flag': rollback_err_flag
+          }] }}"
+
+    # - debug: var=job_result
+
+    - name: 에러 시, 작업 중단
+      fail:
+        msg: "작업 실패: {{err_msg}}"
+      when: err_flag
+      ignore_errors: false

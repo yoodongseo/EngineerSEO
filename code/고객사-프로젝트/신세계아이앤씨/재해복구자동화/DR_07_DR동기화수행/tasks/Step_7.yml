@@ -1,0 +1,45 @@
+---
+# 로그 저장 디렉토리 생성
+- name: 복제 상태점검 스크립트 존재확인
+  stat:
+    path: "{{ DR_CHECK_PATH }}/{{ item }}"
+  loop: "{{ DR_CHECK_SCRIPTS }}"
+  register: result_stat
+
+# step7. 스크립트 점검
+- name: "DB SCRIPT 파일 존재여부 추출"
+  set_fact:
+    file_stat_debug: "{{ file_stat_debug|default([]) + [ item.item + ' ---> ' + item.stat.exists|string ] }}"
+    file_stat_bools: "{{ file_stat_bools|default([]) + [ item.stat.exists ] }}"
+  loop: "{{ result_stat.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: "작업 중단 여부 확인(판단기준: DB SCRIPT 파일 존재여부)"
+  fail:
+    msg: "{{ file_stat_debug }}"
+  when: item == false
+  loop: "{{ file_stat_bools }}"
+
+# step7. 1작업
+- name: DR DB ADG 동기화
+  shell: su - oracle -c "{{ db_adg_sync }}"
+  register: result
+
+- name: "DR DB ADG 동기화 추출"
+  set_fact:
+   db_check_results: "{{ db_check_results|default([]) + [ '='*30 + 'DR DB ADG 동기화'  + '='*30 + '\n' + result.stdout ] }}"
+
+- name: DR DB 복제 상태 점검 로그 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_CHECK_FILE }}"
+    create: true
+    block: |
+      {{ db_check_results|join('\n') }}
+    marker: "# {mark} DR DB 복제 상태 점검 로그 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+- name: DR DB 복제 상태 점검 로그 백업 경로 출력
+  debug:
+    msg: "{{ blockinfile_result.diff[0].after_header }}"

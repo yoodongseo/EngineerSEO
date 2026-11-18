@@ -1,0 +1,192 @@
+- name: 연결 확인
+  win_ping: ""
+  register: win_ping_result
+  # ignore_unreachable: true
+  # ignore_errors: true
+
+- block:
+  - name: 01. OS, version 확인 - WINDOWS
+    set_fact:
+      op_type: "{{ ansible_facts.distribution | string }}"
+      os_version: "{{ ansible_facts.distribution_version | string }}"
+      server_type: "WINDOWS"
+
+  - name: 02. 디스크 용량 추출 - WINDOWS
+    win_shell: "(Get-PhysicalDisk | Select-Object -Property Size | Measure-Object -Property 'Size' -Sum).Sum / 1MB"
+    register: disk_size
+  - set_fact:
+      Disk_size: "{{ disk_size.stdout | string }}"
+    when: disk_size.rc == 0
+
+  - name: 03. 메모리 용량 추출 - WINDOWS
+    win_shell: "(Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum /1mb"
+    register: memory_size
+  - name: set_fact
+    set_fact:
+      Mem_size: "{{ memory_size.stdout | string }}"
+    when: memory_size.rc == 0
+
+  - name: 04. CPU 개수 추출 (물리적 CPU socket 개수) - WINDOWS
+    win_shell: |
+      $sockets = Get-WmiObject -Class Win32_Processor | Measure-Object
+      $sockets.Count
+    register: cpu_sockets
+  - set_fact:
+      CPU_cnt: "{{ cpu_sockets.stdout | string }}"
+    when: cpu_sockets.rc == 0
+
+  - name: 05. CPU 총 코어 개수 추출 (Processor 개수) - WINDOWS
+    win_shell: "Get-WmiObject -Class Win32_Processor | Measure-Object -Property NumberOfCores -Sum | Select-Object -ExpandProperty Sum"
+    register: total_cores
+  - set_fact:
+      CPU_total_core_cnt: "{{ total_cores.stdout | string }}"
+      # CPU_total_core_cnt: "{{ ansible_facts.processor_count | string }}"
+    when: total_cores.rc == 0
+
+  ## OracleDB 버전체크 (버전추출 테스트 완료)
+  - name: 06. DB 체크 - OracleDB, WINDOWS
+    win_shell: "{{ windows_DB_command.oracleDB }}"
+    register: oracledb
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "Oracle"
+    - name: 06_01. oracleDB 버전확인 - WINDOWS
+      win_shell: "{{ windows_DB_version_command.oracleDB }}"
+      register: oracledb_version_info
+    - name: 06_02. oracleDB 정보가공 - WINDOWS  
+      set_fact:
+        db_name: "Oracle Database {{ oracledb_version_info.stdout | cut_str(2,1) }}"
+        db_version_01: "{{ oracledb_version_info.stdout | cut_str(2,1) }}"
+        db_version_02: "{{ oracledb_version_info.stdout | find_value(':', 'SQL*Plus') }}"
+      when: oracledb_version_info.rc == 0 and oracledb_version_info.stdout != ''
+    when: oracledb.rc == 0 and oracledb.stdout != ''
+
+  ## mysqlDB 버전체크 (버전추출 테스트 완료)
+  - name: 06. DB 체크 - mysqlDB, WINDOWS
+    win_shell: "{{ windows_DB_command.mySQL }}"
+    register: mysqldb
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "MySQL"
+    - name: 06_01. mysqlDB 버전확인 - WINDOWS
+      win_shell: "{{ windows_DB_version_command.mysql }}"
+      register: mysql_version_info
+    - name: 06_02. mysqlDB 정보가공 - WINDOWS  
+      set_fact:
+        db_name: "MySQL server {{ mysql_version_info.stdout | cut_str(0,2) }}"
+        db_version_01: "{{ mysql_version_info.stdout | cut_str(0,2) }}"
+        db_version_02: "{{ mysql_version_info.stdout | cut_str(0,2) }}"
+      when: mysql_version_info.rc == 0 and mysql_version_info.stdout != ''
+    when: mysqldb.rc == 0 and mysqldb.stdout != ''
+
+  ## postgreSQL 버전체크 (버전추출 테스트 완료)
+  - name: 06. DB 체크 - postgreSQL, WINDOWS
+    win_shell: "{{ windows_DB_command.postgreSQL }}"
+    register: postgresql
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "postgreSQL"
+    - name: 06_01. postgrSQL 버전확인 - WINDOWS
+      win_shell: "{{ windows_DB_version_command.postgrSQL }}"
+      register: postgreSQL_version_info
+    - name: 06_02. postgreSQL 정보가공 - WINDOWS  
+      set_fact:
+        db_name: "{{ postgreSQL_version_info.stdout }}"
+        db_version_01: "{{ postgreSQL_version_info.stdout | cut_str(0,2) }}"
+        db_version_02: "{{ postgreSQL_version_info.stdout | cut_str(0,2) }}"
+      when: postgreSQL_version_info.rc == 0 and postgreSQL_version_info.stdout != ''
+    when: postgresql.rc == 0 and postgresql.stdout != ''
+
+  ## mongoDB 버전체크
+  - name: 06. DB 체크 - mongoDB, WINDOWS
+    win_shell: "{{ windows_DB_command.mongoDB }}"
+    register: mongodb
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "MongoDB"
+    - name: 06_01. mongoDB 버전확인 - WINDOWS
+      win_shell: "{{ windows_DB_version_command.mongoDB }}"
+      register: mongoDB_version_info
+    - name: 06_02. mongoDB 정보가공 - WINDOWS  
+      set_fact:
+        db_name: "MongoDB {{ mongoDB_version_info.stdout | cut_str(0,3) }}"
+        db_version_01: "{{ mongoDB_version_info.stdout | cut_str(0,3) }}"
+        db_version_02: "{{ mongoDB_version_info.stdout | cut_str(0,3) }}"
+      when: mongoDB_version_info.rc == 0 and mongoDB_version_info.stdout != ''
+    when: mongodb.rc == 0 and mongodb.stdout != ''
+
+  ## msSQLserver 버전체크 (버전추출 테스트 완료)
+  - name: 06. DB 체크 - msSQLserver, WINDOWS
+    win_shell: "{{ windows_DB_command.msSQLserver }}"
+    register: sqlserver
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "MSSQL"
+    - name: 06_01. msSQLserver 버전확인 - WINDOWS
+      win_shell: "{{ windows_DB_version_command.msSQLserver }}"
+      register: msSQLserver_version_info
+    - name: 06_02. msSQLserver 정보가공 - WINDOWS
+      set_fact:
+        db_name: "{{ msSQLserver_version_info.stdout | cut_str(0) }}"
+        db_version_01: "{{ msSQLserver_version_info.stdout | cut_str(0,7) }}"
+        db_version_02: "{{ msSQLserver_version_info.stdout | cut_str(0,7) }}"
+      when: msSQLserver_version_info.rc == 0 and msSQLserver_version_info.stdout != ''
+    when: sqlserver.rc == 0 and sqlserver.stdout != ''
+
+  ## Tibero 확인
+  - name: 05. DB 체크 - Tibero, WINDOWS
+    win_shell: "{{ windows_DB_command.tibero }}"
+    register: tibero
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "Tibero"
+    - name: 05_01. Tibero 버전확인
+      shell: "{{ windows_DB_version.tibero }}"
+      register: tibero_version_info
+    - name: 05_02. Tibero 정보 가공
+      set_fact:
+        db_name: "Tibero {{ tibero_version_info.stdout | string | cut_str(0,1) }}"
+        db_version_01: "{{ tibero_version_info.stdout | string | cut_str(1,1) }}"
+        db_version_02: "{{ tibero_version_info.stdout | string | cut_str(1,1) }}"
+      when: tibero_version_info.rc == 0 and tibero_version_info.stdout != ''
+    when: tibero.rc == 0 and tibero.stdout != ''
+
+  ## DB2 확인
+  - name: 05. DB 체크 - DB2, WINDOWS
+    win_shell: "{{ windows_DB_command.db2 }}"
+    register: db2
+    failed_when: false
+  - block:
+    - set_fact:
+        db_info: "DB2"
+    - name: 05_01. DB2 버전확인
+      shell: "{{ windows_DB_version.db2 }}"
+      register: db2_version_info
+    - name: 05_02. db2 정보 가공
+      set_fact:
+        db_name: "{{ db2_version_info.stdout | string | cut_str(0,1) }}"
+        db_version_01: "{{ db2_version_info.stdout | string | cut_str(0,11) }}"
+        db_version_02: "{{ db2_version_info.stdout | string | cut_str(0,11) }}"
+      when: db2_version_info.rc == 0 and db2_version_info.stdout != ''
+    when: db2.rc == 0 and db2.stdout != ''
+
+  # 기타
+  - name: 06. DB 체크 - 기타, WINDOWS
+    set_fact:
+      db_info: "기타"
+      db_name: ""
+      db_version_01: ""
+      db_version_02: ""
+    when: db_info is undefined
+
+  - name: 07. IP, hostname 추출 - WINDOWS
+    set_fact:
+      host_ip: "{{ fap.host_ip }}"
+      host_name: "{{ fap.host_name }}"
+  when: win_ping_result.ping is defined

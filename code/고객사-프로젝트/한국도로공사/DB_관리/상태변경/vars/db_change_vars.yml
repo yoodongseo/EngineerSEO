@@ -1,0 +1,31 @@
+---
+merged_value: []
+report_type: "dr_report"
+file_dir: "/fap/report/dr_live/step3/{{ fap.job_id }}/{{ fap.host_name }}_{{ inventory_hostname }}"
+file_path: "{{ file_dir }}/dr_change_{{ today.stdout }}.txt"
+
+oracle_sid:
+  - name: APGD
+    port: '3000'
+    ip: '192.168.1.10'
+    bsradm: 'r0|r1|r2|r26|r27'
+
+  # - name: ADQM
+  #   port: '3001'
+  #   ip: '192.168.1.11'
+  #   bsradm: 'r3|r4|r5|r20|r21'
+  
+  - name: AEVAL
+    port: '3004'
+    ip: '192.168.1.12'
+    bsradm: 'r9|r10|r11|r22|r23'
+
+  - name: ADAP
+    port: '3005'
+    ip: '192.168.1.13'
+    bsradm: 'r6|r7|r8|r18|r19'
+
+  - name: ANKMIS
+    port: '3006'
+    ip: '192.168.1.14'
+    bsradm: 'r12|r13|r14|r24|r25'

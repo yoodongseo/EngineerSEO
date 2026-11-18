@@ -1,0 +1,13 @@
+---
+- name: HPUX 명령어 통합 실행
+  raw: "{{ hpux_combined_command }}"
+  register: combined_result
+
+- name: merged_value 생성 (파싱 및 병합)
+  set_fact:
+    merged_value: >-
+      {{
+        combined_result.stdout_lines
+        | parse_sectioned_output
+        | parse_combined_result('hpux')
+      }}

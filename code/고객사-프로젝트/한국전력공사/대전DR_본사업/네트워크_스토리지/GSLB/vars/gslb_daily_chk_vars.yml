@@ -1,0 +1,100 @@
+---
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "network"
+model: "gslb"
+data5: "에방점검_GSLB"
+
+commands:
+  - cmd_id: "0001"
+    filter_key: "GSLBCPUFilter"
+    name: "01. CPU 점검"
+    command: "show cpu"
+    os: "{{ model }}"
+    inspection_criteria:
+      normal_busy_max: 70
+      normal_idle_min: 30
+      normal_wa_max: 5
+      require_st_zero: true
+      critical_busy_min: 80
+      critical_idle_max: 20
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0002"
+    filter_key: "memory"
+    name: "02. Memory 점검"
+    command: "show memory"
+    os: "{{ model }}"
+    inspection_criteria: 80
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+  - cmd_id: "0003"
+    filter_key: "GSLBArpFilter"
+    name: "03. ArpTable 점검"
+    command: "show arp"
+    os: "{{ model }}"
+    inspection_criteria:
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+  - cmd_id: "0004"
+    filter_key: "GSLBRouterFilter"
+    name: "04. 라우팅 테이블 상태 점검"
+    command: "show routes"
+    os: "{{ model }}"
+    inspection_criteria:
+      require_main_default: True
+      check_scope_link: True
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+  - cmd_id: "0005"
+    filter_key: "GSLBHardwareFilter"
+    name: "05. 하드웨어 상태 점검"
+    command: "show hardware_status"
+    os: "{{ model }}"
+    inspection_criteria:
+      cpu_temp_max: 50
+      sys_temp_max: 50
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+###################################### 로그 사전 명령어 ###################################### 
+  - command: "set lines 1000"
+    is_save: False
+    is_compare: true
+    timeout: 3
+    sleep: 2
+    message: "{{ message_data }}"
+    os: "{{ model }}"
+###################################### 로그 사전 명령어 ###################################### 
+  - cmd_id: "0006"
+    filter_key: "LogFilter"
+    name: "06. 로그 점검"
+    command: "show log tail 100"
+    os: "{{ model }}"
+    inspection_criteria: "error, down"
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"

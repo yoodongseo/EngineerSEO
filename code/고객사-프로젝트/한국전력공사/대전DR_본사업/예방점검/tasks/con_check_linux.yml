@@ -1,0 +1,52 @@
+---
+- block:
+  - name: 1. 연결상태 체크(SSH)
+    raw: "uname -a"
+    register: prompt_result_2
+    ignore_errors: true
+    
+  - name: 실패 데이터 확인
+    set_fact:
+      fail_result: >-
+        {%- if (prompt_result_2.unreachable | default(false))
+              or ('shared connection to' in (prompt_result_2.stderr | default('') | lower)
+                  and prompt_result_2.rc != 0) -%}
+          {%- if 'password' in (prompt_result_2.msg | default('') | lower) -%}
+          계정 정보 불일치
+    
+          {%- elif 'port' in (prompt_result_2.msg | default('') | lower) -%}
+          접속포트 불일치
+    
+          {%- elif 'failed to connect' in (prompt_result_2.msg | default('') | lower) or 'time' in (prompt_result_2.msg | default('') | lower) -%}
+          대상 설비 통신 불가
+    
+          {%- else -%}
+          기타
+          {%- endif -%}
+    
+        {%- else -%}
+        정상
+        {%- endif -%}
+  
+  - name: 연결 상태 실패 처리
+    fail:
+      msg: "점검 실패: {{ fail_result }}"
+    when: fail_result != '정상'
+    
+  always:
+    - name: Save DATA Merged 생성 -- Con_tasks
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '00.연결상태',
+          'command': 'uname',
+          'result': '비정상' if prompt_result_2['failed'] | default(True) else '정상',
+          'is_success': False if prompt_result_2['failed'] | default(True) else True,
+          'is_pass': '-1' if prompt_result_2['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type,
+          'data5': report_target,
+          'fail_reason': fail_result
+            }] }}"
+      when: save_type == 'report'

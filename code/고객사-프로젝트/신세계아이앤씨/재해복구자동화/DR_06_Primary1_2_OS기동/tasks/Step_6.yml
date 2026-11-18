@@ -1,0 +1,129 @@
+---
+# 로그 저장 디렉토리 생성
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+# step6. 1작업
+- name: CRS 기동
+  shell: |
+    source ~/.bash_profile
+    {{ item }}
+  loop:
+    - crsctl enable crs
+    - crsctl start crs
+  loop_control:
+    label: CRS 기동 명령어 수행
+  args:
+    executable: /bin/bash
+  register: result_crsctl
+
+- name: crs status check
+  shell: |
+    source ~/.bash_profile
+    crsctl check crs
+  register: command_result
+  until: |
+    'CRS-4638' in command_result.stdout and
+    'CRS-4537' in command_result.stdout and
+    'CRS-4529' in command_result.stdout and
+    'CRS-4533' in command_result.stdout
+  retries: 30
+  delay: 10
+
+- name: crsctl status 확인
+  shell: |
+    source ~/.bash_profile
+    crsctl status res -t
+  register: crsctl_status
+
+- name: Primary DB 복원 정보 추출
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + item.item + '='*30 + '\n' + item.stdout ] }}"
+  loop: "{{ result_crsctl.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: crsctl status 정보 추출
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'crsctl status' + '='*30 + '\n' + crsctl_status.stdout ] }}"
+
+# step6. 2작업
+- name: DB 가동
+  shell: su - "{{ item.oracle_user }}" -c "{{ startup_sh }}"
+  register: result
+  loop: "{{ ORACLE }}"
+  when: item.oracle_sid != ""  # ORACLE_SID가 정의된 경우에만 실행
+
+- name: DB 가동 여부 검사 --- cannot 문자열 포함 시, 작업 중단
+  fail:
+    msg: 작업 중단
+  when: 
+    - item.stdout is defined
+    - "'cannot' in item.stdout"
+  loop: "{{ result.results }}"
+
+- name: Primary DB 복원 정보 추출
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'DB startup' + '='*30 + '\n' + item.stdout ] }}"
+  loop: "{{ result.results }}"
+  loop_control:
+    label: "{{ item.item.oracle_sid }}"
+  when: item.stdout is defined
+
+# step6. cubeone 실행 필요 시 호출
+- name: cubeone 실행
+  COMPANYlude_tasks: ../tasks/cubeone_task.yml
+  when: CUBEONE_WORK in ['y','Y']
+
+# step6. 3작업
+- name: 프로세스 기동 확인 - 1
+  shell: su - oracle -c "{{ item }}"
+  loop: "{{ DR_DB_CEHCK_CMD }}"
+  register: result_ps
+  loop_control:
+    label: "{{ item }}"
+
+- name: 프로세스 추출 - 1
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + item.cmd + '='*30 +'\n' + item.stdout ] }}"
+  loop: "{{ result_ps.results }}"
+  loop_control:
+    label: "{{ item.cmd }}"
+
+- name: SQL dual 시간 확인
+  shell: su - oracle -c "{{ dual_sh }}"
+  register: result_ps
+
+- name: SQL dual 시간 확인 추출
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'DB날짜 쿼리' + '='*30 + '\n' + result_ps.stdout ] }}"
+
+# step6. 4작업
+- name: bdump 로그 확인
+  shell: |
+    source /home/oracle/.bash_profile
+    bdump
+    dump_dir=$(pwd)
+    su - oracle -c "tail -100 $dump_dir/alert*.log"
+  register: bdump_result
+
+- name: "bdump 로그 확인"
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'bdump 로그 확인'  + '='*30 + '\n' + bdump_result.stdout ] }}"
+
+- name: Primary DB 복원 로그 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DB_RECOVERY_FILE }}"
+    create: true
+    block: |
+      {{ db_recovery_results|join('\n') }}
+    marker: "# {mark} Primary DB 복원 로그 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+- name: Primary DB 복원 로그 백업 경로 출력
+  debug:
+    msg: "{{ blockinfile_result.diff[0].after_header }}"

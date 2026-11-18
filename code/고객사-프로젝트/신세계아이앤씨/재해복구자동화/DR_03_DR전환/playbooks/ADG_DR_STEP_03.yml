@@ -1,0 +1,29 @@
+---
+- name: "DR_1node_03_DR전환"
+  hosts: all
+  serial: 1
+  gather_facts: true
+  tasks:
+    - name: 일시 생성
+      set_fact:
+        today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+      delegate_to: localhost
+      run_once: true
+      
+    - name: 변수 파일 호출
+      COMPANYlude_vars: ../vars/server_ordering_03.yml
+    
+    - name: Standy DB의 호스트 정보
+      debug: 
+        msg:
+        - "IP: {{ STANDBY_DB_IP }}"
+        - "HOSTNAME: {{ ansible_facts.fqdn }}"
+      when: fap.host_ip == STANDBY_DB_IP | default('none')
+    
+    - name: "Step 3 - Standby DB 기동"
+      COMPANYlude_tasks: ../tasks/Step_3.yml
+      when: fap.host_ip == STANDBY_DB_IP | default('none')
+
+    - debug:
+        msg:
+        - "[Step 3] 완료 - DR_1node_03_DR전환"

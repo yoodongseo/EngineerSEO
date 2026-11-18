@@ -1,0 +1,11 @@
+---
+- name: Start Tomcat service
+  win_service:
+    name: "Tomcat9"
+    state: started
+  register: service_result
+
+- name: 결과 확인
+  debug:
+    msg: "{{ service_result.stdout }}"
+

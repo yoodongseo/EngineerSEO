@@ -1,0 +1,20 @@
+---
+- name: 11. Unix pkginfo
+  raw: "pkginfo | grep application"
+  register: pkg_info
+
+- name: 11. UNIX - package list
+  set_fact:
+    package_info: "{{ package_info | default([]) + [ \
+                { 'arch': 'null', \
+                  'epoch': 'null' , \ 
+                  'name': (item.split())[1], \
+                  'release': 'null', \
+                  'source': 'null', \
+                  'version': 'null'} \ 
+                ] }}"
+  loop: "{{ pkg_info.stdout_lines[1:] }}"
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'package_list': package_info }) }}"

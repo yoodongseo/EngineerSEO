@@ -1,0 +1,32 @@
+---
+- name: WIDEIPS 추가 -> {{wideips_name}}
+  ansible.builtin.uri:
+    url: "{{ host }}/{{ rest_api_info.default_api }}/wideip/{{pool_type|lower}}"
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: POST
+    body_format: json
+    body:
+      kind: "{{'tm:gtm:wideip:' ~ pool_type|lower ~ ':' ~ pool_type|lower ~ 'state'}}" # tm:gtm:wideip:a:astate
+      name: "{{ wideips_name }}"
+      partition: "Common"
+      poolLbMode: "{{ pool_lbmode | lower }}"
+      # ttlPersistence: "3600"
+      pools:
+        - {
+            name: "{{pool_name}}",
+            order: "{{pool_order}}",
+            ratio: "{{ pool_ratio }}",
+            partition: "Common",
+          }
+    validate_certs: false
+  register: AddWideIPs
+  delegate_to: localhost
+# - debug: var=AddWideIPs
+
+- name: WIDEIPS 확인 정보 추출
+  set_fact:
+    data: "{{ AddWideIPs.json|default([]) }}"
+    err_msg: "{{ AddWideIPs.json|default({}) if AddWideIPs.status|int != 200 else {} }}"
+    err_flag: "{{ false if AddWideIPs.status|default(0)|int == 200 else true }}"
+    workdone_wideips: "{{ false if AddWideIPs.status|default(0)|int != 200 else true }}"

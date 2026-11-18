@@ -1,0 +1,54 @@
+sunos_combined_command: |
+  echo "===os_info==="
+  echo "os_name=`uname -s`"
+  echo "os_version=`head -n 1 /etc/release | awk '{print $1, $2, $3, $4}'`"
+  echo "kernel=SunOS `uname -r` `uname -v`"
+  echo "os_type=Unix"
+
+  echo "===df_lines==="
+  df -k | awk 'NR==1 {print; next}
+  NF<6 { getline nextline; $0=$0" "nextline }
+  { print }'
+
+  echo "===disk_size==="
+  df -k | nawk '$1 ~ /^\/dev\// {s+=$2} END {print int(s/1024)}'
+
+  echo "===uptime==="
+  uptime
+
+  echo "===cpu==="
+  mpstat 1 2 | tail -1 | awk '{print 100 - $NF}'
+
+  echo "===cpu_cores==="
+  psrinfo -pv | awk '/cores and/ {sum+=$5} /virtual processor/ && !/cores and/ {sum+=$5} END {print sum}'
+
+  echo "===memory==="
+  vmstat 1 2 | tail -1 | awk '{print ($5/($4+$5))*100}'
+
+  echo "===memory_size==="
+  prtconf | grep 'Memory size' | awk '{print $3}'
+
+  echo "===user_list==="
+  awk -F: '$7 ~ /(sh|bash|ksh|pfksh)$/ {print $1}' /etc/passwd
+
+  echo "===service_list==="
+  if command -v svcs >/dev/null 2>&1; then
+    svcs -a | awk 'NR > 1 { print $3 }' | while read svc; do
+      state=`svcs -o state -H "$svc" 2>/dev/null`
+      enabled=`svcs -l "$svc" 2>/dev/null | awk '/^enabled/ {print $NF}'`
+      echo "{\"name\": \"$svc\", \"source\": \"smf\", \"state\": \"$state\", \"status\": \"$enabled\"}"
+    done
+  else
+    ls /etc/init.d | while read svc; do
+      echo "{\"name\": \"$svc\", \"source\": \"initd\", \"state\": \"unknown\"}"
+    done
+  fi
+
+  echo "===package_list==="
+  pkginfo | awk '{ print $2 }' | while read pkg; do 
+    info=`pkginfo -l $pkg`
+    version=`echo "$info" | grep 'VERSION' | cut -d':' -f2 | cut -d',' -f1 | sed 's/^ *//'`
+    release=`echo "$info" | grep 'VERSION' | cut -d',' -f2 | cut -d'=' -f2`
+    arch=`echo "$info" | grep 'ARCH' | cut -d':' -f2 | sed 's/^ *//'`
+    echo "{\"name\": \"$pkg\", \"version\": \"$version\", \"release\": \"$release\", \"epoch\": null, \"arch\": \"$arch\", \"source\": \"pkginfo\"}"
+  done

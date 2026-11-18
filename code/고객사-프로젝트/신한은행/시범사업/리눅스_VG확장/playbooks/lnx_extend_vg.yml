@@ -1,0 +1,20 @@
+---
+- name: Linux VG 여유공간확장
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/lnx_extend_vg_vars.yml
+  tasks:
+  - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_lnx_con_tasks.yml
+
+      - name: 2. VG 생성 작업 수행
+        include_tasks: ../tasks/02_lnx_extend_vg_tasks.yml
+
+    always:
+      - name: 데이터 저장
+        include_tasks: ../tasks/save_data.yml

@@ -1,0 +1,40 @@
+---
+- name: "DR 1node 07 DR 동기화 수행"
+  hosts: all
+  serial: 1
+  gather_facts: true
+  tasks:
+    - name: 일시 생성
+      set_fact:
+        today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+      delegate_to: localhost
+      run_once: true
+      
+    - name: 변수 호출
+      COMPANYlude_vars: ../vars/server_ordering_7.yml
+
+    - name: "Step 7 - DR 동기화 점검"
+      COMPANYlude_tasks: ../tasks/Step_7.yml
+      when: fap.host_ip == STANDBY_DB_IP | default('none')
+      
+    - name: "Step 7-1 - FIRST_ACTIVE_DB_IP DR Alter System Switch"
+      COMPANYlude_tasks: ../tasks/Step_7-1.yml
+      when: fap.host_ip == FIRST_ACTIVE_DB_IP | default('none')
+
+    - name: "Step 7-1 - SECOND_ACTIVE_DB_IP DR Alter System Switch"
+      COMPANYlude_tasks: ../tasks/Step_7-1.yml
+      when: fap.host_ip == SECOND_ACTIVE_DB_IP | default('none')
+
+    - name: "Step 7-2 - DR 복제 상태 점검 실행"
+      COMPANYlude_tasks: ../tasks/Step_7-2.yml
+      when: fap.host_ip == STANDBY_DB_IP | default('none')
+
+    - name: 모든 로그 저장 작업
+      COMPANYlude_tasks: ../tasks/save_db.yml
+      run_once: true
+    
+    - debug:
+        msg:
+        - "[Step 7] DR 동기화 완료"
+        - "[Step 7-1, 7-2] DR 복제 상태 점검 완료"
+        - "점검 로그 경로 ---> 각 서버의 {{ BACKUP_DIR }}"

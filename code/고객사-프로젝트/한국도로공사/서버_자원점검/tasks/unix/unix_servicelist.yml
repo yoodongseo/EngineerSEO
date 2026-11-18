@@ -1,0 +1,18 @@
+---
+- name: 10. UNIX - Service list Command
+  command: svcs
+  register: svcs_output
+
+- name: 10. UNIX - Service list
+  set_fact:
+    service_info: "{{ service_info | default([]) + [ \
+                { 'name': (item.split())[2].split(':')[1], \
+                  'source': ((item.split())[2] | split(':'))[0] , \ 
+                  'state': (item.split())[0], \
+                  'status': (item.split())[0] } \
+                ] }}"
+  loop: "{{ svcs_output.stdout_lines[1:] }}"
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'service_list': service_info }) }}"

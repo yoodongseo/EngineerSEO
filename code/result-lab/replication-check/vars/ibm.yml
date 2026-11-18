@@ -1,0 +1,15 @@
+---
+system: "IBM"
+
+inspection_commands:
+  - rule_key: "rep_ibm"
+    cmd_id: "0001"
+    name: "IBM 복제 상태 점검"
+    command: "lsrcconsistgrp"
+    os: "{{ vendor }}"
+    inspection_criteria: "IBM 복제 상태가 consistent_copying, consistent_synchronized, idling 중 하나일 것"
+    is_compare: true
+    is_save: true
+    timeout: 10
+    sleep: 1
+    message: "{{ message_data }}"

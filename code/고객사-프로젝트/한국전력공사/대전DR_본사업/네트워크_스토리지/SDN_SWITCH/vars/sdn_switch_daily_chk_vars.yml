@@ -1,0 +1,130 @@
+---
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "network"
+model: "sdn_leaf"
+data5: "에방점검_SDN스위치"
+
+commands:
+  - cmd_id: "0001"
+    filter_key: "SdnUptimeFilter"
+    name: "01. 시스템 Uptime 점검"
+    command: "show system uptime"
+    os: "{{ model }}"
+    # inspection_criteria: min_minutes는 최소 정상 uptime(분) 기준
+    inspection_criteria:
+      min_minutes: 1
+    is_save: true
+    is_compare: true
+    timeout: 3
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0002"
+    filter_key: "SdnInterfaceBriefFilter"
+    name: "02. 인터페이스 상태 점검"
+    command: "show interface brief"
+    os: "{{ model }}"
+    # inspection_criteria: allow_admin_down 허용 여부와 bad_statuses 검출 기준
+    inspection_criteria:
+      allow_admin_down: true
+      bad_statuses: ["down", "err-disabled", "inactive", "disabled"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0003"
+    filter_key: "SdnInterfaceStatusFilter"
+    name: "03. 패브릭 인터페이스 상태 점검"
+    command: "show interface status"
+    os: "{{ model }}"
+    # inspection_criteria: ok_statuses 외 bad_statuses 검출 시 비정상
+    inspection_criteria:
+      ok_statuses: ["connected", "up"]
+      bad_statuses: ["notconnect", "inactive", "disabled", "err-disabled", "down"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0004"
+    filter_key: "SdnInterfaceStatusFilter"
+    name: "04. 다운링크 인터페이스 상태 점검"
+    command: "show interface status"
+    os: "{{ model }}"
+    # inspection_criteria: ok_statuses 외 bad_statuses 검출 시 비정상
+    inspection_criteria:
+      ok_statuses: ["connected", "up"]
+      bad_statuses: ["notconnect", "inactive", "disabled", "err-disabled", "down"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0005"
+    filter_key: "SdnSystemResourcesFilter"
+    name: "05. CPU/Memory 점검"
+    command: "show system resources"
+    os: "{{ model }}"
+    # inspection_criteria: cpu_max_pct, mem_max_pct는 최대 허용 사용률(%)
+    inspection_criteria:
+      cpu_max_pct: 80
+      mem_max_pct: 80
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0006"
+    filter_key: "SdnEnvTemperatureFilter"
+    name: "06. 온도 점검"
+    command: "show environment temperature"
+    os: "{{ model }}"
+    # inspection_criteria: bad_statuses 온도 상태값 검출 시 비정상
+    inspection_criteria:
+      bad_statuses: ["major", "minor", "critical", "fail", "failure", "shutdown", "absent", "notpresent"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0007"
+    filter_key: "SdnEnvPowerFilter"
+    name: "07. PSU 상태 점검"
+    command: "show environment power"
+    os: "{{ model }}"
+    # inspection_criteria: allow_absent, allow_shutdown 허용 여부 기준
+    inspection_criteria:
+      allow_absent: false
+      allow_shutdown: false
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0008"
+    filter_key: "SdnEnvFanFilter"
+    name: "08. FAN 상태 점검"
+    command: "show environment fan"
+    os: "{{ model }}"
+    # inspection_criteria: bad_statuses 팬 상태값 검출 시 비정상
+    inspection_criteria:
+      bad_statuses: ["fail", "failed", "failure", "critical", "minor", "major", "absent", "notpresent", "shutdown"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"

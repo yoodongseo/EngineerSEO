@@ -1,0 +1,62 @@
+---
+- block:
+  - name: 커널 정보 수집
+    shell: uname -r
+    register: result_kernel_version
+
+  - name: OS 메이저 버전정보 수집
+    shell: grep '^VERSION_ID=' /etc/os-release | cut -d'"' -f2 | cut -d'.' -f1
+    register: result_os_version
+
+  - name: 커널 버전 양/불 처리
+    fail:
+      msg: "커널 버전 부적합 --> {{ result_kernel_version['stdout'] }}"
+    when: (result_os_version['stdout'] == '7' and extracted_kernel_7 not in result_kernel_version['stdout']) or
+          (result_os_version['stdout'] == '8' and extracted_kernel_8 not in result_kernel_version['stdout'])
+
+  - name: 배포 경로 생성
+    file:
+      path: "{{ copy_dest }}"
+      state: directory
+
+  - name: 설치 패키지 배포
+    copy:
+      src: "{{ copy_src }}/{{ item['name'] }}"
+      dest: "{{ copy_dest }}"
+    loop: "{{ pkg_name['os_type_' + result_os_version['stdout']] }}"
+    loop_control:
+      label: "{{ item['name'] }} 배포 진행중.."
+
+  - name: 설치 작업 수행
+    command: /usr/bin/python3 ../vars/cli_expect.py
+    environment:
+      username: "{{ ansible_user }}"
+      password: "{{ ansible_password }}"
+      hostname: "{{ fap['host_ip'] }}"
+      port: "{{ ansible_port | default('22') }}"
+      command_expect: "{{ item | to_json }}"
+      su_password: "{{ ansible_become_password | default('') }}"
+    loop: "{{ expect_cli_list['install'] }}"
+    loop_control:
+      label: "{{ item['name'] }}"
+    register: result_install_py
+    delegate_to: localhost
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': item.item.name,
+          'command': 'LSV {{ req_type }}',
+          'result': item.stdout | default(none),
+          'is_success': True,
+          'is_pass': False if item.failed | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"
+      when: item.stdout is defined
+      loop: "{{ result_install_py.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"

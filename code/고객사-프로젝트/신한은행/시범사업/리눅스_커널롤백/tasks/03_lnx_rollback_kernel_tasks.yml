@@ -1,0 +1,21 @@
+---
+- block:
+  - name: 커널버전 롤백 쉘 수행
+    shell: grubby --set-default-index=1
+    register: result_lnx_rollback_kernel
+    timeout: "{{ rollback_timeout }}"
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '3. 커널 롤백',
+          'command': report_type,
+          'result': '비정상' if result_lnx_rollback_kernel['failed'] | default(True) else '정상',
+          'is_success': True,
+          'is_pass': False if result_lnx_rollback_kernel['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

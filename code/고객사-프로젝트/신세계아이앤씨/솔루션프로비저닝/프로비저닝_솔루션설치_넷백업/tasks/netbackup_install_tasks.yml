@@ -1,0 +1,89 @@
+---
+- name: 넷백업 설정 파일 수정
+  lineinfile:
+    path: "{{ conf_file }}"
+    regexp: '^CLIENT_NAME'
+    line: 'CLIENT_NAME = {{ hostname_result.stdout }}'
+    backup: no
+
+- name: 수정 결과 확인
+  shell: "cat {{ conf_file }}"
+  register: lineinfile_result
+
+- name: 설정파일 수정 결과 로그 파일 생성
+  blockinfile:
+    path: "{{ file_dir }}/netbackup.txt"
+    block: |
+      {{ lineinfile_result.stdout }}
+    marker: "--- bp.conf ---"
+    create: true
+  delegate_to: localhost
+
+- name: 스크립트 존재여부 확인 -- DB서버
+  stat:
+    path: /usr/openv/netbackup/oracle/rman_linux.tar
+  register: script
+    
+- name: 존재 시 압축해제
+  shell: tar xvf /usr/openv/netbackup/oracle/rman_linux.tar
+  when: script.stat.exists
+
+- name: CA 인증 및 인증서 확인
+  shell: "{{ item.cmd }}"
+  loop: "{{ nbcertcmd }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: ca_auth
+  ignore_errors: yes
+
+- name: 인증 오류 작업 중단
+  fail:
+    msg: |
+      CA 인증 오류 입니다. 원인을 확인하세요
+      원인 : "{{ item.stderr }}"
+  when: "'operation failed' in item.stderr"
+  loop: "{{ ca_auth.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: 인증 및 인증서 결과 로그 저장
+  blockinfile:
+    path: "{{ file_dir }}/netbackup.txt"
+    block: |
+      {{ item.stdout }}
+    create: true
+    marker: "--- {{ item.item.name }} ---"
+    # marker_begin: "{{ item.item.name }}"
+    # marker_end: "{{ item.item.name }}\n"
+  delegate_to: localhost
+  loop: "{{ ca_auth.results }}" 
+
+- name: Netbackup 버전 확인
+  shell: cat /usr/openv/netbackup/bin/version
+  register: netbackup_version
+
+- name: 통신 체크
+  shell: /usr/openv/netbackup/bin/bpclntcmd -pn
+  register: connection_check
+
+- name: Netbackup 버전 결과 저장
+  blockinfile:
+    path: "{{ file_dir }}/netbackup.txt"
+    block: |
+      --- 통신 체크 ---
+      {{ connection_check.stdout }}
+      
+      --- 버전 확인 ---
+      {{ netbackup_version.stdout }}
+    create: true
+    marker: "--- 통신 / 버전 확인 결과 ---"
+  delegate_to: localhost
+
+- name: 통신 체크 결과 디버깅
+  shell: "cat {{ file_dir }}/netbackup.txt"
+  register: log_result
+  delegate_to: localhost
+
+- name: 통신 체크 로그 확인
+  debug:
+    msg: "{{ log_result.stdout }}"

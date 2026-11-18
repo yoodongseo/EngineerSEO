@@ -1,0 +1,61 @@
+---
+- name: 서버 자원 현황 수집
+  hosts: all
+  strategy: free
+  gather_facts: false
+  ignore_errors: yes
+ 
+  tasks:
+    - block:
+        - name: set_fact
+          set_fact:
+            merged_value: "{{ merged_value | default([]) }}"
+          delegate_to: localhost
+
+        - name: ansible_os_family
+          raw: uname -s
+          register: ansible_os_family
+          when: "ansible_port != 5985"
+
+        - name: windows_os_family
+          win_shell: Get-ComputerInfo | Select-Object WindowsProductName, WindowsVersion, OsArchitecture
+          register: windows_os_family
+          when: "ansible_port == 5985"
+          
+        - name: ansible_os_family debug
+          debug:
+            var: ansible_os_family
+
+        - name: Linux server
+          include_tasks: ../tasks/resource_tasks_linux.yml
+          when: ansible_os_family | regex_search('(?i)Linux')
+
+        - name: Unix Server
+          include_tasks: ../tasks/resource_tasks_unix.yml
+          when: ansible_os_family | regex_search('(?i)SunOS|AIX|HP-UX')
+
+        - name: Windows Server
+          include_tasks: ../tasks/resource_tasks_windows.yml
+          when: windows_os_family | regex_search('(?i)Windows')
+
+      always:
+        - name: Make content value
+          set_fact:
+            content_value: "{{ content_value | default({}) | combine({'host': inventory_hostname, 'host_info': merged_value}) }}"
+            # content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+          delegate_to: localhost 
+
+        - name: Save to DB
+          fap.common.save_data:
+            protocol: http
+            hostname: "{{ inventory_hostname }}"
+            data_type: SERVER_INFO
+            data_key: SERVER_INFO
+            content: "{{ content_value }}"
+            template_id: "{{ fap.template_id | default(omit) }}"
+            job_id: "{{ fap.job_id | default(omit) }}"
+          delegate_to: localhost
+
+
+
+      

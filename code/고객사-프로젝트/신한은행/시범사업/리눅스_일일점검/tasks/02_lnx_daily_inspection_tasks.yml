@@ -1,0 +1,21 @@
+---
+- block:
+  - name: "{{ item['name'] }} 점검"
+    shell: "{{ item['cmd'] }}"
+    register: result_inspection
+    ignore_errors: True
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': item['name'],
+          'command': item['name'],
+          'result': result_inspection['stdout'] | default('unknown') if result_inspection['failed'] else result_inspection['stdout'] + item['unit'],
+          'is_success': True,
+          'is_pass': True if result_inspection['stdout'] | int <= item['compare_value'] else False,
+          'system': system,
+          'report_type': report_type
+            }] }}"

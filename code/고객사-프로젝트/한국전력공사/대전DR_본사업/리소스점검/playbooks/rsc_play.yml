@@ -1,0 +1,66 @@
+- name: 서버 자원 현황 수집
+  hosts: all
+  gather_facts: false
+  strategy: free
+  ignore_errors: false
+  ignore_unreachable: true
+
+  # 변수 호출
+  vars_files: 
+    - ../vars/main_vars.yml
+  
+  # 사전 준비 작업
+  # pre_tasks:
+  # - name: 공통 사전 준비 작업
+  #   include_tasks: "{{ fap_lib }}/pre_check.yml"
+
+  # module_defaults:
+  #   fap.common.exec_command_custom: 
+  #     fap_vars: "{{ fap }}" # fap 변수 
+  #     protocol: auto # 작업 대상에 접속하기위한 프로토콜 정의 ---> 선택: auto(default)|telnet|ssh
+  #     ip: "{{ inventory_hostname }}" # 작업 대상의 IP 주소
+  #     ssh_port: "{{ ansible_port | default(22) }}" # SSH 접속 시 사용할 포트 번호
+  #     result_type: list # 해당 모듈 수행 결과의 return type 정의 ---> 선택: list|dict|cli_data
+  #     user_id: "{{ ansible_user }}" # 작업대상 접속에 필요한 username
+  #     user_password: "{{ ansible_password | default('') }}" # 작업대상 접속에 필요한 password
+  #     become_method: "{{ ansible_become_method | default('') }}" # 작업대상 접속의 권한상승 명령어(필요 시) 
+  #     become_password: "{{ ansible_become_password | default('') }}" #작업 대상 접속의 권한상승 비밀번호(필요 시)
+
+  tasks:
+    - block: 
+      - name: OS 이름 수집
+        raw: uname -s
+        register: ansible_os_family
+        # when: ansible_port != 5985 or ansible_port != 29338 or ansible_port != 5986 or ansible_port != 26598
+        when: vendor != "Windows"
+
+      - name: Windows OS 이름 수집
+        win_shell: "(Get-WmiObject Win32_OperatingSystem).Caption"
+        register: windows_os_family
+        # when: ansible_port == 5985 or ansible_port == 29338 or ansible_port == 5986 or ansible_port == 26598
+        when: vendor == "Windows"
+
+      - name: os_family 설정
+        set_fact:
+          os_family: >-
+            {% if vendor == "Windows" %}
+              Windows
+            {% else %}
+              {{ ansible_os_family.stdout_lines | base_clean | first | trim }}
+            {% endif %}
+
+      # - name: os_family 실제 값 확인
+      #   debug:
+      #     msg: "{{ cmd_vars_map[os_family | trim] }}"
+
+      - name: OS별 vars 호출
+        include_vars: "{{ cmd_vars_map[os_family | trim] }}"
+        when: cmd_vars_map[os_family | trim] is defined
+
+      - name: OS별 tasks 실행
+        include_tasks: "{{ os_task_map[os_family | trim] }}"
+        when: os_task_map[os_family | trim] is defined
+
+      always:
+      - name: DB 저장 작업 호출
+        include_tasks: ../tasks/updated/save_db.yml

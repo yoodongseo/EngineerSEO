@@ -1,0 +1,53 @@
+---
+FIRST_ACTIVE_DB_IP: "{{ fap.host_vars.first_active_db_ip }}"
+# FIRST_ACTIVE_DB_HOSTNAME: "{{ fap.host_vars.first_active_db_hostname }}"    # 사용하지 않음
+SECOND_ACTIVE_DB_IP: "{{ fap.host_vars.second_active_db_ip }}"
+# SECOND_ACTIVE_DB_HOSTNAME: "{{ fap.host_vars.second_active_db_hostname }}"  # 사용하지 않음
+ORACLE_SID: "{{ fap.host_vars.oracle_sid }}"
+ORACLE_HOME: "{{ fap.host_vars.oracle_home }}"
+
+# CUBEONE 가동 중지 여부
+CUBEONE_WORK: "{{ fap.host_vars.cubeone_work | default(none) }}"
+
+#######시스템 연계변수 선언으로 인한 변수처리
+
+#### 백업 디렉토리
+BACKUP_DIR: "/fap/report/dr_log/{{ today }}/step6"
+
+#### Step6. Primary DB 복원
+DB_RECOVERY_FILE: "step6_{{ fap.host_name }}_db_recovery.log"
+
+#### ORACLE 정보
+ORACLE:
+- oracle_user: "{{ fap.host_vars.oracle_user_1 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_1 | default(none) }}"
+- oracle_user: "{{ fap.host_vars.oracle_user_2 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_2 | default(none) }}"
+- oracle_user: "{{ fap.host_vars.oracle_user_3 | default(none) }}"
+  oracle_sid: "{{ fap.host_vars.oracle_sid_3 | default(none) }}"
+  
+#### 다중 CUBEONE 계정 선언
+cubeoneaccount:
+- cubeone_account: "{{ fap.host_vars.cubeone_1 | default(none) }}"
+- cubeone_account: "{{ fap.host_vars.cubeone_2 | default(none) }}"
+
+DR_DB_CEHCK_CMD:
+- ps -ef | grep pmon | grep -v grep | cat 
+- ps -ef | grep tns | grep -v grep | cat 
+- lsnrctl status
+
+startup_sh: |
+    export ORACLE_SID="{{ item.oracle_sid }}"
+    sqlplus / as sysdba <<EOF
+    startup
+    exit
+
+    EOF
+
+dual_sh: |
+    sqlplus / as sysdba <<EOF
+    select to_char(sysdate, 'YYYY/MM/DD HH24:MI:SS') from dual;
+    exit
+    EOF
+
+

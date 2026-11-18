@@ -1,0 +1,254 @@
+---
+system: "{{ vendor }}_2_3_4_5_6"
+
+inspection_commands:
+  - rule_key: "cpu_usage"
+    cmd_id: "0001"
+    name: "01.CPU 점검"
+    command: "vmstat"
+    os: "{{ vendor }}"
+    inspection_criteria: 40
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "cpu_core"
+    cmd_id: "0002"
+    name: "02.CPU 코어별 상태 점검"
+    command: "lsdev -Cc processor"
+    os: "{{ vendor }}"
+    inspection_criteria: "Available"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "memory_usage"
+    cmd_id: "0003"
+    name: "03.Memory 사용률"
+    command: "lsdev -Cc memory"
+    os: "{{ vendor }}"
+    inspection_criteria: "Available"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "memory_scan"
+    cmd_id: "0004"
+    name: "04.Memory 상태 확인"
+    command: "svmon -G"
+    os: "{{ vendor }}"
+    inspection_criteria: ""
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "paging_space"
+    cmd_id: "0005"
+    name: "05.Paging Space"
+    command: "svmon -G"
+    os: "{{ vendor }}"
+    inspection_criteria: 50
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "filesystem_usage"
+    cmd_id: "0006"
+    name: "06.파일시스템 사용량"
+    command: "df -g"
+    os: "{{ vendor }}"
+    inspection_criteria: 80
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "disk_swap_usage"
+    cmd_id: "0007"
+    name: "07.Disk Swap 사용률"
+    command: "lsps -a"
+    os: "{{ vendor }}"
+    inspection_criteria: 50
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "disk_redundancy"
+    cmd_id: "0008"
+    name: "08.DISK 이중화 정상 여부"
+    command: "lsvg -l rootvg"
+    os: "{{ vendor }}"
+    inspection_criteria: "syncd"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+  
+  - rule_key: "dev_stat"
+    cmd_id: "0009"
+    name: "09.DISK 인식 여부 점검"
+    command: "lsdev -Cc disk"
+    os: "{{ vendor }}"
+    inspection_criteria: "Available"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+  
+  - rule_key: "disk_stat"
+    cmd_id: "0010"
+    name: "10.DISK I/O 점검"
+    command: "iostat -D"
+    os: "{{ vendor }}"
+    inspection_criteria:
+      tm_act: 80.0
+      timeouts: 0
+      fails: 0
+      sqfull: 0
+      avgserv: 15.0
+      maxserv: 15.0
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "inode_usage"
+    cmd_id: "0011"
+    name: "11.DISK I-Node 정상여부"
+    command: "df -i"
+    os: "{{ vendor }}"
+    inspection_criteria: "2"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "kernel_parameter"
+    cmd_id: "0012"
+    name: "12.Kernel parameter Check"
+    command: "lsattr -El sys0"
+    os: "{{ vendor }}"
+    inspection_criteria: ""
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "system_log"
+    cmd_id: "0013"
+    name: "13.로그 점검"
+    command: "errpt -a"
+    os: "{{ vendor }}"
+    inspection_criteria: "error"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "cluster_status"
+    cmd_id: "0014"
+    name: "14.Cluster 데몬 상태"
+    command: "lssrc -g cluster"
+    os: "{{ vendor }}"
+    inspection_criteria: "active"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "shared_volume_status"
+    cmd_id: "0015"
+    name: "15.공유 볼륨 점검 상태"
+    command: "mount"
+    os: "{{ vendor }}"
+    inspection_criteria: "shared"
+    is_compare: true
+    is_save: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "network_link_status"
+    cmd_id: "0016"
+    name: "16.NW 링크 상태"
+    command: "lsdev -Cc adapter | awk '/ent/{print $1}' | while read n; do echo \"[$n]\"; entstat -d $n | grep -i \"Link Status\"; done;"
+    os: "{{ vendor }}"
+    inspection_criteria:
+      # Physical=Up 이면서 Logical=Down 인 조합을 비정상 링크로 판단한다.
+      physical: "Up"
+      logical: "Down"
+    is_compare: true
+    is_save: true
+    timeout: 10
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "nic_redundancy_status"
+    cmd_id: "0017"
+    name: "17.NIC 이중화 상태"
+    command: "lsdev -Cc adapter | awk '/ent/{print $1}' | while read n; do echo \"[$n]\"; entstat -d $n | grep -i \"State\"; done"
+    os: "{{ vendor }}"
+    inspection_criteria:
+      primary: "ACTIVE"
+      backup: "STANDBY"
+    is_compare: true
+    is_save: true
+    timeout: 10
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "ping_loss_status"
+    cmd_id: "0018"
+    name: "18.PingLoss 상태"
+    command: "gw=$(netstat -rn | awk '$1==\"default\"{print $2}'); ping -c 2 -w 3 $gw"
+    os: "{{ vendor }}"
+    inspection_criteria: 0
+    is_compare: true
+    is_save: true
+    timeout: 10
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "path_redundancy_status"
+    cmd_id: "0019"
+    name: "19.Path 이중화 상태"
+    command: "lspath"
+    os: "{{ vendor }}"
+    inspection_criteria: "Available"
+    is_compare: true
+    is_save: true
+    timeout: 10
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - rule_key: "hba_connection_status"
+    cmd_id: "0020"
+    name: "20.HBA 연결상태 점검"
+    command: "lsdev -Cc adapter | awk '/fcs/{print $1}' | while read h; do echo \"[$h]\"; fcstat $h | egrep -i \"Port Speed|Port FC|PORT Type|Attention Type\"; done"
+    os: "{{ vendor }}"
+    inspection_criteria: "Link Down"
+    is_compare: true
+    is_save: true
+    timeout: 30
+    sleep: 1
+    message: "{{ message_data }}"

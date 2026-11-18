@@ -1,0 +1,10 @@
+---
+- name: "shell {{ item.cli }}"
+  shell: "{{ item.cli }}"
+  register: result_cli
+  ignore_errors: true
+
+- name: Get OS facts
+  set_fact:
+    os_facts: "{{ os_facts | default('\"' + fap.host_name + '\",' + '\"' + inventory_hostname + '\"') \ 
+              + ',\"' + result_cli.stdout|default('False')|replace('\"', '\"\"') + '\"' }}"

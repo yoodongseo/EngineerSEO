@@ -1,0 +1,46 @@
+---
+
+### Linux 대상 점검 명령어 수행 및 점검결과 변수처리
+- name: "재기동 후 명령어 수행_python {{ item.message }}" ### Linux
+  command: /usr/bin/python3 ../vars/multi_raw.py
+  environment:
+    hostname: "{{ fap.host_ip }}"
+    port: "{{ ansible_port }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    root_passwd: "{{ ansible_become_password | default('') }}"
+    raw: "{{ item.raw }}"
+    multi_raw: "{{ item.multi_raw | to_json }}"
+    vendor: "{{ vendor }}"
+    time: "{{ item.time }}"
+  register: total_item_cli
+  delegate_to: localhost
+  ignore_errors: True
+
+# - name: totak_item 디버깅
+#   debug:
+    # msg: "{{ total_item.stdout }}"
+  
+### 점검주체별 명령어 수행결과 txt파일 저장(임시)
+- name: 명령어 결과 파일저장
+  raw: |
+    echo "{{ total_item_cli.stdout }}" | sed "s/\['//;s/']//g" >> "{{ item.tmp_file_path }}"
+  delegate_to: localhost
+
+### txt파일에 기입된 데이터 값 변수 저장
+- name: 전체 명령어 파일 reading
+  command: cat "{{ item.tmp_file_path }}"
+  register: total_item
+  delegate_to: localhost
+
+### 점검 명령어 수행결과 txt 파일 삭제
+- name: Temp 삭제
+  file: 
+    path: "{{ item.tmp_file_path }}"
+    state: absent
+  delegate_to: localhost
+
+- name: 실패 처리
+  fail:
+    msg: "{{ fap['host_ip'] }} 명령어 실행 처리과정 오류"
+  when: total_item_cli['failed'] | default(True)

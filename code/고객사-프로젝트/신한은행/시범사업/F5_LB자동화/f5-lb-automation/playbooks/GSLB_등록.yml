@@ -1,0 +1,45 @@
+---
+- name: GSLB_등록
+  hosts: all
+  serial: 1
+  gather_facts: false
+  ignore_errors: true
+  ignore_unreachable: true
+  vars:
+    ansible_connection: local
+  tasks:
+    - block:
+        - name: '변수 호출, site_code -> {{ fap.site_code }}'
+          ansible.builtin.include_vars: '{{ item }}'
+          loop:
+            - '../vars/{{ fap.site_code }}_vars.yml'
+            - '../vars/common_vars.yml'
+          loop_control:
+            label: '변수 호출'
+
+        - name: 네이밍룰 설정
+          set_fact:
+            pool_name: 'pool_{{reqgslbinfo.ip}}_{{reqgslbinfo.port}}'            
+            node_name: '{{reqgslbinfo.ip}}:{{reqgslbinfo.port}}'            
+            vserver_name: 'vir_{{reqgslbinfo.ip}}_{{reqgslbinfo.port}}' 
+
+        - name: F5_Pool_등록
+          include_tasks: '../tasks/add_pool.yml'
+        
+        # - name: F5_VServer_등록
+        #   include_tasks: '../tasks/add_vserver.yml'
+
+      always:
+        # - block:
+        #     - name: 작업 결과 판단 및 출력
+        #       include_tasks: '../tasks/job_result.yml'
+
+        #   always:
+        #     - name: 작업 내용 DB 저장
+        #       include_tasks: '/fap/ansible/projects/KB_custom/tasks/gslb_save_to_db.yml'
+
+        - name: 작업 결과 출력
+          debug:
+            msg:
+              - '에러메세지': -> '{{ err_msg }}'
+              

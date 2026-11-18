@@ -1,0 +1,24 @@
+---
+- name: Linux 설정정보 백업
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/lnx_conf_backup_vars.yml
+  tasks:
+  - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_lnx_con_tasks.yml
+
+      - name: 2. 설정 정보 수집
+        include_tasks: ../tasks/02_lnx_gather_conf_tasks.yml
+        loop: "{{ backup_cli }}"
+        loop_control:
+          label: "{{ item['name'] }}"
+
+    always:
+      - name: 데이터 저장
+        include_tasks: ../tasks/save_data.yml
+        when: result_hostname['failed'] == False

@@ -1,0 +1,34 @@
+---
+- block:
+  - name: 배포 경로 생성
+    file:
+      path: "{{ copy_dest }}"
+      state: directory
+
+  - name: 업데이트 파일 배포
+    copy:
+      src: "{{ item['name'] }}"
+      dest: "{{ copy_dest }}"
+    loop: "{{ copy_src }}"
+    loop_control: 
+      label: "{{ item['name'] }} 파일 배포"
+
+  - name: 설치 쉘 수행
+    shell: "{{ update_cli }}"
+    register: result_update_cli
+    no_log: True
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. 업데이트',
+          'command': report_type,
+          'result': result_update_cli['stdout'] | default(none),
+          'is_success': True,
+          'is_pass': False if result_update_cli['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

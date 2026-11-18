@@ -1,0 +1,16 @@
+---
+- name: Java 설치여부 확인
+  shell: "source /etc/profile && java -version"
+  register: java_result
+  ignore_errors: true
+
+- name: Tomcat 설치여부 확인
+  shell: systemctl status tomcat
+  ignore_errors: true
+  register: tomcat_result
+
+- name: 디버깅
+  debug:
+    msg:
+      - "{{ java_result.stderr }}"
+      - "{{ tomcat_result.stdout }}"

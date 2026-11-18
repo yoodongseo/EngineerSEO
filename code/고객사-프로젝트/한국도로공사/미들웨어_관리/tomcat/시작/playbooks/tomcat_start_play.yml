@@ -1,0 +1,29 @@
+---
+- name: 한국도로공사 Tomcat Start up
+  hosts: all
+  gather_facts: false
+  tasks:
+    - block:
+      - name: 변수 호출
+        include_vars: ../vars/tomcat_start_vars.yml
+
+      - name: 날짜 연+월
+        raw: date +'%Y%m%d%H%M'
+        register: today
+
+      - name: 작업 호출
+        include_tasks: ../tasks/tomcat_start_tasks.yml
+
+      always:
+        - set_fact:
+            content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+          
+        - fap.common.save_data:
+            content: "{{ content_value }}"
+            protocol: http
+            hostname: "{{ inventory_hostname }}"
+            data_type: "report"
+            data_key: "dr_live"
+            template_id: "{{ fap.template_id }}"
+            job_id: "{{ fap.job_id }}"
+          delegate_to: localhost

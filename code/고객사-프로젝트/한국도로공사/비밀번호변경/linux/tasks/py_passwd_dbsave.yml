@@ -1,0 +1,36 @@
+---
+- name: 결과 파일 DB화 작업
+  set_fact:
+    result_value: "{{ result_value | default([]) + [{
+      'host': inventory_hostname,
+      'host_name': fap.host_ip,
+      'name': '패스워드 변경 결과',
+      'command': 'passwd',
+      'is_success': true if password_value is defined else false,
+      'is_pass': 'none',
+      'report_type': report_name,
+      'system': month_user,
+      'result': password_value.stdout|default(none)
+      }] }}"
+    delegate_to: localhost
+
+- name: Make content value
+  set_fact:
+    content_value: "{{ content_value | default({}) | combine({'data_list': result_value}) }}"
+  delegate_to: localhost
+
+- name: Save DB
+  fap.common.save_data:
+    content: "{{ content_value }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: report
+    data_key: vulnerability
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  delegate_to: localhost
+
+- name: 저장 완료 변수 초기화
+  set_fact: # 변수 초기화
+    merged_value: []
+    content_value: {}

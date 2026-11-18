@@ -1,0 +1,106 @@
+---
+- name: CMDB 정보추출
+  hosts: all
+  gather_facts: true
+  ignore_errors: true
+  ignore_unreachable: true
+  tasks:
+    - name: 변수 호출
+      include_vars: ../vars/common.yml
+    
+    - name: DB 정보호출
+      include_vars: ../db_info.yml
+
+    # - name: 윈도우 서버 확인
+    #   win_ping: ""
+    #   register: chk_connection
+    #   ignore_unreachable: true
+    #   failed_when: false
+
+    # - name: 포트 변경 - 5985
+    #   set_fact:
+    #     ansible_port: '5985'
+    #   when: chk_connection.ping == 'pong'
+
+    - name: LINUX 정보추출
+      include_tasks: ../tasks/resource_tasks_unix.yml
+      when: ansible_port | default('') != 5985
+
+    - name: WINDOWS 정보추출
+      include_tasks: ../tasks/resource_tasks_windows.yml
+      when: ansible_port | default('') == 5985
+
+    # # - debug:
+    # #     msg: >
+    # #       DB정보: {{ DB_info }}
+
+    - name: 호스트의 link_ID 추출 및 UPDATE
+      community.postgresql.postgresql_query:
+        db: "{{ postgre_db }}"
+        login_host: "{{ postgre_host }}"
+        login_user: "{{ postgre_user }}"
+        login_password: "{{ postgre_passwd }}"
+        port: "{{ postgre_port }}"
+        query: "{{ postgre_query_select }} '{{ fap.host_ip }}' LIMIT 1"
+      register: query_result
+      delegate_to: localhost
+      until: query_result is succeeded
+      retries: "3"
+      delay: 2
+
+    # - debug:
+    #     var: query_result
+
+    - name: 정보 취합
+      set_fact:
+        sys_info:
+          host_ip: "{{ fap.host_ip | default('') }}"
+          host_name: "{{ fap.host_name | default('') }}"
+          # object_id: "{{ query_result.query_result[0].link_id | default('') }}" ## mapping을 위한 host의 link_ID
+          object_id: "{{ query_result.query_result[0].link_id if query_result.query_result[0].link_id is not none else None }}"
+          op_type: "{{ op_type | default('') }}" ## OS
+          server_type: "{{ server_type | default('') }}" ## OS구분
+          os_version: "{{ os_version | default('')}}" ## OS버전1
+          os_kernel_version: "{{ os_kernel_version | default('') }}" ## OS버전2
+          db_info: "{{ db_info | default('') }}" ## DB구분
+          db_name: "{{ db_name | default('') }}" ## DB
+          db_version_01: "{{ db_version_01 | default('') }}" ## DB버전1
+          db_version_02: "{{ db_version_02 | default('') }}" ## DB버전2
+          cpu_number: "{{ CPU_cnt | default(0) | int }}"
+          cpu_core_number: "{{ CPU_total_core_cnt | default(0) | int }}"
+          memory: "{{ Mem_size | default(0) | int }}" ## GB
+          disk_size: "{{ Disk_size | default(0) | int }}" ## GB
+
+    - name: object_id 디버깅
+      debug:
+        msg: "{{ sys_info.object_id }}"
+
+    - name: Save to DB
+      fap.common.save_data:
+        table_name: ansible_server_detail
+        content: "{{ sys_info }}"
+        protocol: http
+        hostname: "{{ inventory_hostname }}"
+        data_type: report
+        # data_key: report
+        # template_id: "{{ fap.template_id | default(omit) }}"
+        # job_id: "{{ fap.job_id | default(omit) }}"
+      delegate_to: localhost
+      when: sys_info is defined
+
+    # - name: (임시) object_id 업데이트
+    #   community.postgresql.postgresql_query:
+    #     db: "{{ postgre_db }}"
+    #     login_host: "{{ postgre_host }}"
+    #     login_user: "{{ postgre_user }}"
+    #     login_password: "{{ postgre_passwd }}"
+    #     port: "{{ postgre_port }}"
+    #     query: "update ansible_server_detail asd set object_id = '{{ sys_info.object_id | default('') }}' where asd.host_ip = '{{ sys_info.host_ip | default('') }}'"
+    #   register: query_result
+    #   delegate_to: localhost
+    #   until: query_result is succeeded
+    #   retries: "3"
+    #   delay: 2
+
+    # - debug:
+    #     var: sys_info

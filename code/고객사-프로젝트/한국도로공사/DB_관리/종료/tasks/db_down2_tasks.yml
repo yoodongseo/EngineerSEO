@@ -1,0 +1,68 @@
+---
+- name: "볼륨 확인"
+  shell: "df -h | grep -i {{ item.name }}"
+  register: df_result
+  until: "item.name in df_result.stdout"
+  retries: 3          # 최대 시도 횟수
+  delay: 5           # 각 시도 사이의 대기 시간 (초)
+  loop: "{{ oracle_sid }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: 볼륨 확인 결과 디버그
+  debug:
+    msg: >
+      Result for {{ item.item.name }}: 
+      {{ item.stdout }}
+  loop: "{{ df_result.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: "볼륨 확인 결과 로그 저장"
+  blockinfile:
+    path: "{{ file_path }}"
+    block: |
+      {{ item.stdout }} 
+    create: true
+    marker: "--- 볼륨 확인 결과 --- {mark}"
+    marker_begin: "{{ item.item.name }}"
+    marker_end: "{{ item.item.name }} \n"
+  delegate_to: localhost
+  loop: "{{ df_result.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: DR HA 전환 후 DB 상태 확인 - 스크립트 실행
+  shell: sh /var/lib/edb/kcc/edb_proc_check.sh
+  register: edb_proc_check
+
+- name: 스크립트 실행 Debug
+  debug:
+    var: edb_proc_check.stdout
+
+- name: "스크립트 실행  결과 로그 저장"
+  blockinfile:
+    path: "{{ file_path }}"
+    block: |
+      {{ edb_proc_check.stdout }} 
+    create: true
+    marker: "--- 스크립트 확인 결과 --- {mark}"
+    # marker_begin: "{{ item.item.name }}"
+    # marker_end: "{{ item.item.name }} \n"
+  delegate_to: localhost
+
+- name: result_value set_fact
+  set_fact:
+    result_value: "{{ result_value | default({}) | combine({
+    'host': inventory_hostname,
+    'host_name': fap.host_ip,
+    'is_success': true,
+    'is_pass': true,
+    'file_path': file_dir,
+    'report_type': report_type,
+    'system': 'Linux'
+    }) }}"
+  delegate_to: localhost
+
+- set_fact:
+    merged_value: "{{ merged_value | default([]) + [result_value] }}"

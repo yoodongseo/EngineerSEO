@@ -1,0 +1,243 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: "backup"
+report_type: "네트워크 리소스 점검"
+system: "Network"
+data_key: 'NW_RESOURCE'
+
+### merged_value --- List 선언
+merged_value: []
+
+piolink:
+  - cmd_name: "CPU"
+    cmd_command: 'CPU'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU 점검
+    raw: 'show resource-management | include Cpu'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0001
+
+  - cmd_name: "Memory"
+    cmd_command: 'Memory'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. Memory
+    raw: 'show resource-management | include Mem'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0002
+
+  - cmd_name: "인터페이스별 메모리 사용량"
+    cmd_command: '인터페이스별 메모리 사용량'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. 인터페이스별 메모리 사용량
+    raw: 'show summary'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0003
+
+juniper:
+  - cmd_name: "CPU"
+    cmd_command: 'CPU'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU
+    raw: 'show system processes brief'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 4
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0001
+
+  - cmd_name: "Memory"
+    cmd_command: 'Memory'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. Memory
+    raw: "show system memory | match memory"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 4
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0002
+
+  - cmd_name: "Storage"
+    cmd_command: 'Storage'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. Storage
+    raw: 'show system storage'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 4
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0003
+
+nxos:
+  - cmd_name: "CPU"
+    cmd_command: 'CPU'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. CPU
+    raw: 'show system resources | head lines 3'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0001
+
+  - cmd_name: "Memory"
+    cmd_command: 'Memory'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. Memory
+    raw: 'show system resources | in Memory'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0002
+
+  - cmd_name: "redundancy"
+    cmd_command: 'redundancy'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. redundancy
+    raw: 'show system redundancy status'
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    id: 0003
+
+alteon:
+  - cmd_name: "패스워드 설정"
+    cmd_command: 'info/sys/user'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 계정관리 - 패스워드 설정
+    raw: "info/sys/user"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_alteon.txt"
+    cmd_id: 645001
+    id: 0001
+
+  - cmd_name: "SNMP 서비스 확인"
+    cmd_command: 'info/sys/snmpv3/view'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 기능관리 - SNMP 서비스 확인
+    raw: "info/sys/snmpv3/view"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_alteon.txt"
+    cmd_id: 645016
+    id: 0002
+
+  - cmd_name: "SNMP community string 복잡성 설정"
+    cmd_command: "info/sys/snmpv3/comm"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. 기능관리 - SNMP community string 복잡성 설정
+    raw: "info/sys/snmpv3/comm"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_alteon.txt"
+    cmd_id: 645017
+    id: 0003
+
+  # - cmd_name: "NTP 서버 연동"
+  #   cmd_command: "show configuration system ntp"
+  #   value: "str"
+  #   com_value: "Fail"
+  #   message: |
+  #       4. 로그관리 - NTP 서버 연동
+  #   raw: "show configuration system ntp"
+  #   multi_raw:
+  #     - ''
+  #   arr_num: 0
+  #   grep: ""
+  #   time: 3
+  #   criteria: "Fail 결과 존재 시 비정상"
+  #   tmp_file_path: "../templates/{{ fap['host_ip'] }}_alteon.txt"
+  #   cmd_id: 645014
+  #   id: 0004
+
+  - cmd_name: "로그온 시 경고 메시지 설정"
+    cmd_command: "/info/sys/general"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. 접근관리 - 로그온 시 경고 메시지 설정
+    raw: "/info/sys/general"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_alteon.txt"
+    cmd_id: 645009
+    id: 0005

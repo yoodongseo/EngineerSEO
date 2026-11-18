@@ -1,0 +1,25 @@
+---
+- block:
+  - name: 연결 상태 확인
+    shell: hostname
+    register: result_hostname
+  
+  - name: 실패 처리 # (DB에 데이터를 입력하면서 명시적으로 실패하기 위해 사용)
+    fail:
+      msg: "{{ fap['host_ip'] }}"
+    when: result_hostname['failed'] | default(True)
+
+  always:
+    - name: Save DATA Merged 생성 -- lnx_con_tasks
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '1. 연결상태',
+          'command': 'hostname',
+          'result': '비정상' if result_hostname['failed'] | default(True) else '정상',
+          'is_success': False if result_hostname['failed'] | default(True) else True,
+          'is_pass': False if result_hostname['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

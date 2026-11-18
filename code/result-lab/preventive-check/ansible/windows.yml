@@ -1,0 +1,26 @@
+- name: Initialize windows result items
+  set_fact:
+    command_result_items: []
+
+- name: Run windows commands
+  ansible.windows.win_command: "{{ item.command }}"
+  args:
+    output_encoding_override: euc-kr
+  loop: "{{ inspection_commands | selectattr('is_save', 'eq', true) | list }}"
+  register: windows_command_results
+  failed_when: false
+
+- name: Build windows result items
+  set_fact:
+    command_result_items: >-
+      {{
+        command_result_items + [{
+          'command': item.item.command,
+          'output': (
+            ((item.stdout | default('')) ~
+            (('\n' ~ item.stderr) if (item.stderr | default('') | trim) else ''))
+            | trim
+          )
+        }]
+      }}
+  loop: "{{ windows_command_results.results }}"

@@ -1,0 +1,32 @@
+---
+- name: 네트워크 리소스 점검
+  hosts: all
+  strategy: free
+  gather_facts: false 
+  ignore_errors: false
+  ignore_unreachable: true
+  tasks:
+    - block:
+      # - name: 1. 연결 상태 점검
+      #   include_tasks: ../tasks/00_nw_con_check.yml
+
+      - name: 변수 호출
+        include_vars: ../vars/resource_vars.yml
+
+      - name: 네트워크 리소스 점검 작업
+        include_tasks: ../tasks/01_nw_resource_tasks.yml
+        loop: >-
+          {{ axgate if vendor == 'axgate'
+          else cisco if vendor == 'cisco' 
+          else nexg if vendor == 'nexg'
+          else juniper if vendor == 'juniper'
+          else nxos if vendor == 'nxos'
+          else Linux if vendor == 'Linux'
+          else piolink if vendor == 'piolink'
+          else alteon if vendor == 'alteon' }}
+        loop_control:
+          label: "{{ item }}"
+          
+      always:
+        - name: 데이터 저장
+          include_tasks: ../tasks/save_data.yml

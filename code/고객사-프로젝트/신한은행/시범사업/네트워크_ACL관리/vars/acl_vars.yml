@@ -1,0 +1,161 @@
+
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+report: "backup"
+inspection_group: "예방점검"
+ansible_port: 22
+report_type: "네트워크 ACL 설정"
+system: "Network"
+data_key: 'NW_CHG_ACL'
+
+### merged_value --- List 선언
+merged_value: []
+
+## Global
+job_flag: "{{ fap['host_vars']['job_flag'] | default(none) }}"
+
+## ACL 설정
+list_number: "{{ fap['host_vars']['list_number'] | default(none) }}"
+acl_source: "{{ fap['host_vars']['acl_source'] | default(any) }}"
+wildcard: "{{ fap['host_vars']['wildcard'] | default(none) }}"
+acl_int: "{{ fap['host_vars']['acl_int'] | default(none) }}"
+
+## axgate, juniper
+acl_rule: "{{ fap['host_vars']['acl_rule'] | default(none) }}"
+acl_name: "{{ fap['host_vars']['acl_name'] | default(none) }}"
+
+## juniper
+directive: "{{ fap['host_vars']['directive'] | default(none) }}"
+term_name: "{{ fap['host_vars']['term_name'] | default(none) }}"
+source_type: "{{ fap['host_vars']['source_type'] | default(none) }}"
+
+## NXOS
+len: "{{ fap['host_vars']['len'] | default(none) }}"
+
+cisco:
+  - cmd_name: "ACL 설정"
+    cmd_command: 'ACL 설정'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. ACL 설정
+    raw: ''
+    multi_raw:
+      - 'show access-lists' ## before
+      - 'configure terminal'
+      - "access-list {{ list_number }} {{ 'permit' if job_flag == 'permit' else 'deny' }} {{ acl_source }} {{ wildcard }}"
+      - "interface {{ acl_int }}"
+      - "ip access-group {{ list_number }} {{ acl_rule }}"
+      - "end"
+      - 'show access-lists' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    id: 0001
+
+axgate:
+  - cmd_name: "ACL 설정"
+    cmd_command: "ACL 설정"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. ACL 설정
+    raw: ''
+    multi_raw:
+      - 'show access-list' ## before
+      - 'configure terminal'
+      - "access-list {{ list_number }} {{ 'permit' if job_flag == 'permit' else 'deny' }} {{ acl_source }} {{ wildcard }}"
+      - "interface {{ acl_int }}"
+      - "ip-access-group {{ list_number }} {{ acl_rule }}"
+      - "end"
+      - 'show access-list' ## after
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap.host_ip }}_axgate.txt"
+    id: 0001
+
+nxos:
+  - cmd_name: "ACL 설정 전 확인"
+    cmd_command: 'ACL 설정 전 확인'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. ACL 설정 전 확인
+    raw: ""
+    multi_raw:
+      - "switchto vdc VD"
+      - "show access-lists"
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0001
+
+  - cmd_name: "ACL 설정"
+    cmd_command: 'ACL 설정'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. ACL 설정
+    raw: ""
+    multi_raw:
+      - "switchto vdc VD"
+      - 'configure terminal'
+      - "ip access-list {{ acl_name }}"
+      - "{{ 'permit' if job_flag == 'permit' else 'deny' }} ip {{ acl_source }}/{{ len }} any"
+      - "exit"
+      - "interface {{ acl_int }}"
+      - "ip access-group {{ acl_name }} {{ acl_rule }}"
+      - "end"
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0002
+
+  - cmd_name: "ACL 설정 후 점검"
+    cmd_command: 'ACL 설정 후 점검'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. ACL 설정 후 점검
+    raw: ""
+    multi_raw:
+      - "switchto vdc VD"
+      - "show access-lists"
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    id: 0003
+
+juniper:
+  - cmd_name: "ACL 설정"
+    cmd_command: 'ACL 설정'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. ACL 설정
+    raw: ""
+    multi_raw:
+      - 'show firewall' ## before
+      - 'configure'
+      - "set firewall family inet filter {{ acl_name }} term {{ term_name }} {{ directive }} {{ source_type }} {{ acl_source }}"
+      - "set interfaces {{ acl_int }} unit 0 family inet filter input {{ acl_name }}"
+      - "commit"
+      - "exit"
+      - 'show firewall' ## after   
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    id: 0001

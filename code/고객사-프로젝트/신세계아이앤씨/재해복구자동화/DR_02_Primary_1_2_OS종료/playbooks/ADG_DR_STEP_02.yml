@@ -1,0 +1,38 @@
+---
+- name: "DR_1node_02_Primary1_2_OS종료"
+  hosts: all
+  serial: 1
+  gather_facts: true
+  tasks:
+    - name: 일시 생성
+      set_fact:
+        today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+      delegate_to: localhost
+      run_once: true
+      
+    - name: 변수 파일 호출
+      COMPANYlude_vars: ../vars/server_ordering_02.yml
+
+    - name: Active1 DB 호스트 정보
+      debug: 
+        msg:
+        - "Active DB 정보"
+        - "IP: {{ FIRST_ACTIVE_DB_IP }}"
+        - "HOSTNAME: {{ ansible_facts.fqdn }}"
+      when: fap.host_ip == FIRST_ACTIVE_DB_IP | default('none')
+
+    - name: Active2 DB 호스트 정보
+      debug: 
+        msg:
+        - "Active2 DB 정보"
+        - "IP: {{ SECOND_ACTIVE_DB_IP }}"
+        - "HOSTNAME: {{ ansible_facts.fqdn }}"
+      when: fap.host_ip == SECOND_ACTIVE_DB_IP | default('none')
+  
+    - name: "Step 2 - Primary 중지 {{ ansible_facts.fqdn }}"
+      COMPANYlude_tasks: ../tasks/Step_2.yml
+      when: fap.host_ip == FIRST_ACTIVE_DB_IP | default(omit) or fap.host_ip == SECOND_ACTIVE_DB_IP | default(omit)
+
+    - debug:
+        msg:
+        - "[Step 2] 완료 - DR_1node_02_Primary #1 #2 OS종료"

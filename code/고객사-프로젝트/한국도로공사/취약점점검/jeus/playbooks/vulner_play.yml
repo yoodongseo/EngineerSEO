@@ -1,0 +1,14 @@
+---
+- name: COMPANY Jeus 취약점 점검
+  hosts: all
+  gather_facts: no
+  become: yes
+
+  tasks:
+    - name: vars 호출
+      include_vars: ../vars/vulner_vars.yml
+
+    - name: tasks 호출
+      include_tasks: ../tasks/vulner_tasks.yml
+
+

@@ -1,0 +1,20 @@
+---
+- block:
+  - name: 백업 명령어 수행 - {{ item['name'] }}
+    shell: "{{ item['command'] }}"
+    register: result_shell
+    ignore_errors: True
+
+  - name: 백업 명령어 수행결과 Merged
+    set_fact:
+      merged_value: "{{ merged_value|default([]) + [{
+                    'host': inventory_hostname,
+                    'id': item['id'],
+                    'name': item['name'],
+                    'command': item['command'],
+                    'result': result_shell['stdout'] | default(''),
+                    'message': '',
+                    'is_success': True,
+                    'os': system,
+                    'compare': item['compare']|default(None)
+                    }] }}"

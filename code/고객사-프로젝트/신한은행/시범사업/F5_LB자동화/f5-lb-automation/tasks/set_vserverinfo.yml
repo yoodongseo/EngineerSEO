@@ -1,0 +1,38 @@
+---
+# 네이밍룰 센터코드_계열사코드_Server
+- name: Define Server
+  set_fact:
+    server_name: "{{ item.datacentercode ~ '_' ~ company_code ~ '_Server' }}"
+
+# 네이밍룰 V서버 Index
+- name: Define Virtual Server Idx
+  set_fact:
+    vserver_idx: "{{ vserver_idx|int + 1 }}"
+
+# 네이밍룰 vir_센터코드_Idx_계열사코드_도메인명
+- name: Define Virtual Server
+  set_fact:
+    vserver_name: "{{ 'vir' ~ '_' ~ item.datacentercode ~ '_' ~  vserver_idx ~ '_' ~ company_code ~ '_' ~ wideips_name  }}"
+
+# - name:
+#   set_fact:
+#     vir_data_Dict:
+# - name:
+#   set_fact:
+#     vir_data_list: "{{ vir_data_list + vir_data_Dict }}"
+
+- name: GSLB 정상 등록일 경우 Potal 전달 데이터 작성
+  set_fact:
+    vir_data: "{{ vir_data|default([]) +  \
+      [{
+      'serverName': server_name,
+      'vServerName': vserver_name,
+      'ip': item.ip,
+      'distributionRatio': item.distributionratio,
+      'healthCheckIp': item.healthcheckip|default(''),
+      'healthCheckPort': item.healthcheckport,
+      'healthCheckUrl': item.healthcheckurl|replace('\\r\\n', '[br]'),
+      'protocol': item.protocol
+      }]
+      }}"
+# - debug: var=vir_data

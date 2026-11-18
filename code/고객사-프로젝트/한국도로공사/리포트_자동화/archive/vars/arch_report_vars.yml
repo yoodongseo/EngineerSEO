@@ -1,0 +1,16 @@
+---
+### raw 데이터 경로
+archive_file_path: /home/example_user/arch_chk/log
+
+### 엑셀 저장 경로
+archive_save_path: "/fap/report/{{ archive_report_name }}/{{ today.stdout }}/{{ fap.job_id }}/{{ inventory_hostname }}"
+
+### 엑셀명
+archive_name: "archive_backup_{{ today.stdout }}.xlsx"
+
+### 파이썬 엑셀 output 경로
+archive_output_path: "{{ archive_save_path }}/{{ archive_name }}"
+
+### 보고서 info
+archive_report_name: "archivalbackup"
+

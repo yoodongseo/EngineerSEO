@@ -1,0 +1,64 @@
+---
+- name: root 계정 확인
+  shell: whoami
+  register: whoami_result
+
+- name: root 계정이 아닌 경우 - 작업종료
+  fail:
+    msg:
+      - "현재 로그인 계정 : {{ whoami_result.stdout }}"
+      - "root 계정으로 작업이 필요합니다."
+      - "작업을 종료합니다."
+  when: whoami_result.stdout != "root"
+  
+- name: 설치 파일 압축 해제
+  shell: unzip /CHECK/nkia/20230403_polestar_unix.zip -d /CHECK/nkia/
+
+- name: 설치 디렉토리 생성
+  ansible.builtin.file:
+    path: /CHECK/nkia/POLESTAR7
+    state: directory
+
+- name: 설치 파일 압축 해제 --> /CHECK/nkia/POLESTAR7
+  shell: tar zxvf /CHECK/nkia/NNPAgent_SMS_Linux64_3.4_8.4.7_5.tar.gz -C /CHECK/nkia/POLESTAR7
+
+- name: 설치 스크립트 실행
+  shell: "./AgentInstall.sh -t 2"
+  register: install_result
+  until: "'success' in install_result.stdout"
+  args:
+    chdir: /CHECK/nkia/POLESTAR7
+  retries: 3
+  delay: 3
+
+- name: 설치 스크립트 실행 결과
+  debug:
+    msg: "{{ install_result.stdout }}"
+
+- name: Agent 설치 확인
+  shell: ps -ef | grep {{ item.name }} | grep -v grep
+  register: pre_install_result
+  retries: 5
+  delay: 3
+  until: "item.name in pre_install_result.stdout"
+  loop: "{{ AGENT }}"
+  ignore_errors: true
+
+- name: 불필요 파일 삭제
+  shell: rm -rf NNPAgent*
+  args:
+    chdir: /CHECK/nkia/
+  register: rm_result
+
+- name: Agent 설치 실패 판단 - 작업 종료
+  fail:
+    msg: 
+      - "Agent 설치 실패"
+      - "작업을 종료합니다."
+      - "작업 실패 로그: item.stderr"
+  when: item.rc != 0
+  loop: "{{ pre_install_result.results }}"
+
+- name: 설치 완료 프로세스 확인
+  shell: ps -ef | grep AGENT | grep -v grep
+  register: install_success

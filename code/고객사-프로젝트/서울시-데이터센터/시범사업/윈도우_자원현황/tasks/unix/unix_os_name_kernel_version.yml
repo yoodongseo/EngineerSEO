@@ -1,0 +1,20 @@
+---
+- name: 01. UNIX - OS
+  raw: uname -s
+  register: os_name
+
+- name: 01. UNIX - OS version
+  raw: uname -r
+  register: os_version
+
+- name: 01. UNIX Kernel
+  raw: isainfo -kv
+  register: os_kernel
+
+- name: 01. UNIX - OS, version, type, kernel
+  set_fact:
+    merged_value: "{{ merged_value | combine({'os_name': os_name.stdout | regex_replace('\r?\n', ''), 'os_type': 'UNIX' }) }}"
+
+- name: 01. UNIX - kernel
+  set_fact:
+    merged_value: "{{ merged_value | combine({'kernel': os_kernel.stdout | regex_replace('\r?\n', ''), 'os_version': os_version.stdout | regex_replace('\r?\n', '') }) }}"

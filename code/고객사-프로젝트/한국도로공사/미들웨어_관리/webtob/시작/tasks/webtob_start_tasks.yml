@@ -1,0 +1,54 @@
+---
+- name: 저장 경로 생성
+  file:
+    state: directory
+    path: "{{ file_path }}"
+  delegate_to: localhost
+
+### Linux 대상 점검 명령어 수행 및 점검결과 변수처리
+- name: "명령어 수행_python {{ item.message }}" ### Linux
+  command: /usr/bin/python3 ../vars/multi_raw.py
+  environment:
+    hostname: "{{ fap.host_ip }}"
+    port: "{{ ansible_port }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    root_passwd: "{{ ansible_become_password | default('') }}"
+    raw: "{{ item.raw }}"
+    multi_raw: "{{ item['multi_raw'] | to_json }}"
+    vendor: "{{ vendor | default('Linux') }}"
+    time: "{{ item.time }}"
+    prompt: "{{ item.prompt | default(none) }}"
+  register: total_item
+  delegate_to: localhost
+
+- debug: var=total_item['stdout']
+
+# 명령어 결과 파일 저장
+- name: 명령어 결과 파일 저장
+  lineinfile:
+    path: "{{ item['path'] }}"  # 저장할 파일 경로
+    line: "{{ total_item['stdout'] }}"  # 명령어 결과
+    create: yes  # 파일이 없으면 새로 생성
+  delegate_to: localhost
+  when: "item['path'] is defined"
+
+- name: "{{ item['cmd_name'] }} - 파일 다운로드" # 파일 다운로드 path 없으면 사용
+  fetch:
+    src: "{{ src_path }}"
+    dest: "{{ item['path'] }}"
+    flat: true
+  when: "item['path'] is not defined"
+
+- name: Save DATA Merged 생성 - 점검 파일 다운로드
+  set_fact:
+    merged_value: "{{ merged_value | default([]) + [{
+      'host': fap['host_ip'],
+      'host_name': fap['host_ip'],
+      'is_success': True,
+      'system': system,
+      'file_path': file_path,
+      'report_type': report_type
+      }] }}"
+
+- debug: var=merged_value

@@ -1,0 +1,31 @@
+---
+- name: 날짜 추출
+  set_fact: date="{{ lookup('pipe', 'date +%Y%m%d') }}"
+  run_once: yes 
+  delegate_to: localhost
+
+- name: "점검결과 파일저장을 위한 디렉토리 생성 --- {{ local_dir_path }}"
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ local_dir_path }}"
+  - "{{ local_dir_path }}/device_info"
+  run_once: true
+  delegate_to: localhost
+
+- name: 점검 결과 리포트의 컬럼 값 생성
+  set_fact:
+    header: "{{ header|default('HOSTNAME, IP') + ',\"' + item.header + '\"' }}"
+  loop: "{{ cmd }}"
+  run_once: yes 
+
+- name: 점검 결과 TMP 파일 생성
+  lineinfile:
+    dest: "{{ local_dir_path }}/device_info/{{ tmp_file }}"
+    line: "{{ header }}"
+    create: yes
+    state: present
+  run_once: yes 
+  delegate_to: localhost
+

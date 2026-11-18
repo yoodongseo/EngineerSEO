@@ -1,0 +1,39 @@
+---
+- name: "DR 05 Primary 원복" ##이름 수정 필요
+  hosts: all
+  serial: 1
+  # vars_files:
+  # - ../vars/server_ordering_5.yml
+  gather_facts: true
+  tasks:
+    - name: 일시 생성
+      set_fact:
+        today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+      delegate_to: localhost
+      run_once: true
+      
+    - name: 변수 파일 호출
+      COMPANYlude_vars: ../vars/server_ordering_5.yml
+
+    - name: Standy DB의 호스트 정보
+      debug: 
+        msg:
+        - "IP: {{ fap.host_vars.standby_db_ip }}"
+        - "HOSTNAME: {{ ansible_facts.fqdn }}"
+
+    - name: 호스트 정보 불일치 시 작업 종료
+      fail:
+        msg:
+        - "변수파일과 추출한 HOSTNAME이 일치하지 않습니다. 작업이 중단 됩니다."
+        - "변수파일에 입력한 HOSTNAME: {{ fap.host_vars.standby_db_hostname }}"
+        - "추출한 HOSTNAME: {{ ansible_facts.fqdn }}"
+      when: fap.host_ip != STANDBY_DB_IP | default('none')
+
+    - name: "Step 5 - DR DB 복원"
+      COMPANYlude_tasks: ../tasks/Step_5.yml
+
+    - debug:
+        msg:
+          - "[Step 5] DR DB 복원"
+          - "[Step 6] 수동 작업. Primary OS 기동 작업을 진행 해주세요."
+#### Step6 은 사람이 수동 #####

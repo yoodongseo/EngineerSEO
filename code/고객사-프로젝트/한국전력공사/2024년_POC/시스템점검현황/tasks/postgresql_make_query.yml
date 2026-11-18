@@ -1,0 +1,40 @@
+---
+- name: fap_report_data 입력값 파싱
+  set_fact: 
+    severity: "{{ '7' if merged.is_pass | default('0') == '1' else '3' }}"
+    output: "{{ merged.result | default('') }}"  # fap save 모듈 사용시 활성화
+    is_success: "{{ merged.is_success | default(1) }}"
+
+- set_fact: # fap_report_data 테이블 저장용 content_value(Dict) 변수 생성
+    content_value: "{{ content_value | default({}) | combine({
+      'inventory_id': host_info.inventory_id,
+      'group_id': host_info.group_id,
+      'host_id': host_info.host_id,
+      'os_info': vendor,
+      'report_type': inspection_group,
+      'template_id': fap.template_id,
+      'job_id': fap.job_id,
+      'inspection_group': inspection_group,
+      'inspection_item': item.cmd_name,
+      'output': output,
+      'is_success': is_success,
+      'collect_date': today,
+      'severity': severity
+      }) }}"
+### 'report_type': fap_report_type,
+
+- fap.common.save_data: # SAVE 모듈 수행
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    table_name: "{{ report_table }}"
+    content: "{{ content_value }}"
+    data_type: "{{ report_table }}"
+    data_key: "{{ report_table }}"
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  delegate_to: localhost
+
+- set_fact: # 다음 loop에서 content_value가 오류로 생성되지 않았을때 이전변수가 그대로 활용되지 않도록 초기화
+    content_value: {}
+
+

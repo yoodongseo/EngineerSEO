@@ -1,0 +1,26 @@
+---
+# step2. 3작업
+- name: Primary cubeone 중지
+  shell: |
+    source /home/{{ item.cubeone_account }}/.bash_profile
+    su - cubeone -c "/home/cubeone/bin/cubeone.sh stop $ORACLE_SID"
+  register: result_stop_cubeone
+  loop: "{{ cubeoneaccount }}"
+  when: item.cubeone_account != ""
+
+- name: Primary CRS 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ CUBEONE_FILE }}"
+    create: true
+    block: |
+      "{{ item.stdout }}"
+    marker: "# {mark} Primary cubeone 중지 명령어 결과 백업"
+  register: blockinfile_result_crs
+  loop: "{{ result_stop_cubeone.results }}"
+  when: item.stdout is defined
+  delegate_to: localhost
+
+- name: cubeone 중지 명령어 결과 백업 경로 출력 ---> localhost
+  when: blockinfile_result_crs.changed | bool
+  debug:
+    msg: "저장 경로 : {{ BACKUP_DIR }}/{{ CUBEONE_FILE }}"

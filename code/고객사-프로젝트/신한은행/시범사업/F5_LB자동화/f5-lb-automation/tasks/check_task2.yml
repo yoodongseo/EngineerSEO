@@ -1,0 +1,104 @@
+---
+- when: err_flag == false
+  block:
+    - name: Server 정보 조회
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/server"
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: GET
+        validate_certs: "{{ validate_certs }}"
+      register: ServerList
+      delegate_to: localhost
+
+    # 네이밍룰 센터코드_계열사코드_Server
+    - name: Define Server
+      set_fact:
+        server_name: "{{ item.datacentercode ~ '_' ~ company_code ~ '_Server' }}"
+
+    - name: Server 중복 검증 -> {{server_name}}
+      set_fact:
+        data: "{{ ServerList.json|default([]) }}"
+        err_msg:
+          "{{ '' if server_name in ServerList['json']['items'] | map(attribute='name') | list
+          else server_name if err_msg == ''
+          else err_msg ~ ', ' ~ item.datacentercode }}"
+
+    - name: 에러 플래그 설정
+      set_fact:
+        err_flag: True
+        workable_server: false
+        err_msg: "{{ '요청하신 ' ~ err_msg ~ ' 서버가 존재하지 않습니다.'}}"
+      when: err_msg|default('')|length > 0
+
+- when: err_flag == false
+  block:
+    # 네이밍룰 V서버 Index
+    - name: Define Virtual Server Idx
+      set_fact:
+        vserver_idx: "{{ vserver_idx|int + 1 }}"
+
+    # 네이밍룰 vir_센터코드_Idx_계열사코드_도메인명
+    - name: Define Virtual Server
+      set_fact:
+        vserver_name: "{{ 'vir' ~ '_' ~ item.datacentercode ~ '_' ~  vserver_idx ~ '_' ~ company_code ~ '_' ~ wideips_name  }}"
+
+    - name: Virtual Server 정보 조회
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/server/{{server_name}}/virtual-servers"
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: GET
+        validate_certs: "{{ validate_certs }}"
+      register: VServerList
+      delegate_to: localhost
+    # - debug: var=VServerList
+
+    - name: Virtual Server 중복 검증 -> {{vserver_name}}
+      set_fact:
+        data: "{{ VServerList.json|default([]) }}"
+        err_msg: "{{'요청하신 [' ~ vserver_name ~ '] V서버가 이미 존재 합니다.' if vserver_name in VServerList['json']['items'] | map(attribute='name') | list  else ''}}"
+    # - debug: var=err_msg
+
+    - name: 에러 플래그 설정
+      set_fact:
+        err_flag: True
+        workable_vserver: false
+      when: err_msg|default('')|length > 0
+
+- when: err_flag == false
+  block:
+    # 네이밍룰 protocol_모니터
+    - name: Define Monitor
+      set_fact:
+        monitor_name: "{{ item.protocol ~ '_' ~ vserver_name ~ '_' ~ item.healthcheckport }}"
+
+    - name: 헬스체크모니터 정보 조회
+      ansible.builtin.uri:
+        url: "{{ host }}/{{ rest_api_info.default_api }}/monitor/{{item.protocol}}"
+        user: "{{ username }}"
+        password: "{{ password }}"
+        method: GET
+        validate_certs: "{{ validate_certs }}"
+      register: MonitorList
+      delegate_to: localhost
+    # - debug: var=MonitorList
+
+    - name: 헬스체크모니터 중복 검증 -> {{monitor_name}}
+      set_fact:
+        data: "{{ VServerList.json|default([]) }}"
+        err_msg: "{{'요청하신 [' ~ monitor_name ~ '] 헬스체크모니터가 이미 존재 합니다.' if monitor_name in MonitorList['json']['items'] | map(attribute='name') | list  else ''}}"
+    # - debug: var=err_msg
+
+    - name: 에러 플래그 설정
+      set_fact:
+        err_flag: True
+        workable_vserver: false
+      when: err_msg|default('')|length > 0
+
+# - debug: var=err_flag
+- name: 에러 시, 작업 중단
+  fail:
+    msg: "검증 실패: {{err_msg}}"
+  when: err_flag
+  ignore_errors: false

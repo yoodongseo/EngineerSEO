@@ -1,0 +1,11 @@
+---
+report_type: "security"
+data_key: "kepco"
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_id }}/{{ fap.host_ip }}"
+data_type: "report"
+save_type: "report"
+target_type: "{{ 'mixed' if vendor in ['Linux', 'Windows', 'Aix', 'Hpux', 'Solaris', 'aix', 'hpux', 'solaris'] else 'pwonly' }}"
+report_target: "보안점검_{{ '서버' if vendor in ['Linux', 'Windows', 'Aix', 'Hpux', 'Solaris', 'aix', 'hpux', 'solaris'] else '네트워크장비' }}"
+message_data: "{{ report_type }}_{{ save_today }}"

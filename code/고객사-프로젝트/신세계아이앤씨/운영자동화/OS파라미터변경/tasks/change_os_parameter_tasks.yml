@@ -1,0 +1,57 @@
+---
+- name: 시간 정보 수집
+  shell: date +%y%m%d_%Hh%Mm
+  register: result_date
+
+- name: "{{ sysctl_file }} 백업 --- {{ sysctl_file }}_{{ result_date.stdout }}"
+  copy:
+    src: "{{ sysctl_file }}"
+    dest: "{{ sysctl_file }}_{{ result_date.stdout }}"
+  register: result_copy_sysctl
+
+- name: "{{ limits_file }} 백업 --- {{ limits_file }}_{{ result_date.stdout }}"
+  copy:
+    src: "{{ limits_file }}"
+    dest: "{{ limits_file }}_{{ result_date.stdout }}"
+  register: result_copy_limits
+
+- name: 커널파라미터 설정 - sysctl
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: "{{ sysctl_state }}"
+    sysctl_set: 'yes'
+    sysctl_file: "{{ sysctl_file }}"
+    reload: 'yes'
+  with_items: "{{ sysctl }}"
+  register: result_sysctl
+  when: sysctl_flag 
+
+- name: 커널파라미터 설정 - limits
+  pam_limits:
+    domain: "{{ item.domain }}"
+    limit_type: "{{ item.limit_type }}"
+    limit_item: "{{ item.limit_item }}"
+    value: "{{ item.value }}"
+    comment: "{{ item.comment }}"
+    dest: "{{ limits_file }}"
+  with_items: "{{ limits }}"
+  register: result_limits
+  when: limits_flag
+
+- name: reset ssh connection
+  ansible.builtin.meta: reset_connection
+
+# - name: sysctl 커널 파라미터 변경 확인
+#   shell: 'sysctl -a'
+#   register: result_cmd_sysctl
+
+# - name: limits 커널 파라미터 변경 확인
+#   shell: 'ulimit -a'
+#   register: result_cmd_ulimit
+
+# - name: sysctl -a 수행결과 출력
+#   debug: var=result_sysctl.stdout
+
+# - name: ulimit -a 수행결과 출력
+#   debug: var=result_ulimit.stdout

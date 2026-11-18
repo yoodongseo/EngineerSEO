@@ -1,0 +1,180 @@
+---
+- name: 01. WINDOWS - OS 정보 수집
+  win_shell: |
+    $os = Get-WmiObject -Class Win32_OperatingSystem
+    $platform = [System.Environment]::OSVersion.Platform
+    Write-Output "$($os.Caption)|$platform|$($os.Version)|$($os.BuildNumber)"
+  register: win_os_info
+
+- name: 01. WINDOWS - OS 정보 수집
+  set_fact:
+    merged_value: >-
+      {{
+        merged_value | default({}) | combine({
+          'os_name': win_os_info.stdout.split('|')[0] | trim,
+          'os_type': win_os_info.stdout.split('|')[1] | trim,
+          'os_version': win_os_info.stdout.split('|')[2] | trim,
+          'kernel': win_os_info.stdout.split('|')[3] | trim
+        })
+      }}
+
+- name: 02. WINDOWS - Disk 정보 수집
+  win_shell: Get-Volume | Select-Object DriveLetter, FileSystemLabel, FileSystem, SizeRemaining, Size | ConvertTo-Csv -NoTypeInformation
+  register: disk_info
+
+- name: 02. WINDOWS - Disk 정보 수집(필터 방식)
+  set_fact:
+    df_list: "{{ disk_info.stdout_lines | remove_locale_warnings | parse_win_df_lines }}"
+
+# - name: 02. WINDOWS - Disk 정보 수집
+#   set_fact:
+#     df_list: "{{ df_list | default([]) + [ \
+#               { 'filesystem': (item.split(',')[1] | regex_replace('^\"|\"$', '') + '(' + item.split(',')[2] | regex_replace('^\"|\"$', '') + ')'), \
+#                 'size': (item.split(',')[4] | regex_replace('^\"|\"$', '') | int / 1024 / 1024 | round) | int, \
+#                 'used': ((item.split(',')[4] | regex_replace('^\"|\"$', '') | int - item.split(',')[3] | regex_replace('^\"|\"$', '') | int) / 1024 / 1024 | round) | int, \
+#                 'avail': (item.split(',')[3] | regex_replace('^\"|\"$', '') | int / 1024 / 1024 | round) | int, \
+#                 'mounted': (item.split(',')[0] | regex_replace('^\"|\"$', '')) } \
+#               ] }}"
+#   loop: "{{ disk_info.stdout_lines[1:] }}"
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_list': df_list }) }}"
+
+- name: 02. WINDOWS - Disk size
+  win_shell: "(Get-PhysicalDisk | Select-Object -Property Size | Measure-Object -Property 'Size' -Sum).Sum / 1GB"
+  register: disk_size
+  
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'disk_size': disk_size.stdout_lines[0] | trim }) }}"
+
+- name: 03. WINDOWS - Uptime info
+  win_shell: |
+    $bootuptime = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime
+    $CurrentDate = Get-Date
+    $uptime = $CurrentDate - $bootuptime
+    Write-Output "$($uptime.days) Days, $($uptime.Hours) Hours, $($uptime.Minutes) Minutes"
+  register: uptime_info
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'uptime': uptime_info.stdout_lines[0] }) }}"
+
+- name: 04. WINDOWS - CPU Usage
+  win_shell: "Get-WmiObject win32_processor | Measure-Object -property LoadPercentage -Average | Select Average"
+  register: cpu_info
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu': cpu_info.stdout_lines[3] | trim }) }}"
+
+- name: 04. WINDOWS - CPU Cores
+  win_shell: |
+    (Get-CimInstance Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
+  register: cpu_cores
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'cpu_cores': cpu_cores.stdout_lines[0] | trim }) }}"
+
+- name: 05. WINDOWS - Memory Usage
+  win_shell: |
+    $CompObject =  Get-WmiObject -Class WIN32_OperatingSystem
+    $Memory = ((($CompObject.TotalVisibleMemorySize - $CompObject.FreePhysicalMemory)*100)/ $CompObject.TotalVisibleMemorySize)
+    Write-Host $Memory
+  register: memory_info
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory': memory_info.stdout_lines[0] | trim }) }}"
+
+- name: 05. WINDOWS - Memory size
+  win_shell: "(Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum /1mb"
+  register: memory_size
+
+- name: set_fact
+  set_fact:
+    merged_value: "{{ merged_value | combine({'memory_size': memory_size.stdout_lines[0] | trim }) }}"
+
+- name: 06. WINDOWS - User list
+  win_shell: "gwmi win32_UserAccount | Select Name | ForEach-Object {$_.Name}"
+  register: user_list
+  
+- name: 06. WINDOWS - User list --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | combine({'user_list': user_list.stdout_lines | select('match', '.+') | list } ) }}"
+
+- name: 07. WINDOWS - Service list
+  win_shell: |
+    Get-Service | ForEach-Object {
+      "$($_.DisplayName)|$($_.Status)|$($_.ServiceType)|$($_.StartType)"
+    }
+  register: service_info
+
+- set_fact:
+    service_list_parsed: "{{ service_info.stdout_lines | parse_service_pipe }}"
+
+- name: 07. WINDOWS - Service list --> merged_value
+  set_fact:
+    merged_value: "{{ merged_value | default({}) | combine({'service_list': service_list_parsed}) }}"
+
+# - name: 08. WINDOWS - Package list
+#   win_shell: Get-Package | Select-Object @{Name='name'; Expression={$_.Name}}, @{Name='version'; Expression={$_.Version}}, @{Name='release'; Expression={$_.ProviderName}}, @{Name='source'; Expression={$_.Source}} | ConvertTo-Json
+#   register: package_info
+
+# - name: set_fact
+#   set_fact:
+#    merged_value: "{{ merged_value | combine({'package_list': package_info.stdout | from_json }) }}"
+
+- name: 08. WINDOWS - Package list (PowerShell 버전 확인)
+  win_shell: |
+    $ver = $PSVersionTable.PSVersion.Major
+    Write-Output $ver
+  register: powershell_version
+
+- name: 08. WINDOWS - Package list (PS 5+)
+  win_shell: |
+    Get-Package | ForEach-Object {
+      "$($_.Name)|$($_.Version)|$($_.ProviderName)|$($_.Source)"
+    }
+  when: powershell_version.stdout | int >= 5
+  register: pkg_list_get_package
+
+# powershell 버전 5 이상: parse_package_lines의 fallback 파라미터 값 설정 필요없음 (default: false)
+- name: 08. WINDOWS - Package list 정제 (PS 5+)
+  when: powershell_version.stdout | int >= 5
+  set_fact:
+    package_list: "{{ pkg_list_get_package.stdout_lines | parse_package_lines }}" 
+
+- name: 08. WINDOWS - Package list --> merged_value (PS 5+)
+  when: powershell_version.stdout | int >= 5
+  set_fact:
+    merged_value: "{{ merged_value | default({}) | combine({'package_list': package_list}) }}"
+
+- name: 08. WINDOWS - Package list (PS < 5)
+  win_shell: |
+    $paths = @(
+      "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+      "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+    foreach ($path in $paths) {
+      Get-ItemProperty $path -ErrorAction SilentlyContinue |
+        Where-Object { $_.DisplayName -and $_.DisplayVersion } |
+        ForEach-Object {
+          "$($_.DisplayName)|$($_.DisplayVersion)|Unknown"
+        }
+    }
+  when: powershell_version.stdout | int < 5
+  register: pkg_list_registry
+
+# powershell 버전 5 이하: parse_package_lines의 fallback 파라미터 값을 true로 설정해야 함
+- name: 08. WINDOWS - Package list 정제 (PS < 5)
+  when: powershell_version.stdout | int < 5
+  set_fact:
+    package_list: "{{ pkg_list_registry.stdout_lines | parse_package_lines(true) }}"
+
+- name: 08. WINDOWS - Package list --> merged_value
+  when: powershell_version.stdout | int < 5
+  set_fact:
+    merged_value: "{{ merged_value | default({}) | combine({'package_list': package_list}) }}"

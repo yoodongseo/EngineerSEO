@@ -1,0 +1,25 @@
+---
+- block:
+  - name: 설치 패키지 배포
+    copy:
+      src: "{{ copy_src }}" ## "../templates/{{ result_pkg_search['stdout'] }}"
+      dest: "{{ copy_dest }}"
+
+  - name: Agent 설치
+    shell: "{{ agent_mgmt_polestar['install'] }}"
+    register: result_agent_install
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. Agent 설치',
+          'command': 'Polestar install cmd',
+          'result': result_agent_install['stdout'] | default('unknown'),
+          'is_success': True,
+          'is_pass': False if result_agent_install['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

@@ -1,0 +1,22 @@
+---
+# REST API 정보
+rest_api_info:
+  active_api: "mgmt/tm/sys/failover" # active/standby 구분
+  default_api: "mgmt/tm/gtm"
+  wide_ip:
+    a: "mgmt/tm/gtm/wideip/a"
+    astat: "mgmt/tm/gtm/wideip/a/stats"
+    # cname: "mgmt/tm/gtm/wideip/cname"
+  pool:
+    a: "mgmt/tm/gtm/pool/a" # /{pool_name}/members ---> pool member 조회
+    # cname : "mgmt/tm/gtm/pool/cname"
+  monitor:
+    gatewayicmp: "mgmt/tm/gtm/monitor/gatewayIcmp"
+    tcp: "/mgmt/tm/gtm/monitor/tcp"
+    http: "/mgmt/tm/gtm/monitor/http"
+    https: "/mgmt/tm/gtm/monitor/https"
+    udp: "/mgmt/tm/gtm/monitor/udp"
+  server: "/mgmt/tm/gtm/server"
+
+# 포탈 연계 플래그
+portal_flag: true

@@ -1,0 +1,20 @@
+---
+- block:
+  - name: 디렉토리 권한 설정 작업 수행
+    shell: "{{ set_dir_perm_cmd }}"
+    register: result_set_dir_perm_cmd
+  
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '2. 디렉토리 권한 설정',
+          'command': 'Linux_PKG',
+          'result': result_set_dir_perm_cmd['stdout'] if result_set_dir_perm_cmd['failed'] else '정상',
+          'is_success': True,
+          'is_pass': False if result_set_dir_perm_cmd['failed'] else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

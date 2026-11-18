@@ -1,0 +1,227 @@
+---
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "network"
+model: "cisco"
+data5: "에방점검_SDN컨트롤러"
+
+commands:
+  - cmd_id: "0001"
+    filter_key: "SdnUptimeFilter"
+    name: "01. 시스템 Uptime 점검"
+    command: "uptime"
+    os: "{{ model }}"
+    # inspection_criteria: min_minutes는 최소 정상 uptime(분) 기준
+    inspection_criteria:
+      min_minutes: 1
+    is_save: true
+    is_compare: true
+    timeout: 3
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0002"
+    filter_key: "SdnAcidiagAvreadFilter"
+    name: "02. 컨트롤러 상태 점검"
+    command: "acidiag avread"
+    os: "{{ model }}"
+    # inspection_criteria: bad_keywords 미검출, min_health 이상이면 정상
+    inspection_criteria:
+      bad_keywords: ["inactive", "unreachable", "failed", "fault", "down", "unknown", "degraded"]
+      min_health: 80
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0003"
+    filter_key: "SdnAcidiagFnvreadFilter"
+    name: "03. 패브릭 연동 상태 점검"
+    command: "acidiag fnvread"
+    os: "{{ model }}"
+    # inspection_criteria: bad_keywords 미검출 시 정상
+    inspection_criteria:
+      bad_keywords: ["inactive", "unreachable", "failed", "fault", "down", "unknown", "degraded"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0004"
+    filter_key: "SdnInterfaceBriefFilter"
+    name: "04. 인터페이스 상태 점검"
+    command: "show interface bridge-domain"
+    os: "{{ model }}"
+    # inspection_criteria: allow_admin_down 허용 여부와 bad_statuses 검출 기준
+    inspection_criteria:
+      allow_admin_down: true
+      bad_statuses: ["down", "err-disabled", "inactive", "disabled"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0005"
+    filter_key: "cpu"
+    name: "05. CPU 점검"
+    command: "top -bn1 | grep 'Cpu(s)'"
+    os: "{{ model }}"
+    # inspection_criteria: cpu_max_pct, mem_max_pct는 최대 허용 사용률(%)
+    inspection_criteria: 80
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0006"
+    filter_key: "memory"
+    name: "06. Memory 점검"
+    command: "free -m"
+    os: "{{ model }}"
+    # inspection_criteria: cpu_max_pct, mem_max_pct는 최대 허용 사용률(%)
+    inspection_criteria: 80
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0007"
+    filter_key: "disk"
+    name: "07. DISK 사용량 점검"
+    command: "df -h"
+    os: "{{ model }}"
+    # inspection_criteria: max_use_percent 초과 또는 min_avail_gb 미만이면 비정상
+    inspection_criteria:
+      max_use_percent: 80
+      min_avail_gb: 10
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0008"
+    filter_key: "SdnAcidiagHealthFilter"
+    name: "08. PSU/FAN 상태 점검"
+    command: "acidiag avread"
+    os: "{{ model }}"
+    # inspection_criteria: bad_patterns 검출, ignore_patterns 제외 기준
+    inspection_criteria:
+      bad_patterns: ["fail", "fault", "critical", "major", "minor", "degraded", "not ok", "not present", "unknown"]
+      ignore_patterns: []
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0009"
+    filter_key: "SdnFaultInstFilter"
+    name: "09. ACI Fault Log 점검"
+    command: "show faults detail | head -100"
+    os: "{{ model }}"
+    # inspection_criteria: bad_severities 심각도 fault가 있으면 비정상
+    inspection_criteria:
+      bad_severities: ["critical"]
+    is_save: true
+    is_compare: true
+    timeout: 10
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0010"
+    filter_key: "messages"
+    name: "10. CIMC Fault Log 점검"
+    command: "cat /var/log/messages | tail -100"
+    os: "{{ model }}"
+    # inspection_criteria: bad_severities 심각도 fault가 있으면 비정상
+    inspection_criteria: ["error", "failed"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0011"
+    filter_key: "SdnNtpqFilter"
+    name: "11. NTP 상태 점검"
+    command: "show ntpq"
+    os: "{{ model }}"
+    # inspection_criteria: min_reach 이상이고 tally 문자(*,+,o) 확인 시 정상
+    inspection_criteria:
+      min_reach: 1
+      require_tally: true
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0012"
+    filter_key: "SdnAcidiagFnvreadFilter"
+    name: "12. 패브릭 멤버쉽 점검"
+    command: "acidiag fnvread"
+    os: "{{ model }}"
+    # inspection_criteria: bad_keywords 미검출 시 정상
+    inspection_criteria:
+      bad_keywords: ["inactive", "unreachable", "failed", "fault", "down", "unknown", "degraded"]
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0013"
+    filter_key: "SdnAcidiagAvreadFilter"
+    name: "13. 패브릭 클러스터 멤버쉽 점검"
+    command: "acidiag avread"
+    os: "{{ model }}"
+    # inspection_criteria: bad_keywords 미검출, min_health 이상이면 정상
+    inspection_criteria:
+      bad_keywords: ["inactive", "unreachable", "failed", "fault", "down", "unknown", "degraded"]
+      min_health: 80
+    is_save: true
+    is_compare: true
+    timeout: 5
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0014"
+    filter_key: "SdnEndpointCountFilter"
+    name: "14. Endpoint 수 점검"
+    command: "moquery -c fvCEp | wc -l"
+    os: "{{ model }}"
+    # inspection_criteria: min_count는 최소 Endpoint 개수 기준
+    inspection_criteria:
+      min_count: 1
+    is_save: true
+    is_compare: true
+    timeout: 10
+    sleep: 0.2
+    message: "{{ message_data }}"
+
+  - cmd_id: "0015"
+    filter_key: "SdnAcidiagBackupFilter"
+    name: "15. Config 백업 점검"
+    command: "show running-config"
+    os: "{{ model }}"
+    # inspection_criteria: ok_keywords 포함, bad_keywords 미포함이면 정상
+    inspection_criteria:
+      ok_keywords: ["completed", "complete", "success", "successful", "backup"]
+      bad_keywords: ["fail", "failed", "error", "denied", "abort"]
+    is_save: true
+    is_compare: true
+    timeout: 20
+    sleep: 0.2
+    message: "{{ message_data }}"

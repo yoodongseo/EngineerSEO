@@ -1,0 +1,58 @@
+---
+- name: 접속, active 상태 확인
+  ansible.builtin.uri:
+    url: '{{ host }}/{{ rest_api_info.active_api}}'
+    user: '{{ username }}'
+    password: '{{ password }}'
+    method: GET
+    validate_certs: '{{ validate_certs }}'
+  register: result_active
+  delegate_to: localhost
+
+- name: 접속 실패 결과 저장
+  set_fact:
+    job_result: "{{ job_result|default([]) + [{
+      'resActive': 'unknown',
+      'data': result_active,
+      'err_msg': '접속실패',
+      'err_flag': True
+      }] }}"
+    err_flag: True
+  when: >
+    result_active.failed|default(true) == true 
+    or result_active.json is not defined
+
+- name: 접속 실패 판단
+  fail:
+    msg: '접속 실패'
+  when: >
+    result_active.failed|default(true) == true 
+    or result_active.json is not defined
+  ignore_errors: false
+
+- name: active 상태 추출
+  set_fact:
+    is_active: "{{ 1 if result_active['json']['apiRawValues']['apiAnonymous']|default('unknown')|regex_search('active')|lower == 'active'
+      else 0 if result_active['json']['apiRawValues']['apiAnonymous']|default('unknown')|regex_search('standby')|lower == 'standby'
+      else None }}"
+# - when: is_active|default(false)
+#   block:
+#   - name: 동기화 정보 조회
+#     ansible.builtin.uri:
+#       url: "{{ host }}/{{ item }}"
+#       user: "{{ username }}"
+#       password: "{{ password }}"
+#       method: GET
+#       validate_certs: "{{ validate_certs }}"
+#     register: result_async_info
+#     loop:
+#     - "{{ rest_api_info.a_record }}" # 0->a_record
+#     - "{{ rest_api_info.cname_record }}" # 1->cname_record
+#     - "{{ rest_api_info.zone.auth }}" # 2->zone_auth
+#     - "{{ rest_api_info.zone.forward }}" # 3->zone_forward
+#     - "{{ rest_api_info.zone.delegated }}" # 4->zone_delegated
+
+#   - name: 동기화 정보 추출
+#     set_fact:
+#       job_result: "{{ result_async_info.results }}"
+#     when: result_async_info is defined

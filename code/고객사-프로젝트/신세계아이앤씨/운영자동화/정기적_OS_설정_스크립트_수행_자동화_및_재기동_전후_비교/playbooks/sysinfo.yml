@@ -1,0 +1,91 @@
+---
+- name: Sysinfo
+  hosts: all
+  become: true
+  gather_facts: true
+  ignore_errors: true
+  ignore_unreachable: true
+  tasks:  
+    - block:
+      - name: 연결 상태 체크
+        shell: hostname
+        register: result_hostname
+
+      - name: Sysinfo 변수 호출
+        include_vars: ../vars/vars_sysinfo.yml
+        when: result_hostname.failed|default(true) == false
+
+      - name: Sysinfo 작업 호출 --- RedHat
+        include_tasks: ../tasks/sysinfo_rhel.yml 
+        when: ansible_distribution|default('unknown') in ["CentOS", "RedHat", "Ubuntu"] and result_hostname.failed|default(true) == false     
+        # when: ansible_distribution|default('unknown') == "CentOS" and result_hostname.failed|default(true) == false
+      
+      - name: Sysinfo 작업 호출 --- Solaris
+        include_tasks: ../tasks/sysinfo_solaris.yml
+        when: ansible_distribution|default('unknown') == "Solaris" and result_hostname.failed|default(true) == false
+
+      - name: Sysinfo 작업 호출 --- AIX
+        include_tasks: ../tasks/sysinfo_aix.yml
+        when: ansible_distribution|default('unknown') == "AIX" and result_hostname.failed|default(true) == false
+
+      - name: Sysinfo 작업 호출 --- Oracle
+        include_tasks: ../tasks/sysinfo_oracle.yml
+        when: ansible_distribution|default('unknown') == "Oracle" and result_hostname.failed|default(true) == false
+
+      always:
+        - name: Make result_value --- False
+          set_fact:
+            result_value: "{{ result_value | default({}) | combine({\
+            'host': inventory_hostname, \
+            'id': None,\
+            'name': None, \ 
+            'result': None,\
+            'is_success': False, \
+            'compare': False }) }}" 
+          delegate_to: localhost
+          when: result_value is not defined or result_hostname.failed|default(true) == true
+
+        - name: set_fact - merged_value --- False
+          set_fact:
+            merged_value: "{{ merged_value | default([]) + [result_value] }}"
+          delegate_to: localhost
+          when: result_value.is_success | default(false) == false
+
+        - name: Make content value
+          set_fact:
+            content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+          delegate_to: localhost
+          when: merged_value is defined
+
+        - name: Save to DB
+          fap.common.save_data:
+            content: "{{ content_value }}"
+            protocol: http
+            hostname: "{{ inventory_hostname }}"
+            data_type: backup
+            template_id: "{{ fap.template_id | default(omit) }}"
+            job_id: "{{ fap.job_id | default(omit) }}"
+          delegate_to: localhost
+          when: content_value is defined
+
+        - name: Success Message
+          debug: 
+            msg: "작업을 성공 하였습니다."
+          when: content_value is defined and result_hostname.failed|default(true) == false and content_value.data_list[0].is_success|default(false) == true
+
+        - name: Failure Message
+          debug: 
+            msg: "작업을 실패 하였습니다. 정보를 확인해 주세요."
+          ignore_errors: false
+          when: content_value is not defined or result_hostname.failed|default(true) == true or content_value.data_list[0].is_success|default(false) == false
+          failed_when: content_value is not defined or result_hostname.failed|default(true) == true or content_value.data_list[0].is_success|default(false) == false
+
+        - name: "작업을 종료합니다"
+          run_once: true
+          delegate_to: localhost
+          command: echo " "
+          changed_when: false
+          check_mode: no
+          no_log: true
+
+

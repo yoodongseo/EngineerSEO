@@ -1,0 +1,27 @@
+---
+- name: win_os_update
+  hosts: all
+  strategy: free
+  gather_facts: True
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files: 
+    - ../vars/update_vars.yml
+  tasks:
+    - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_win_con_tasks.yml
+
+      - name: 2. 업데이트 작업 수행
+        include_tasks: ../tasks/02_win_update.yml
+
+      - name: 3. 재부팅
+        include_tasks: ../tasks/03_win_reboot_tasks.yml
+        when: reboot_flag == 'Y'
+
+      # - name: 4. 업데이트 성공여부 점검 (가장 최근 업데이트 시간을 추출하는 방식으로 처리 필요)
+      #   include_tasks: ../tasks/04_win_update_check.yml
+        
+      always:
+        - name: 데이터 저장
+          include_tasks: ../tasks/save_data.yml

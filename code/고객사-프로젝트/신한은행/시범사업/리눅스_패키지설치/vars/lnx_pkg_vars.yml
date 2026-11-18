@@ -1,0 +1,8 @@
+---
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: 'Linux'
+report_type: 'Linux 패키지 설치'
+data_key: LNX_PKG_INST
+
+# 수행의뢰 변수
+pkg_name: "{{ fap['host_vars']['pkg_name'] }}"

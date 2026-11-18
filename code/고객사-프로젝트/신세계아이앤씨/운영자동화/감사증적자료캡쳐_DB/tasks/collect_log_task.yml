@@ -1,0 +1,108 @@
+---
+- name: set_fact --- result_date
+  set_fact:
+    result_date: "{{ hostvars.localhost.result_date.stdout }}"
+    hostname: "{{ result_connection.stdout }}"
+
+- name: "점검결과 파일저장을 위한 디렉토리 생성 --- {{ local_dir_path }}"
+  file:
+    path: "{{ local_dir_path }}"
+    state: directory
+  run_once: true
+  delegate_to: localhost
+
+- name: "점검결과 파일저장을 위한 디렉토리 생성 --- {{ local_dir_path }}//{{ hostname }}_{{ inventory_hostname }}"
+  file:
+    path: "{{ local_dir_path }}/{{ hostname }}_{{ inventory_hostname }}"
+    state: directory
+  delegate_to: localhost
+  
+- name: DBA role을 가진 계정 조회
+  include_tasks: check_DBA_role.yml
+
+- name: "DBA role을 가진 계정 조회 완료"
+  run_once: true
+  delegate_to: localhost
+  command: echo " "
+  changed_when: false
+  check_mode: no
+  no_log: true
+
+- name: 패치 이력 확인
+  include_tasks: check_path_history.yml
+
+- name: "패치 이력 확인 완료"
+  run_once: true
+  delegate_to: localhost
+  command: echo " "
+  changed_when: false
+  check_mode: no
+  no_log: true
+
+- name: 패스워드 복잡도 설정 확인 
+  include_tasks: check_password_complex.yml
+
+- name: "패스워드 복잡도 설정 확인 완료"
+  run_once: true
+  delegate_to: localhost
+  command: echo " "
+  changed_when: false
+  check_mode: no
+  no_log: true
+
+- when: merged_cmd is defined
+  block:  
+  - name: make file using lineinblock
+    ansible.builtin.blockinfile:            
+      block: "{{ item.output }}"
+      path: "{{ local_dir_path }}/{{ hostname }}_{{ inventory_hostname }}/{{ item.file }}.log"
+      marker: ""      
+      create: true      
+    loop: "{{ merged_cmd }}"  
+    delegate_to: localhost
+    no_log: true
+  
+  ##첫줄 엔터 지우기 4월 29일 추가
+  - name: Delete first line from file
+    ansible.builtin.shell: "sed -i '1d' {{ local_dir_path }}/{{ hostname }}_{{ inventory_hostname }}/{{ item.file }}.log"
+    loop: "{{ merged_cmd }}"
+    delegate_to: localhost
+    no_log: true
+
+  - name: make file using lineinblock
+    ansible.builtin.blockinfile:
+      block: "{{ lookup('file', '../vars/' + item) }}"
+      path: "/{{ local_dir_path }}/{{ hostname }}_{{ inventory_hostname }}/{{ item }}"
+      marker: ""
+      create: true
+    loop: "{{ python }}"  
+    delegate_to: localhost
+    no_log: true
+  
+  - name: make image
+    shell: "python {{ python[0] }}"
+    args:
+      chdir: "{{ local_dir_path }}/{{ hostname }}_{{ inventory_hostname }}"
+    delegate_to: localhost
+
+  - name: remove python
+    file:
+      path: "{{ local_dir_path }}//{{ hostname }}_{{ inventory_hostname }}/{{ item }}"
+      state: absent
+    loop: "{{ python}}"
+    delegate_to: localhost
+
+  - name: Make merged value --- true
+    set_fact:
+      merged_value: "{{ [{\
+      'host': inventory_hostname, \
+      'host_name': fap.host_name, \
+      'is_success': true, \
+      'file_path': '{{ local_dir_path }}/{{ hostname }}_{{ inventory_hostname }}', \
+      'system': system, \
+      'report_type': report_type \
+        }] }}"
+    delegate_to: localhost
+
+
+      

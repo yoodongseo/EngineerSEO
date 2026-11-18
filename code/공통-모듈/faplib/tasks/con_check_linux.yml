@@ -1,0 +1,59 @@
+---
+- block:
+  - name: 1. 연결상태 체크(Windows제외)
+    fap.custom.prompt:
+      command: "{{ inspection_commands }}"
+      # ssh_params:
+      #   # login_prompt_timeout: 10
+      #   # connect_timeout: 10
+      #   # auth_timeout: 10
+      #   # banner_timeout: 10
+    delegate_to: localhost
+    register: prompt_result_2
+    ignore_errors: true
+
+  - name: 실패 데이터 확인 #변수 호출
+    set_fact:
+      fail_result: >-
+        {%- if (prompt_result_2.failed | default(false)) 
+              or (var_result.failed | default(false)) -%}
+          {%- if var_result.failed | default(false) -%}
+          변수 호출 실패
+          {%- elif 'password' in (prompt_result_2.msg | default('') | lower) or 'authentication' in (prompt_result_2.msg | default('') | lower) and 'timeout' not in (prompt_result_2.msg | default('') | lower) -%}
+            계정정보 불일치
+          {%- elif 'port' in (prompt_result_2.msg | default('') | lower) and 'time' not in (prompt_result_2.msg | default('') | lower) -%}
+            접속포트 불일치
+          {%- elif 'failed to connect' in (prompt_result_2.msg | default('') | lower) -%}
+            대상설비 통신불가
+          {%- elif 'timeout' in (prompt_result_2.msg | default('') | lower) or 'timed out' in (prompt_result_2.msg | default('') | lower) or 'time out' in (prompt_result_2.msg | default('') | lower) -%}
+            연결시간 초과
+          {%- else -%}
+            기타
+          {%- endif -%}
+        {%- else -%}
+          정상
+        {%- endif -%}
+
+  - name: 연결 상태 실패 처리 # (DB에 데이터를 입력하면서 명시적으로 실패하기 위해 사용)
+    fail:
+      msg: "점검실패: {{ fail_result }}"
+    when: fail_result != '정상'
+    ignore_errors: false
+
+  always:
+    - name: Save DATA Merged 생성 -- con_tasks
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '00.연결상태',
+          'command': 'uname',
+          'result': '비정상' if prompt_result_2.failed | default(True) else '정상',
+          'is_success': False if prompt_result_2.failed | default(True) else True,
+          'is_pass': '-1' if prompt_result_2.failed | default(True) else True,
+          'system': system,
+          'report_type': report_type,
+          'fail_reason': fail_result,
+          'data5': report_target
+            }] }}"
+      when: save_type == 'report'

@@ -1,0 +1,56 @@
+---
+- block: 
+  - name: 변수 호출 --- ../vars/vars_rhel.yml
+    include_vars: ../vars/vars_rhel.yml
+
+  - name: 변수 설정 --- become_pass
+    set_fact:
+      become_pass: '{{ ansible_ssh_pass }}'
+
+  - name: 스크립트 파일 배포
+    ansible.builtin.copy:
+      src: "../vars/{{ script_file }}"
+      dest: "{{ script_path }}/{{ script_file }}"
+    register: result_copy
+
+  - name: sysinfo 스크립트 실행
+    shell: "sh {{ script_file }}"
+    args:
+      chdir: "{{ script_path }}"
+    vars:
+      ansible_become: yes
+      ansible_become_method: sudo
+      ansible_become_pass: "{{ become_pass }}"
+    register: result_script
+    failed_when: result_script.changed != true
+
+  - name: sysinfo 결과파일 확인
+    stat:
+      path: "{{ script_path }}/sysinfo-{{ date }}-{{ hostname }}.log"
+    register: result_stat
+
+  - name: syinfo 결과파일 읽기
+    ansible.builtin.slurp:
+      src: "{{ script_path }}/sysinfo-{{ date }}-{{ hostname }}.log"
+    register: result_slurp
+    when: result_stat.stat.exists
+
+  - name: sysinfo 결과파일 변수에 저장
+    set_fact:
+      result: "{{ result_slurp.content|b64decode }}"
+    when: result_stat.stat.exists
+
+  - name: 파일 삭제
+    ansible.builtin.file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+      - "{{ script_path }}/{{ script_file }}"
+      - "{{ script_path }}/sysinfo-{{ date }}-{{ hostname }}.log"
+
+  - name: Make Success message
+    include_tasks: ../tasks/make_success_msg.yml
+
+  rescue:
+    - name: Make failure message
+      include_tasks: ../tasks/make_failure_msg.yml

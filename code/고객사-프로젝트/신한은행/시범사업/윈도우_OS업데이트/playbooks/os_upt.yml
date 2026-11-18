@@ -1,0 +1,187 @@
+---
+- name: Win_update
+  hosts: all
+  gather_facts: true
+  ignore_errors: true
+  ignore_unreachable: true
+  vars:
+    os_info: "{{ ansible_facts.distribution | default('unknown') }}"    # Rocky, Ubuntu, Microsoft Windows 10 PRO
+    os_family: "{{ ansible_facts.os_family | default('unknown') }}"   # Redhat, Windows, Debian    
+
+    is_success: false # 기본값
+    system: "{{ os_family }}"
+    report_type: "업데이트"
+    
+    # Windows
+    pending_reboot_timeout: 1200
+    pending_pre_reboot_delay: 15
+    pending_post_reboot_delay: 60
+
+    update_serivce_running_check_shell: |
+      $WindowsUpdateService = Get-Service -Name wuauserv
+      if ($WindowsUpdateService.Status -eq "Running") {
+          Write-Host "Windows update is Running"
+          exit 0 } else {
+            Write-Host "Windows Update is not running"
+            exit 1
+        }
+    update_pending_check_shell: |
+      $PendingReboot = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired" -ErrorAction SilentlyContinue
+      if ($PendingReboot) {
+          Write-Host "Pending state exists"
+        } else {
+          Write-Host "No pending status"
+        }
+  tasks:
+  - fail:
+      msg:
+        - "연결 실패, 작업 중단 --> {{ inventory_hostname }}"
+    ignore_errors: false
+    when: os_info | default('unknown') == 'unknown'
+
+  - fail: # 현재 테스트할 수 있는 OS 정보 아닐 경우 중단 (Windows 계열)
+      msg:
+        - "대상 장비 OS 계열 확인 결과 --> {{ os_family }}"
+        - "대상 장비 세부 OS 현황 --> {{ os_info }}"
+        - "Windows OS가 아니므로 작업 중단"
+    when: os_family | default('unknown') != 'Windows'
+    ignore_errors: false
+
+  - block: # Windows 작업 수행
+    - debug:
+        msg:
+          - "Windows Update Ready --> {{ inventory_hostname }}"
+
+    - name: Windows 업데이트 서비스 가동유무 점검
+      win_shell: "{{ update_serivce_running_check_shell }}"
+      register: result_update_service_running_check_shell
+
+    - fail: # update 서비스 미실행중인 경우
+        msg:
+          - "작업 중지 ---> {{ inventory_hostname }}"
+          - "사유 ---> {{ result_update_service_running_check_shell.stdout }}"
+      when: result_update_service_running_check_shell.rc | default(1) == 1
+      ignore_errors: false
+
+    - name: Windows 업데이트 보류 존재 여부 확인
+      win_shell: "{{ update_pending_check_shell }}"
+      register: result_update_pending_check_shell
+
+    - block: # 보류중인 업데이트가 존재하는 경우 재기동은 1회만 수행
+      - debug:
+          msg:
+            - "Windows 장비 재기동 수행"
+            - "대상장비 --> {{ inventory_hostname }}"
+            - "사유 --> 보류중인 업데이트가 존재하는 것으로 확인"
+            - "관련 로그 --> {{ result_update_pending_check_shell.stdout | trim | default('unknown') }}"
+      
+      - name: Windows 장비 재부팅
+        win_reboot:
+          reboot_timeout: "{{ pending_reboot_timeout }}"
+          pre_reboot_delay: "{{ pending_pre_reboot_delay }}"
+          post_reboot_delay: "{{ pending_post_reboot_delay }}"
+        register: result_win_reboot
+      
+      - fail: 
+          msg:
+            - "재기동 작업 실패"
+            - "{{ inventory_hostname }} 작업중단"
+        when: result_win_reboot.failed | default(true) == true
+        ignore_errors: false
+
+      - name: 보류중인 업데이트 재확인
+        win_shell: "{{ update_pending_check_shell }}"
+        register: after_update_pending_check_shell
+
+      - fail:
+          msg:
+            - "reboot 이후에도 Pending clear가 되지 않은것으로 확인"
+            - "작업 실패 및 중단 --> {{ inventory_hostname }}"
+        when: after_update_pending_check_shell.stdout | trim | default('unknown') == 'Pending state exists' and after_update_pending_check_shell.stdout | trim | default('unknown') != 'No pending status'
+        ignore_errors: false
+
+      - debug: # Pending 정상 Clear의 경우 
+          msg:
+            - "대상장비 ---> {{ inventory_hostname }}"
+            - "재부팅 이후 Pending 정상 클리어 여부 확인, 이후 업데이트 작업 수행 준비 진행"
+            - "관련 로그 --> {{ after_update_pending_check_shell.stdout | trim | default('unknown') }}"
+        when: after_update_pending_check_shell.stdout | trim | default('unknown') == 'No pending status'
+      when: result_update_pending_check_shell.stdout | trim | default('unknown') == 'Pending state exists' # block --> 보류중인 업데이트가 존재하는 경우 재기동을 수행하는 작업 조건
+
+    - name: OS 업데이트 작업 수행
+      ansible.windows.win_updates:
+        category_names: '*'
+        state: installed
+        log_path: "C:\\ansible_update_log.txt"
+        reboot: false
+        reboot_timeout: "{{ pending_reboot_timeout }}"
+      async: 7200
+      poll: 10
+      register: result_win_updates
+      # failed_when: false
+
+    - name: 작업 결과 변수 업데이트 
+      set_fact:
+        # result: "{{ result_win_updates.updates | default('unknown') | string }}"
+        result: "{{ '성공' if result_win_updates['failed'] | default(false) == false else '실패' }}"
+        is_success: true
+        is_pass: "{{ True if result_win_updates.failed | default(true) == false else false }}"      
+
+    - set_fact: # result_value 생성
+        result_value: "{{ result_value | default({}) | combine ({ \
+          'host': inventory_hostname, \
+          'host_name': fap['host_ip'], \
+          'name': 'update', \
+          'command': 'win_update', \
+          'result': result|default(none), \
+          'is_success': is_success, \
+          'is_pass': is_pass|default(false), \
+          'system': '윈도우', \
+          'report_type': report_type \
+          }) }}"      
+
+    - set_fact: # merged_value에 누적
+        merged_value: "{{ merged_value|default([]) + [result_value] }}"
+
+    always:
+    - set_fact: # Windows 업데이트 수행 전 단계에서 실패가 생성 되었을 경우 (merged_value가 생성되지 않았으리라 판단)
+        merged_value: "{{ merged_value + [{\
+          'host': inventory_hostname, \
+          'host_name': fap['host_ip'], \
+          'name': none, \
+          'command': none, \
+          'result': none, \
+          'is_success': is_success, \
+          'is_pass': none, \
+          'system': system, \
+          'report_type': report_type \
+          }] }}"
+      when: merged_value is not defined 
+
+    - set_fact: # DB 저장용 변수 최종 생성
+        content_value: "{{ content_value | default({}) | combine({'data_list': merged_value}) }}"
+
+    - name: Save to DB
+      fap.common.save_data:
+        content: "{{ content_value }}"
+        protocol: http
+        hostname: "{{ inventory_hostname }}"
+        data_type: report
+        data_key: win_update
+        template_id: "{{ fap.template_id | default(omit) }}"
+        job_id: "{{ fap.job_id | default(omit) }}"
+      delegate_to: localhost
+
+    - debug: # 작업결과
+        msg:
+          - "작업 대상 OS 정보 --> {{ os_info | default('알수없음')}}"
+          - "작업 전 pending 존재여부 점검 결과 --> {{ (result_update_pending_check_shell.stdout | trim | default('unknown') == 'No pending status') | ternary('없음', '존재') }}"
+          - "작업 전 재기동 여부 --> {{ (result_win_reboot.failed is defined) | ternary ('수행', '미수행') }}"
+          - "Windows 업데이트 수행 여부 --> {{ '수행' if result_win_updates['failed'] is defined else '미수행' }}"
+          - "Windows 업데이트 작업 성공 여부 --> {{ (result_win_updates.failed | default(true) == false) | ternary('성공', '비정상 또는 작업 미수행') }}"
+          # - "windows 업데이트 작업 결과"
+          # - "{{ result_win_updates.updates }}"
+          - "출력 종료"
+      failed_when: result_win_updates.failed | default(true) == true
+      ignore_errors: false
+    when: os_family == 'Windows'  # block --> os_family가 윈도우 계열로 확인되는 경우에 수행하는 작업조건

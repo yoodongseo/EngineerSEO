@@ -1,0 +1,30 @@
+---
+- name: Windows Tomcat install
+  hosts: all
+  strategy: free
+  gather_facts: True
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files: 
+    - ../vars/win_tomcat_vars.yml
+  tasks:
+    - block:
+      - name: 1. Tomcat 설치 작업 진행
+        include_tasks: ../tasks/win_tomcat_tasks.yml
+        when: tomcat_action == 'install'
+
+      - name: 2. Tomcat 시작
+        include_tasks: ../tasks/win_tomcat_start.yml
+        when: tomcat_action == 'start'
+
+      - name: 3. Tomcat 중지
+        include_tasks: ../tasks/win_tomcat_stop.yml
+        when: tomcat_action == 'stop'
+
+      - name: 4. Tomcat 재시작
+        include_tasks: ../tasks/win_tomcat_restart.yml
+        when: tomcat_action == 'restart'
+        
+      always:
+        - name: 데이터 저장
+          include_tasks: ../tasks/save_data.yml

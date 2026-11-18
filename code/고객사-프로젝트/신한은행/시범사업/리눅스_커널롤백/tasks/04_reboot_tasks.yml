@@ -1,0 +1,22 @@
+---
+- block:
+  - name: 재기동
+    reboot:
+      reboot_timeout: "{{ rollback_reboot['reboot_timeout'] }}"
+      boot_time_command: "{{ rollback_reboot['boot_time_command']}}"
+    register: result_reboot
+
+  always:
+    - name: Save DATA Merged 생성
+      set_fact:
+        merged_value: "{{ merged_value | default([]) + [{
+          'host': fap['host_ip'],
+          'host_name': fap['host_ip'],
+          'name': '4. 재기동',
+          'command': report_type,
+          'result': '비정상' if result_reboot['failed'] | default(True) else '정상',
+          'is_success': True,
+          'is_pass': False if result_reboot['failed'] | default(True) else True,
+          'system': system,
+          'report_type': report_type
+            }] }}"

@@ -1,0 +1,20 @@
+---
+report_type: "preventive"
+data_key: "company"
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_id }}/{{ fap.host_ip }}"
+data_type: "report"
+save_type: "report"
+target_type: "server"
+report_target: "예방점검_서버"
+message_data: "{{ report_type }}_{{ save_today }}"
+
+# mail 설정
+target_team_name: ""
+# target_mailing_list: ""
+smtp_noti_name: "EMAIL"
+
+#MaxRetries 이슈로 추가 
+# ansible_winrm_operation_timeout_sec: 120
+# ansible_winrm_read_timeout_sec: 150

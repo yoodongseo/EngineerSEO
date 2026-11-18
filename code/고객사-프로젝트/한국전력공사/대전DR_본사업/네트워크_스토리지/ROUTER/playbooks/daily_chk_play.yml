@@ -1,0 +1,61 @@
+---
+- name: daily_chk_play
+  hosts: all
+  gather_facts: false
+  ignore_errors: true
+  strategy: free
+  ignore_unreachable: true
+  
+  pre_tasks:
+    # - name: 공통 사전 준비 작업
+    #   include_tasks: /fap/ansible/projects/faplib/tasks/pre_check.yml
+    - name: 변수 호출
+      include_vars: ../vars/cisco_daily_chk_vars.yml
+        
+  tasks:
+    - block:
+      - name: 점검 명령어 실행
+        ios_command:
+          commands: "{{ item.command }}"
+        register: prompt_result
+        loop: "{{ commands }}"
+        loop_control:
+          label: "{{ item.name }}"
+        failed_when: false
+        
+      - name: stdout 및 msg 정규화
+        set_fact:
+          total_stdout_lines: >-
+            {{
+              total_stdout_lines | default([])
+              +
+              (
+               item.stdout is defined
+               | ternary(
+                  item.stdout,
+                  [item.msg]
+                )
+              )
+            }}
+        loop: "{{ prompt_result.results }}"
+        loop_control:
+          label: "{{ item.item.name }}"
+        
+      - name: 명령어 결과 필터 처리
+        filter_exec_module:
+          stdout_lines: "{{ total_stdout_lines | list | flatten }}"
+          # stdout_lines: "{{ total_stdout_lines }}"
+          inspection_items: "{{ commands | selectattr('is_save','eq',true) }}"
+          host: "{{ inventory_hostname }}"
+          host_name: "{{ inventory_hostname }}"
+          report_type: "{{ report_type }}"
+          system: "{{ system }}"
+          file_path: ""
+          data5: "{{ data5 }}"
+        register: result_value
+        delegate_to: localhost
+      
+        
+      always:
+        - name: db 저장 task 호출
+          include_tasks: /fap/ansible/projects/faplib/tasks/save_db.yml

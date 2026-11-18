@@ -1,0 +1,7 @@
+---
+script_path: "{{ ansible_env.HOME }}" # home directory
+script_file: sysinfo.sh # 일일점검 스크립트 파일명
+
+date: "{{ ansible_facts.date_time.date|replace('-','') }}"
+hostname: "{{ ansible_facts.nodename }}"
+

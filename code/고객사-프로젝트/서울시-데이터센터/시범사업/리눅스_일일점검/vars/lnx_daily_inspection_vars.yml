@@ -1,0 +1,22 @@
+---
+# today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+system: 'Linux'
+report_type: 'Linux TOP,PS 일일점검'
+data_key: LNX_INSPECTION_DAILY
+
+lnx_inspection_item:
+  - name: 2. CPU (TOP)
+    cmd: " top -bn1 | head -n 16" 
+    id: 0001
+
+  - name: 3. 파일시스템
+    cmd: "df -h"
+    id: 0002
+
+  - name: 4. Memory 
+    cmd: "free -h"
+    id: 0003
+
+  - name: 5. /etc/passwd
+    cmd: "cat /etc/passwd"
+    id: 0004

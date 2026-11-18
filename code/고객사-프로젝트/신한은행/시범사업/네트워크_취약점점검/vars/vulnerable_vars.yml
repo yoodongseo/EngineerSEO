@@ -1,0 +1,458 @@
+---
+### vars 파일
+### 점검분류 기입 ---(예방점검, 보안점검, 복제상태점검)
+inspection_group: "예방점검"
+ansible_port: 22
+report: "securityvulnerability"
+### merged_value --- List 선언
+merged_value: []
+system: network
+file_path: "/fap/report/mcst_vulnercheck/{{ today }}/{{ fap.job_id }}"
+
+# Linux:
+#   - cmd_name: "ls -al"
+#     cmd_command: 'ls -al'
+#     value: "str"
+#     com_value: "passwd"
+#     message: |
+#         1. ls -al
+#     raw: "ls -al /etc/passwd"
+#     multi_raw:
+#       - ''
+#     arr_num: 0
+#     grep: ""
+#     time: 1
+#     criteria: "Fail 결과 존재 시 비정상"
+#     tmp_file_path: "../templates/{{ fap['host_ip'] }}_Linux.txt"
+#     cmd_id: 645001
+#     id: 0001
+
+cisco:
+  - cmd_name: "패스워드 설정"
+    cmd_command: 'show running-config | include username'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 계정관리 - 패스워드 설정
+    raw: "show running-config | include username"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    cmd_id: 645001
+    id: 0001
+
+  - cmd_name: "SNMP 서비스 확인"
+    cmd_command: 'show running-config | include snmp-server'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 기능관리 - SNMP 서비스 확인
+    raw: "show running-config | include snmp-server"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    cmd_id: 645016
+    id: 0002
+
+  - cmd_name: "SNMP community string 복잡성 설정"
+    cmd_command: "show running-config | include 'snmp-server community"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. 기능관리 - SNMP community string 복잡성 설정
+    raw: "show running-config | include 'snmp-server community"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    cmd_id: 645017
+    id: 0003
+
+  - cmd_name: "NTP 서버 연동"
+    cmd_command: "show running-config | include ntp"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. 로그관리 - NTP 서버 연동
+    raw: "show running-config | include ntp"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    cmd_id: 645014
+    id: 0004
+
+  - cmd_name: "로그온 시 경고 메시지 설정"
+    cmd_command: "show running-config | include banner"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. 접근관리 - 로그온 시 경고 메시지 설정
+    raw: "show running-config | include banner"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_cisco.txt"
+    cmd_id: 645009
+    id: 0005
+
+axgate:
+  - cmd_name: "패스워드 설정"
+    cmd_command: 'show running-config username'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 계정관리 - 패스워드 설정
+    raw: "show running-config username"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    cmd_id: 645001
+    id: 0001
+
+  - cmd_name: "SNMP 서비스 확인"
+    cmd_command: 'show running-config snmp-server'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 기능관리 - SNMP 서비스 확인
+    raw: "show running-config snmp-server"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    cmd_id: 645016
+    id: 0002
+
+  - cmd_name: "SNMP community string 복잡성 설정"
+    cmd_command: "show running-config snmp-server"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. 기능관리 - SNMP community string 복잡성 설정
+    raw: "show running-config snmp-server"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    cmd_id: 645017
+    id: 0003
+
+  - cmd_name: "NTP 서버 연동"
+    cmd_command: "show running-config ntp"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. 로그관리 - NTP 서버 연동
+    raw: "show running-config ntp"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    cmd_id: 645014
+    id: 0004
+
+  - cmd_name: "로그온 시 경고 메시지 설정"
+    cmd_command: "show running-config banner"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. 접근관리 - 로그온 시 경고 메시지 설정
+    raw: "show running-config banner"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_axgate.txt"
+    cmd_id: 645009
+    id: 0005
+
+juniper:
+  - cmd_name: "패스워드 설정"
+    cmd_command: 'show configuration system login'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 계정관리 - 패스워드 설정
+    raw: "show configuration system login | except message"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    cmd_id: 645001
+    id: 0001
+
+  - cmd_name: "SNMP 서비스 확인"
+    cmd_command: 'show configuration snmp'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 기능관리 - SNMP 서비스 확인
+    raw: "show configuration snmp"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    cmd_id: 645016
+    id: 0002
+
+  - cmd_name: "SNMP community string 복잡성 설정"
+    cmd_command: "show configuration snmp"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. 기능관리 - SNMP community string 복잡성 설정
+    raw: "show configuration snmp"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    cmd_id: 645017
+    id: 0003
+
+  - cmd_name: "NTP 서버 연동"
+    cmd_command: "show configuration system ntp"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. 로그관리 - NTP 서버 연동
+    raw: "show configuration system ntp"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    cmd_id: 645014
+    id: 0004
+
+  - cmd_name: "로그온 시 경고 메시지 설정"
+    cmd_command: "show configuration system login message"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. 접근관리 - 로그온 시 경고 메시지 설정
+    raw: "show configuration system login message"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 3
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_juniper.txt"
+    cmd_id: 645009
+    id: 0005
+
+nexg:
+  - cmd_name: "패스워드 설정"
+    cmd_command: 'show running-config | include username'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 계정관리 - 패스워드 설정
+    raw: "show running-config | include username"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    cmd_id: 645001
+    id: 0001
+
+  - cmd_name: "SNMP 서비스 확인"
+    cmd_command: 'show running-config | include snmp-server'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 기능관리 - SNMP 서비스 확인
+    raw: "show running-config | include snmp-server"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    cmd_id: 645016
+    id: 0002
+
+  - cmd_name: "SNMP community string 복잡성 설정"
+    cmd_command: "show running-config | include 'snmp-server community"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. 기능관리 - SNMP community string 복잡성 설정
+    raw: "show running-config | include 'snmp-server community"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    cmd_id: 645017
+    id: 0003
+
+  - cmd_name: "NTP 서버 연동"
+    cmd_command: "show running-config | include ntp"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. 로그관리 - NTP 서버 연동
+    raw: "show running-config | include ntp"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    cmd_id: 645014
+    id: 0004
+
+  - cmd_name: "로그온 시 경고 메시지 설정"
+    cmd_command: "show running-config | include banner"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. 접근관리 - 로그온 시 경고 메시지 설정
+    raw: "show running-config | include banner"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nexg.txt"
+    cmd_id: 645009
+    id: 0005
+
+nxos:
+  - cmd_name: "패스워드 설정"
+    cmd_command: 'show running-config | include username'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        1. 계정관리 - 패스워드 설정
+    raw: "show running-config | include username"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 2
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    cmd_id: 645001
+    id: 0001
+
+  - cmd_name: "SNMP 서비스 확인"
+    cmd_command: 'show running-config | include snmp-server'
+    value: "str"
+    com_value: "Fail"
+    message: |
+        2. 기능관리 - SNMP 서비스 확인
+    raw: "show running-config | include snmp-server"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    cmd_id: 645016
+    id: 0002
+
+  - cmd_name: "SNMP community string 복잡성 설정"
+    cmd_command: "show running-config | include 'snmp-server community"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        3. 기능관리 - SNMP community string 복잡성 설정
+    raw: "show running-config | include 'snmp-server community"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    cmd_id: 645017
+    id: 0003
+
+  - cmd_name: "NTP 서버 연동"
+    cmd_command: "show running-config | include ntp"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        4. 로그관리 - NTP 서버 연동
+    raw: "show running-config | include ntp"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    cmd_id: 645014
+    id: 0004
+
+  - cmd_name: "로그온 시 경고 메시지 설정"
+    cmd_command: "show running-config | include banner"
+    value: "str"
+    com_value: "Fail"
+    message: |
+        5. 접근관리 - 로그온 시 경고 메시지 설정
+    raw: "show running-config | include banner"
+    multi_raw:
+      - ''
+    arr_num: 0
+    grep: ""
+    time: 1
+    criteria: "Fail 결과 존재 시 비정상"
+    tmp_file_path: "../templates/{{ fap['host_ip'] }}_nxos.txt"
+    cmd_id: 645009
+    id: 0005

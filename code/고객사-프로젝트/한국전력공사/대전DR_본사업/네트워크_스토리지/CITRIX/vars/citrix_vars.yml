@@ -1,0 +1,187 @@
+---
+report_type: 'preventive'
+data_key: 'kepco'
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+save_today: "{{ lookup('pipe', 'date +%y-%m%d-%H%M') }}"
+message_data: "{{ report_type }}_{{ save_today }}"
+file_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_ip }}/{{ fap.host_ip }}"
+data_type: "report" # content save backup 외 report, backup
+save_type: "report" # report, path, backup
+system: "storage"
+model: "citrix"
+log_date: "{{ lookup('pipe', \"LC_ALL=C date '+%b %e'\") | trim }}"
+data5: "에방점검_Citirix"
+
+commands:
+
+  - cmd_id: "0001"
+    filter_key: "cpu"
+    name: "01. CPU 점검"
+    command: "stat ns"
+    os: "{{ model }}"
+    inspection_criteria: 90
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0002"
+    filter_key: "memory"
+    name: "02. 메모리 점검"
+    command: "stat ns"
+    os: "{{ model }}"
+    inspection_criteria: 90
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0003"
+    filter_key: "InterfaceStatusFilter"
+    name: "03. 인터페이스 점검"
+    command: "stat interface"
+    os: "{{ model }}"
+    inspection_criteria: 80
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - cmd_id: "0004"
+    filter_key: "CitrixInterfaceStatusFilter"
+    name: "04. 모듈 상태 점검"
+    command: "show interface"
+    os: "{{ model }}"
+    inspection_criteria: 
+      is_enabled: True
+      inspection_keyword: "down"
+    is_save: true
+    is_compare: true
+    timeout: 1
+    sleep: 1
+    message: "{{ message_data }}"
+
+  - {
+      cmd_id: "0005",
+      filter_key: "CitrixVlanFilter",
+      name: "05. VLAN 상태 점검",
+      command: "show vlan",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0006",
+      filter_key: "CitrixMacFilter",
+      name: "06. Mac, Arp 상태 점검",
+      command: "show arp",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0007",
+      filter_key: "CitrixRouteFilter",
+      name: "07. 라우팅 Table 상태 점검",
+      command: "show route",
+      os: "{{ model }}",
+      inspection_criteria: "down",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+
+  # citrix 장비는 spanning-tree 확인 가능한 명령어 부재
+  # - {
+  #     cmd_id: "0009",
+  #     filter_key: "CiscoSTPFilter",
+  #     name: "09. STP상태 점검",
+  #     command: "show spanning-tree",
+  #     os: "{{ model }}",
+  #     inspection_criteria: "",
+  #     is_save: true,
+  #     is_compare: true,
+  #     timeout: 1,
+  #     sleep: 1,
+  #     message: "{{ message_data }}"
+  #   }
+
+  - {
+      cmd_id: "0008", # 필터 작성 필요
+      filter_key: "CitrixHaFilter",
+      name: "08. 이중화 상태 점검",
+      command: "show ha node",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+
+  # # - {
+  # #     cmd_id: "0011",
+  # #     filter_key: "CiscoSTPFilter",
+  # #     name: "11. Ping 점검",
+  # #     command: "ping ",
+  # #     os: "{{ model }}",
+  # #     inspection_criteria: "",
+  # #     is_save: true,
+  # #     is_compare: true,
+  # #     timeout: 1,
+  # #     sleep: 1,
+  # #     message: "{{ message_data }}"
+  # #   }
+  - {
+      cmd_id: "0009",
+      filter_key: "LogFilter",
+      name: "09. 로그 점검",
+      command: "show events | grep \"{{ log_date }}\"",
+      os: "{{ model }}",
+      inspection_criteria: "error, down",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}",
+    }
+  - {
+      cmd_id: "0010",
+      filter_key: "PowerFilter",
+      name: "10. 전원 점검",
+      command: "stat system -detail",
+      os: "{{ model }}",
+      inspection_criteria: "NOT SUPPORTED",
+      is_save: true,
+      is_compare: true,
+      timeout: 3,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }
+  - {
+      cmd_id: "0011",
+      filter_key: "FanFilter",
+      name: "11. FAN 점검",
+      command: "stat system -detail",
+      os: "{{ model }}",
+      inspection_criteria: "",
+      is_save: true,
+      is_compare: true,
+      timeout: 1,
+      sleep: 1,
+      message: "{{ message_data }}"
+    }

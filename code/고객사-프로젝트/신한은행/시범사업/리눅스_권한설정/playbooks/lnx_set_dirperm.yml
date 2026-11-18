@@ -1,0 +1,20 @@
+---
+- name: Linux 디렉토리 권한설정
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: False
+  ignore_unreachable: True
+  vars_files:
+    - ../vars/lnx_set_dirperm_vars.yml
+  tasks:
+  - block:
+      - name: 1. 연결 상태 점검
+        include_tasks: ../tasks/01_lnx_con_tasks.yml
+
+      - name: 2. 디렉토리 권한 설정 수행 - "{{ dir_path }}"
+        include_tasks: ../tasks/02_lnx_set_dirperm_tasks.yml
+
+    always:
+      - name: 데이터 저장
+        include_tasks: ../tasks/save_data.yml

@@ -1,0 +1,14 @@
+---
+- name: Primary cubeone 기동
+  shell: |
+    source /home/{{ item.cubeone_account }}/.bash_profile
+    su - cubeone -c "/home/cubeone/bin/cubeone.sh start $ORACLE_SID"
+  register: result
+  loop: "{{ cubeoneaccount }}"
+  when: item.cubeone_account != ""
+
+- name: Primary cubeone 기동 정보 추출
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'Primary cubeone 기동' + '='*30 + 'ㅣㅣn' + item.stdout ] }}"
+  loop: "{{ result.results }}"
+  when: item.stdout is defined

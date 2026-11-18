@@ -1,0 +1,22 @@
+---
+## 각 tasks내 requests_{{ METHOD }}_tasks.yml 파일이 있으며, 용도에 따라 호출하여 사용
+- name: Network API 대상 수집처리
+  hosts: all
+  strategy: free
+  gather_facts: False
+  ignore_errors: true
+  ignore_unreachable: True
+  vars:
+    ansible_connection: local
+  vars_files:
+    - ../vars/nw_gather_api_vars.yml
+  tasks:
+    - name: 1. 정보 수집
+      include_tasks: ../tasks/01_l4_api_get_response_tasks.yml
+      loop: "{{ F5['api_list'] if vendor == 'F5' }}"
+      # loop: >-
+      #   {{ F5['api_list'] if vendor == 'F5'
+      #   else cisco['api_list'] if vendor == 'cisco' 
+      
+    - name: 2. 백업 관리 저장
+      include_tasks: ../tasks/save_data.yml

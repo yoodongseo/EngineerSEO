@@ -1,0 +1,27 @@
+---
+- name: 데이터 비교 'merged_value'
+  set_fact:
+    merged_value: >-
+      {{ [{
+          'host': inventory_hostname,
+          'id': item.id,
+          'name': item.message,
+          'command': item.cmd_name,
+          'result': total_item.stdout | default(None),
+          'message': item.message | default(None),
+          'is_success': true,
+          'os': vendor | default(None),
+          'compare': false
+        }] + (merged_value | default([])) }}
+  when: total_item.failed | default(true) == false
+
+### 생성된 merged_value 데이터를 content_value로 취합
+- name: 데이터 비교 Make content value
+  set_fact:
+    backup_value: "{{ backup_value | default({}) | combine({'data_list': merged_value}) }}"
+  delegate_to: localhost
+  when: merged_value is defined
+
+- name: merged_value 초기화
+  set_fact:
+    merged_value: []

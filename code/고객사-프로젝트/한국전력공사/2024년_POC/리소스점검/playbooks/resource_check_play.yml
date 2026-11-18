@@ -1,0 +1,44 @@
+---
+- name: resource_check_play
+  hosts: all
+  strategy: free
+  ignore_errors: yes
+ 
+  tasks:
+    - block:
+        - name: set_fact
+          set_fact:
+            merged_value: "{{ merged_value | default([]) }}"
+          delegate_to: localhost
+
+        - name: ansible_os_family
+          raw: uname -s
+          register: ansible_os_family
+          when: "ansible_port != 5985"
+          
+        - name: ansible_os_family debug
+          debug:
+            var: ansible_os_family
+
+        - name: Linux server
+          include_tasks: ../tasks/resource_tasks_linux.yml
+          when: ansible_os_family | regex_search('(?i)Linux')
+
+      always:
+        - name: Make content value
+          set_fact:
+            content_value: "{{ content_value | default({}) | combine({'host': inventory_hostname, 'host_info': merged_value}) }}"
+          delegate_to: localhost
+
+        - debug: var=content_value 
+
+        - name: Save to DB
+          fap.common.save_data:
+            protocol: http
+            hostname: "{{ inventory_hostname }}"
+            data_type: SERVER_INFO
+            data_key: SERVER_INFO
+            content: "{{ content_value }}"
+            template_id: "{{ fap.template_id | default(omit) }}"
+            job_id: "{{ fap.job_id | default(omit) }}"
+          delegate_to: localhost

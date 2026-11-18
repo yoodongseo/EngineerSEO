@@ -1,0 +1,36 @@
+---
+- name: server_command
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: do
+      raw: ip a 
+      register : result
+      ignore_errors: 'yes'
+
+    - name: do2
+      raw: netstat -in            
+      register : result2
+      ignore_errors: 'yes'
+
+    - name: do3
+      raw: ipv            
+      register : result3
+      ignore_errors: 'yes'
+
+
+    - name: res
+      debug:
+        msg:
+          - "{{result.stdout}}"
+
+    - name: res2
+      debug:
+        msg:
+          - "{{result2.stdout}}"
+
+    - name: res3
+      debug:
+        msg:
+          - "{{result3.stdout}}"
+
